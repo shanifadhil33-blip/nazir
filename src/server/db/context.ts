@@ -20,3 +20,13 @@ export async function withWorker<T>(driver: TransactionDriver, workspaceId: stri
     return work(connection);
   });
 }
+
+export const sandboxIdentifier = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+export async function withSandbox<T>(driver: TransactionDriver, context: { tenant: string; requesterKey: string }, work: (connection: SqlConnection) => Promise<T>): Promise<T> {
+  if (!sandboxIdentifier.test(context.tenant) || !sandboxIdentifier.test(context.requesterKey)) throw new Error('Invalid sandbox context');
+  return driver.transaction(async (connection) => {
+    await connection.query('SET LOCAL ROLE nazir_sandbox');
+    await connection.query("SELECT set_config('app.sandbox_tenant',$1,true),set_config('app.requester_key',$2,true)", [context.tenant, context.requesterKey]);
+    return work(connection);
+  });
+}

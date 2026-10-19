@@ -1,0 +1,12 @@
+PASS login requires role switch
+PASS workspace separation workspaces
+PASS workspace separation members
+PASS workspace separation rule_packs
+PASS workspace separation audit_events
+PASS cross workspace insert denied
+PASS audit chain verifies
+PASS audit update denied
+PASS audit delete denied
+PASS approved content immutable
+PASS viewer cannot read tool_events
+PASS supplier cannot approve own proposal

@@ -24,7 +24,8 @@ try {
   await db.query('REVOKE ALL ON ALL TABLES IN SCHEMA nazir FROM nazir_login');
   await db.query('REVOKE ALL ON ALL SEQUENCES IN SCHEMA nazir FROM nazir_login');
   await db.query('REVOKE ALL ON ALL FUNCTIONS IN SCHEMA nazir FROM nazir_login');
-  await db.query('GRANT nazir_app,nazir_worker TO nazir_login');
+  for (const scope of ['SCHEMA sandbox', 'ALL TABLES IN SCHEMA sandbox', 'ALL SEQUENCES IN SCHEMA sandbox', 'ALL FUNCTIONS IN SCHEMA sandbox']) await db.query(`REVOKE ALL ON ${scope} FROM nazir_login`);
+  await db.query('GRANT nazir_app,nazir_worker,nazir_sandbox TO nazir_login');
   await db.query('COMMIT');
   console.log('Roles configured');
 } catch (error) {
