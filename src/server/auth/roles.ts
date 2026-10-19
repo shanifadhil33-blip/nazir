@@ -22,6 +22,7 @@ const matrix = {
   'finding.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
   'finding.override': ['quality_reviewer'],
   'finding.accept': ['service_owner', 'quality_reviewer'],
+  'lesson.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer'],
   'lesson.edit': ['service_owner', 'quality_reviewer'],
   'lesson.confirm_small': ['service_owner', 'quality_reviewer'],
   'lesson.approve_big': ['service_owner'],
@@ -29,6 +30,8 @@ const matrix = {
   'evidence.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer'],
   'hidden_scenarios.read': ['service_owner', 'quality_reviewer'],
   'audit.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer'],
+  'comparison.create': ['service_owner', 'quality_reviewer'],
+  'comparison.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
 } satisfies Record<string, Role[]>;
 export type Action = keyof typeof matrix;
 export const actions = Object.keys(matrix) as Action[];

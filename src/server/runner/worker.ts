@@ -3,12 +3,14 @@ import { withWorker } from '../db/context';
 import type { TransactionDriver, SqlConnection } from '../db/driver';
 import { createInspectionChannel, type StateReading } from '../inspection/channel';
 import { runServiceAgent, type ChatModel, type Message } from '../../sandbox/agent';
-import { getAgentVersion, type AgentVersion } from '../../sandbox/versions';
+import type { AgentVersion } from '../../sandbox/versions';
+import { resolveExecutable } from '../repair/executable';
 import { hash } from '../../sandbox/demo-rule-pack';
 import { AiChainExhausted, type CallMeta } from '../ai/chain';
 import { networkChatModel, type RunnerModel } from './network-model';
 import type { RunnerScenario } from './demo-scenarios';
 import { buildJudgeInput } from '../judge/rubric';
+import { judgeNotes, type FrozenLesson } from '../memory/frozen';
 import { unavailable, type SemanticResult } from '../judge/judge';
 import type { Family } from '../ai/providers';
 import { combineVerdicts } from '../judge/evaluate';
@@ -38,7 +40,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   const data = await work(async (db) => {
     const c = (await db.query<{ sandbox_tenant: string; max_attempts: number; agent_version_id: string; scenario_hash: string }>('SELECT sandbox_tenant,max_attempts,agent_version_id,scenario_hash FROM nazir.conversations WHERE id=$1',[cid])).rows[0]!;
     const scenario = (await db.query<RunnerScenario & Record<string,unknown>>('SELECT s.*,m.canonical FROM nazir.scenarios s JOIN nazir.scenario_meanings m ON m.id=s.meaning_id WHERE s.id=(SELECT scenario_id FROM nazir.conversations WHERE id=$1)',[cid])).rows[0]!;
-    const run = (await db.query<{ frozen_manifest: { registry_id: string; configHash: string; recordsOnly?: boolean }; rule_pack_version_id:string }>('SELECT frozen_manifest,rule_pack_version_id FROM nazir.runs WHERE id=$1',[rid])).rows[0]!;
+    const run = (await db.query<{ frozen_manifest: { registry_id: string; configHash: string; recordsOnly?: boolean; lessons?: FrozenLesson[]; repair?: { parent_registry_id?: string; patch?: unknown; executable_hash?: string } }; rule_pack_version_id:string }>('SELECT frozen_manifest,rule_pack_version_id FROM nazir.runs WHERE id=$1',[rid])).rows[0]!;
     return { ...c,scenario,manifest:run.frozen_manifest,rulePackVersionId:run.rule_pack_version_id };
   });
   const tenant = data.sandbox_tenant, channel = createInspectionChannel(inspectionDriver);
@@ -74,7 +76,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   const deadline = new Promise<never>((_,reject) => { timer=setTimeout(() => { if(!judging) { reason='timeout'; stopped=true; } reject(new Error('Attempt timeout')); },conversationTimeoutMs); });
   const bounded = <T>(p: Promise<T>) => Promise.race([p,deadline]);
   try {
-    const version = getAgentVersion(data.manifest.registry_id);
+    const version = resolveExecutable({ registry_id:data.manifest.registry_id,...(data.manifest.repair ?? {}) });
     if (!version || version.configHash!==data.manifest.configHash || data.scenario.content_hash!==data.scenario_hash) { reason='version_drifted'; }
     else {
       await bounded(work(async (db) => { await fence(db); await db.query('SELECT sandbox.seed_tenant($1)',[tenant]);
@@ -121,7 +123,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
               verdict=await bounded(Promise.resolve(evaluate(evaluationInput)));
               if(!data.manifest.recordsOnly) {
                 judging=true;
-                const input=buildJudgeInput(evaluationInput),seed=`${cid}:${attempt}`;
+                const input=buildJudgeInput({ ...evaluationInput,notes:judgeNotes(data.manifest.lessons,String((data.scenario as Record<string,unknown>).family ?? '')) }),seed=`${cid}:${attempt}`;
                 const prior=(await work(async (db) => (await db.query<{model_calls:{family?:Family}[]}>('SELECT model_calls FROM nazir.conversations WHERE id=$1',[cid])).rows[0]!.model_calls));
                 const agentFamilies=[...new Set([...prior.map((m) => m.family ?? 'unknown'),...metas.map((m) => m.family)])];
                 try {
@@ -163,7 +165,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     const summary={ results:data.manifest.recordsOnly?verdict.results ?? {}:{ records,semantic },records,semantic,calls:metas.map((m) => ({ provider:m.provider,model:m.model,failover:m.failover })) };
     await db.query(`UPDATE nazir.conversations SET status=$4,inconclusive_reason=CASE WHEN $4 IN ('inconclusive','queued') THEN $5 ELSE NULL END,last_error=$5,available_at=$6,finished_at=CASE WHEN $7 THEN NULL ELSE clock_timestamp() END,result_summary=$8,model_provider=$9,model_id=$10,failover=$11,model_calls=model_calls || $12::jsonb,lease_owner=NULL,lease_expires_at=NULL WHERE id=$1 AND lease_owner=$2 AND attempt=$3 AND status='running'`,[cid,workerId,attempt,retry?'queued':status,resultReason,new Date(now()+30000*attempt),retry,retry?null:JSON.stringify(summary),meta?.provider ?? null,meta?.model ?? null,metas.some((m) => m.failover),JSON.stringify(metas.map((m) => ({ attempt,provider:m.provider,model:m.model,family:m.family,failover:m.failover })))]);
     if(!retry && evaluationInput && reading && status!=='inconclusive') {
-      const findings=buildFindings({ ...evaluationInput,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic });
+      const findings=buildFindings({ ...evaluationInput,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
       for(const finding of findings) {
         const fields=Object.keys(finding),values=Object.values(finding).map((v) => typeof v==='object'?JSON.stringify(v):v);
         const inserted=(await db.query<{id:string}>(`INSERT INTO nazir.findings(${fields.join(',')}) VALUES(${values.map((_,i) => '$'+(i+1)).join(',')}) ON CONFLICT(workspace_id,conversation_id,check_id) DO NOTHING RETURNING id`,values)).rows[0];

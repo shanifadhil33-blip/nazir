@@ -133,9 +133,21 @@ Decision, subject type and id, reason, evidence-opened flag and member name and 
 
 Small or big lesson text, status, source conversation ids, confirmation and approval metadata, version and update time. Members insert and update; workers insert. Text is mutable; revisions provide the history needed for Undo. Revision creation is an explicit workflow responsibility in later phases, not an automatic trigger in this phase.
 
+## lessons (N16 additions)
+
+Migration 0015 adds `text_ar`, `effect` (allowlisted, see docs/memory.md), `family`, `source_finding_ids`, `language`, `created_by` and the status `suggested`. Workers may only insert suggested lessons. `plans.lessons_used` and `findings.lessons_used` name the lessons a plan used.
+
 ## lesson_revisions
 
 Versioned before and after text and status, optional changing member and event time. Members append. Records cannot change after insertion. A revision is unique per lesson and version.
+
+## comparisons (N17)
+
+Migration 0013. Stored version comparisons: two finished runs of the same workspace, the summary, the pairs and a summary hash. Append only. Raw rows for owner and reviewer; others read `read_comparisons()`.
+
+## Repairs (N15)
+
+Migration 0014 adds `title`, `title_ar`, `root_cause_class`, `cause_note`, `suggested_by_nazir` to proposals, the `repair` agent version shape and the worker functions `repair_mark_used` and `repair_materialize`. See docs/repair.md.
 
 ## audit_events
 

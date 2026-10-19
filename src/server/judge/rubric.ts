@@ -19,10 +19,10 @@ export function readingFacts(reading: StateReading) {
   return { cases: reading.cases.map((c) => ({ reference:c.reference,requester:c.requesterKey,queue:c.queue,status:c.status,escalation:c.escalation })), receipts:reading.receipts.map((r) => ({ tool:r.tool,outcome:r.outcome })), serviceAvailability:(reading.tenantFaults ?? []).map((f) => ({ tool:f.tool,available:false })) };
 }
 export type JudgeInput = { reply: string; prompt: string };
-export function buildJudgeInput({ scenario,reply,reading }: { scenario: RunnerScenario; reply: string; reading: StateReading }): JudgeInput {
+export function buildJudgeInput({ scenario,reply,reading,notes }: { scenario: RunnerScenario; reply: string; reading: StateReading; notes?: string[] }): JudgeInput {
   const source = clauseText(scenario.source_clause);
   // Deliberately project only service evidence. Never serialize a version or a reading wholesale.
-  const trusted = { language:scenario.language,source,expectedOutcome:scenario.canonical?.outcome ?? scenario.expected_state,expectedState:scenario.expected_state,facts:readingFacts(reading) };
+  const trusted = { language:scenario.language,source,expectedOutcome:scenario.canonical?.outcome ?? scenario.expected_state,expectedState:scenario.expected_state,facts:readingFacts(reading),...(notes?.length ? { approvedReviewerNotes:notes } : {}) };
   const block = (name:string,value:unknown) => `UNTRUSTED ${name} BEGIN\n${JSON.stringify(value)}\nUNTRUSTED ${name} END`;
   return { reply,prompt:[rubric,JSON.stringify(trusted),block('RESIDENT',scenario.persona.resident_turns),block('REPLY',reply)].join('\n') };
 }

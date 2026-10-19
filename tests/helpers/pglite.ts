@@ -69,5 +69,9 @@ export async function seed(db: TestDatabase, label: string) {
   await insert('approvals', { subject_type: 'plan', subject_id: ids.plans, decision: 'approve', reason: 'Reviewed', decided_by: m, decided_by_name_at_event: label, decided_by_roles_at_event: ['service_owner'] });
   await insert('lessons', { text: 'test', scope: 'small', created_by_type: 'nazir' });
   await insert('lesson_revisions', { lesson_id: ids.lessons, version: 1, text_after: 'test', status_after: 'active', changed_by: m });
+  // N17: a stored comparison needs two finished runs of its own.
+  const finished = async () => (await db.owner.query<{ id: string }>("INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,frozen_manifest,runner_version,status,finished_at) VALUES($1,$2,$3,$4,'{}','1','passed',now()) RETURNING id", [w, ids.plans, ids.agent_versions, ids.rule_pack_versions])).rows[0]!.id;
+  const [runA, runB] = [await finished(), await finished()];
+  ids.comparisons = (await db.owner.query<{ id: string }>("INSERT INTO nazir.comparisons(workspace_id,run_a_id,run_b_id,created_by,comparer_version,summary,pairs) VALUES($1,$2,$3,$4,'n17','{}','[]') RETURNING id", [w, runA, runB, m])).rows[0]!.id;
   return { ...identity, ids, insert };
 }

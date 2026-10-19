@@ -16,9 +16,11 @@ async function prepare(db:SqlConnection) {
     return id;
   };
   // The bootstrap member is the author, the second man is the reviewer.
-  const author=(await db.query<{id:string}>('SELECT id FROM nazir.members WHERE workspace_id=$1 ORDER BY created_at,id LIMIT 1',[wid])).rows[0]!.id;
+  const author=(await db.query<{id:string}>("SELECT m.id FROM nazir.members m JOIN nazir.member_roles r ON r.member_id=m.id AND r.workspace_id=m.workspace_id AND r.role='service_owner' WHERE m.workspace_id=$1 ORDER BY m.created_at,m.id LIMIT 1",[wid])).rows[0]!.id;
   const reviewer=await member('library_reviewer@example.test','Khalid Hamdan','quality_reviewer');
-  return { fixture,wid,author,reviewer };
+  // N15: a supplier maintainer who proposes repairs (never the reviewer who decides them).
+  const supplier=await member('library_supplier@example.test','Yusuf Rahman','supplier_maintainer');
+  return { fixture,wid,author,reviewer,supplier };
 }
 const libraryCount=async (db:SqlConnection,wid:string) => (await db.query<{id:string}>('SELECT id FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL',[wid])).rows.length;
 const draftIds=async (db:SqlConnection,wid:string) => (await db.query<{id:string}>("SELECT id FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL AND status='draft'",[wid])).rows.map((r) => r.id);
@@ -27,7 +29,7 @@ async function finish(db:SqlConnection,prep:Awaited<ReturnType<typeof prepare>>,
   // Plans are prepared before any run uses this fixture.
   await db.query("UPDATE nazir.plans SET budget_calls=80,stop_rules='{}',families=$2 WHERE id=$1 AND (budget_calls<>80 OR stop_rules<>'{}'::jsonb OR families<>$2::text[])",[plan.id,families]);
   const scenarios=(await db.query<{id:string;stable_key:string}>("SELECT id,stable_key FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL ORDER BY stable_key",[prep.wid])).rows;
-  return { workspaceId:prep.wid,planId:plan.id,versions:prep.fixture.versions,scenarios:Object.fromEntries(scenarios.map((s) => [s.stable_key,s.id])) };
+  return { workspaceId:prep.wid,planId:plan.id,versions:prep.fixture.versions,members:{ author:prep.author,reviewer:prep.reviewer,supplier:prep.supplier },scenarios:Object.fromEntries(scenarios.map((s) => [s.stable_key,s.id])) };
 }
 // One owner transaction. Nested member operations use the same reserved connection (tests, local owner with every role).
 export async function createLibraryFixture(db:SqlConnection) {

@@ -17,6 +17,7 @@ const expected: Record<Action, boolean[]> = {
   'finding.read': [true,true,true,true],
   'finding.override': [false, false, true, false],
   'finding.accept': [true, false, true, false],
+  'lesson.read': [true, true, true, false],
   'lesson.edit': [true, false, true, false],
   'lesson.confirm_small': [true, false, true, false],
   'lesson.approve_big': [true, false, false, false],
@@ -24,6 +25,8 @@ const expected: Record<Action, boolean[]> = {
   'evidence.read': [true, true, true, false],
   'hidden_scenarios.read': [true, false, true, false],
   'audit.read': [true, true, true, false],
+  'comparison.create': [true, false, true, false],
+  'comparison.read': [true, true, true, true],
 };
 it.each(actions.flatMap((action) => roles.map((role, index) => ({ action, role, allowed: expected[action][index] }))))('$role $action = $allowed', ({ action, role, allowed }) => {
   expect(can([role], action)).toBe(allowed);

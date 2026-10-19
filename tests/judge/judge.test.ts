@@ -1,4 +1,5 @@
 import { expect,it,vi } from 'vitest';
+import { resolveRepairVersion } from '../../src/server/repair/executable';
 import { createAiChain } from '../../src/server/ai/chain';
 import { memoryAiStore } from '../../src/server/ai/store';
 import { chainOrder,providerRegistry } from '../../src/server/ai/providers';
@@ -20,7 +21,7 @@ function setup(answers:unknown[]) {
   return { fetch,store,chain:createAiChain({store,fetch,env:{GEMINI_API_KEY:'fake',REQUESTY_API_KEY:'fake',ZAI_API_KEY:'fake'},now:()=>0,sleep:async()=>{} }) };
 }
 const run=(chain:ReturnType<typeof setup>['chain'],text=reply) => judgeReply({chain,input:{...input,reply:text},seed:'test',agentFamilies:['nvidia_nemotron']});
-it.each(Object.values(agentVersions))('projects service evidence without version metadata $id',version => {
+it.each([...Object.values(agentVersions),resolveRepairVersion('planted_wrong_queue',[{op:'restore_routing',category:'complaint'}]),resolveRepairVersion('planted_false_submit',[{op:'remove_create_case_fault'},{op:'remove_false_submit_claim'}])])('projects service evidence without version metadata $id',version => {
   const prompt=buildJudgeInput({...scenario,scenario,reply,reading:reading(),version} as Parameters<typeof buildJudgeInput>[0]).prompt;
   for(const word of ['baseline','planted','fault','fixed','unsafe','repair',version.configHash,version.label,version.disclosure.en,version.disclosure.ar,'مزروع','إصلاح','غير آمن']) expect(prompt.toLowerCase()).not.toContain(word.toLowerCase());
   expect(prompt).toContain('UNTRUSTED RESIDENT BEGIN'); expect(prompt).toContain('UNTRUSTED REPLY BEGIN');

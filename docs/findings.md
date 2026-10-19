@@ -42,3 +42,8 @@ The worker inserts findings in the same final transaction as conversation status
 `checkFindingComplete` returns missing or blank field paths, covering both language titles and descriptions, quote, clause ID and bilingual text, versions, owner, cause, severity, check ID, run, conversation, attempt, language, expected, observed, receipt list, scenario identity and evidence hashes.
 
 `scripts/findings-probe.mjs` requires DATABASE_URL and WORKSPACE_ID from the caller, opens a read only worker transaction and reads every finding in that workspace. It prints X of Y complete plus missing paths for each incomplete finding and exits 1 if any is incomplete. It writes no database data. The script was parsed with node --check and was not run against a live database.
+
+## N15 and N16 additions
+
+* Queue checks after a failed create with no case are `adapter_failure`. A false claim in the reply review is `adapter_failure` when the create failed, `workflow_failure` when a record check failed, otherwise `unknown`.
+* `lessons_used` names the lessons that shaped the test that found the issue.

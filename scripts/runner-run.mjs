@@ -28,7 +28,8 @@ export async function main() {
       const plan=(await db.query("SELECT id FROM nazir.plans WHERE status='approved' ORDER BY created_at,id LIMIT 1")).rows[0];
       const agent=(await db.query("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1",[version])).rows[0];
       const keys=process.env.RUN_SCENARIOS?.split(',').map((s)=>s.trim()).filter(Boolean);
-      const scenarios=(await db.query("SELECT id FROM nazir.scenarios WHERE status='approved' AND language=ANY($1::text[]) AND ($2::text[] IS NULL OR stable_key=ANY($2::text[])) ORDER BY stable_key,language",[languages,keys??null])).rows;
+      // One scenario per stable key and language: the library scenario wins over an older fixture row with the same key.
+      const scenarios=(await db.query("SELECT DISTINCT ON (stable_key,language) id FROM nazir.scenarios WHERE status='approved' AND language=ANY($1::text[]) AND ($2::text[] IS NULL OR stable_key=ANY($2::text[])) ORDER BY stable_key,language,(library_hash IS NOT NULL) DESC,created_at DESC,id",[languages,keys??null])).rows;
       if (!plan || !agent || !scenarios.length || (keys && scenarios.length!==keys.length)) throw new Error('Fixture required');
       return { workspaceId:wid,planId:plan.id,agentVersionId:agent.id,scenarioIds:scenarios.map((s) => s.id),repeats:1,idempotencyKey:process.env.IDEMPOTENCY_KEY,recordsOnly:process.env.RECORDS_ONLY==='true'?true:process.env.RECORDS_ONLY==='false'?false:undefined };
     });

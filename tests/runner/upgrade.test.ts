@@ -19,7 +19,7 @@ it('upgrades a populated 0010 database without changing legacy evidence',async()
   await sql.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading) VALUES($1,$2,'inspection_channel','{}')",[f.workspaceId,c.id]);
   await sql.query("INSERT INTO nazir.findings(workspace_id,run_id,conversation_id,scenario_id,check_layer,title,agent_said,really_happened,rule_pack_version_id,rule_clause,agent_version_id,severity,root_cause_class,owner_role,evidence) SELECT $1,$2,$3,$4,'semantic','Historical finding','Historical quote','Historical record',rule_pack_version_id,'3.1',agent_version_id,'high','unknown','quality_reviewer','{}' FROM nazir.plans WHERE id=$5",[f.workspaceId,r.id,c.id,f.scenarios[0]!.id,f.planId]);
   const before=(await sql.query('SELECT to_jsonb(f) AS row FROM nazir.findings f')).rows[0]!.row as Record<string,unknown>;
-  expect(await migrate(driver)).toEqual(['0011_fixtures.sql','0012_findings.sql']);
+  expect(await migrate(driver)).toEqual(['0011_fixtures.sql','0012_findings.sql','0013_compare.sql','0014_repair.sql','0015_memory.sql']);
   const after=(await sql.query('SELECT to_jsonb(f) AS row FROM nazir.findings f')).rows[0]!.row as Record<string,unknown>;
   for(const [key,value]of Object.entries(before))expect(JSON.stringify(after[key])).toBe(JSON.stringify(value));expect(after.check_id).toBeNull();
   expect((await sql.query('SELECT * FROM nazir.conversation_messages')).rows).toHaveLength(1);expect((await sql.query('SELECT * FROM nazir.state_readings')).rows).toHaveLength(1);

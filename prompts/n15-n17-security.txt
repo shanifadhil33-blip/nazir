@@ -1,0 +1,18 @@
+# N15 to N17 security audit (skill: security-audit-before-deploy), Oct 20 2026, Bilal
+Scope: backend only. No new routes, pages or API handlers in this chunk; new services, migrations 0013 to 0015 and three live scripts.
+
+1 Auth and session: no change. New services take a member id and run inside withMember (RLS plus role checks); worker paths run inside withWorker with a workspace id.
+2 Authorization and isolation:
+  * comparisons: RLS enabled and forced, workspace policy, restrictive read and insert for owner and reviewer, worker read only, append only (update, delete, truncate refused). Supplier and viewer read a projection. Tests: tests/compare, tests/db/security (table count 30, tenant table count 24, cross workspace read and insert refused).
+  * repairs: members cannot insert kind repair (restrictive policy plus trigger); approval needs a reasoned approval row, a reviewer role and a decider who is not the proposer; materialize is worker only and checks the approval itself. Tests: tests/repair.
+  * lessons: effect allowlist in the database; workers may only insert suggested lessons; plans inserted by workers must be proposed by Nazir.
+  * FIXED (Medium, 0015 b_lesson_effect): a member with raw SQL could have set a waiting big lesson to active, or changed the effect of an active big lesson, reusing an older approval. Now a big lesson becomes active only with an owner approval written in the same change, and an active big lesson cannot change its effect. Regression test in tests/memory ("Owner approval required").
+  * Workspace separation for lessons: tests/memory "keeps lessons inside their own workspace" (list, edit and delete across workspaces refused or invisible; plans never use another workspace's lessons).
+3 Secrets: repo scan finds only test fakes. Live scripts redact connection strings, bearer tokens and key shapes. Nothing from /workspace/nazir-secrets is in the repo.
+4 Input: every new service parses input with zod (strict objects, uuid ids, text limits). enqueueRun validates order and per scenario repeats. Talk to correct puts the message and lesson list in UNTRUSTED blocks, accepts only strict JSON with an allowlisted effect and a known lesson id, and falls back to a plain reader.
+  * Low, by design: talk to correct writes the change the reviewer asked for without a second confirmation. Every change is a revision with undo, and big lessons still need the owner. The screen should show the reply with an Undo button.
+5 Abuse: live scripts have hard call caps (repair 80, memory 12 and 40, compare 20). Comparison pair review capped at 20.
+6 Data exposure: retest view shows hidden cases to suppliers only as a count; comparison projection hides hidden details.
+7 Headers: no change this chunk.
+8 Dependencies: pnpm audit needs the network; the box network was down for this turn (TLS EOF to every host). To run next turn.
+10 Live re-test: blocked by the same outage (Neon not reachable). To run next turn with the live checks.

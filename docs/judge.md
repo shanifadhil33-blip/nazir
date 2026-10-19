@@ -53,3 +53,7 @@ Labels say `builder label (not an independent human review)`. They are test expe
 `calibrate` reports agreement with the full denominator, language denominators, unavailable and not run counts. For critical items it also reports contradicted precision as true contradictions divided by predictions of contradicted, and recall as true contradictions divided by labelled contradictions. Zero denominators remain explicit rather than becoming a score. Unavailable and not run items never count as agreements.
 
 `scripts/judge-calibrate.mjs` is a live probe, excluded from the gate. MAX_CALLS defaults to 30 and cannot exceed 60. Reservations count unsuccessful network attempts. Once the cap is spent, remaining items are not run. JUDGE_AGENT_FAMILIES defaults to nvidia_nemotron; CALIBRATION_IDS selects item IDs. The script prints per item metadata and summary denominators, with no keys or raw provider errors. Only its syntax was checked here.
+
+## Approved reviewer notes (N16)
+
+An approved big lesson of kind `judge_note` is passed to the reply review for its family as `approvedReviewerNotes` in the trusted block. The rubric text is unchanged, so the prompt hash shows when notes were present.

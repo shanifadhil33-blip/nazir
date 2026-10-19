@@ -15,8 +15,8 @@ beforeAll(async () => {
 afterAll(async () => { await db?.close(); });
 it('enables and forces RLS with workspace policies on every table', async () => {
   const rows = (await db.owner.query("SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='nazir' AND c.relkind='r'")).rows;
-  expect(rows).toHaveLength(29);
-  expect(tables).toHaveLength(23);
+  expect(rows).toHaveLength(30);
+  expect(tables).toHaveLength(24);
   for (const row of rows) { expect(row.relrowsecurity).toBe(true); expect(row.relforcerowsecurity).toBe(true); }
   expect((await db.owner.query("SELECT * FROM pg_policies WHERE schemaname='nazir' AND policyname='workspace'")).rows).toHaveLength(tables.length);
 });

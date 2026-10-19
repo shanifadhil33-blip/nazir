@@ -96,3 +96,10 @@ The worker runs record checks first, then the injected judge factory or the N09 
 result_summary stores records and semantic separately. Its results field is also {records,semantic} for semantic runs. Records only runs retain their earlier results array. Provider metadata for answered agent calls now includes family. Findings are inserted alongside the final evidence and verdict under the lease lock, with one audit event per new finding. Retry attempts and inconclusive results create none. See [findings.md](findings.md).
 
 Use runner-library-fixture to prepare all 48 library scenarios with a separate invented reviewer and an 80 call plan. The live runner accepts RUN_WORKSPACE=library or WORKSPACE_ID and RUN_SCENARIOS stable keys. It prints record checks and semantic status, issue, evidence span, provider and model. The helper is idempotent. These scripts were checked for syntax only.
+
+## N15 and N16 additions
+
+* The manifest carries `manifestVersion: 'n15'`; `runner_version` stays `n13` because migration 0012 keys on it.
+* A repair version is resolved from its frozen config (`resolveExecutable`) and checked against its executable hash.
+* `enqueueRun` accepts an `order` (conversations are created in that order and claimed in that order), `repeatsFor` per scenario and frozen `lessons`.
+* The runner CLI picks one scenario per stable key and language, library rows first.
