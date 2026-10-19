@@ -1,6 +1,6 @@
 # Runner
 
-N10 adds a backend queue and worker. It adds no screens or HTTP routes. The default evaluator returns `inconclusive`, reason `checks_missing`; N11 supplies actual checks. A successful agent reply is never itself evidence that a case exists.
+N10 adds a backend queue and worker. It adds no screens or HTTP routes. N11 makes the record checks evaluator the default; its full ordered results are stored in the conversation summary. See [record checks](checks.md). A successful agent reply is never itself evidence that a case exists.
 
 ## States
 
@@ -85,4 +85,4 @@ Scripts never read an environment file. Credentials and AI keys come from the pr
 | MAX_CONVERSATIONS | Processed queue items, default 2, maximum 6 |
 | MAX_CALLS | Network calls across the whole process, including failures; default 24, maximum 60 |
 
-The script enqueues the fixture scenarios, then claims queue work until that run is final, no work is currently eligible, or a cap is reached. It does not sleep through retry backoff. Run it again with the same key to continue eligible retries. Claims serve the shared queue, so other eligible runs may consume the process item cap. Output includes conversation status/reason, provider/model/failover, tenant, case references and queues from stored inspection readings, and the run status. It never prints keys, addresses or full transcripts. The default evaluator means a completed journey remains inconclusive until N11 supplies checks.
+The script enqueues the fixture scenarios, then claims queue work until that run is final, no work is currently eligible, or a cap is reached. It does not sleep through retry backoff. Run it again with the same key to continue eligible retries. Claims serve the shared queue, so other eligible runs may consume the process item cap. Output includes conversation status/reason, provider/model/failover, tenant, case references and queues from stored inspection readings, and the run status. It never prints keys, addresses or full transcripts. Output also includes each record check id, status, expected and observed evidence.

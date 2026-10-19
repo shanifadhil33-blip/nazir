@@ -8,10 +8,11 @@ import { hash } from '../../sandbox/demo-rule-pack';
 import { AiChainExhausted, type CallMeta } from '../ai/chain';
 import { networkChatModel, type RunnerModel } from './network-model';
 import type { RunnerScenario } from './demo-scenarios';
+import { recordChecksEvaluator } from '../checks/record-checks';
 type ToolEvents = Awaited<ReturnType<typeof runServiceAgent>>['toolCalls'];
-export type EvaluationInput = { scenario: RunnerScenario; version: AgentVersion; reply: string; transcript: Message[]; toolCalls: ToolEvents; reading: StateReading };
+export type EvaluationInput = { scenario: RunnerScenario; version: AgentVersion; reply: string; transcript: Message[]; toolCalls: ToolEvents; reading: StateReading; expectedTenant?: string };
 export type Verdict = { status: 'passed' | 'failed' | 'inconclusive'; reason?: string; results: unknown };
-export const defaultEvaluator = (): Verdict => ({ status:'inconclusive',reason:'checks_missing',results:{} });
+export const defaultEvaluator = recordChecksEvaluator;
 export type ModelContext = { workspaceId: string; conversationId: string; onCall: (meta: CallMeta) => void; reserveCall: () => Promise<void>; remainingMs: () => number };
 type Claim = { workspace_id: string; conversation_id: string; run_id: string; attempt: number };
 const infrastructure = new Set(['provider_exhausted','timeout','lease_expired','dirty_tenant','reading_failed']);
@@ -56,7 +57,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       if (!ok) lost=true;
     }).catch(() => { lost=true; }).finally(() => { beatBusy=false; });
   },leaseSeconds*1000/3);
-  let verdict: Verdict = defaultEvaluator();
+  let verdict: Verdict = { status:'inconclusive',reason:'reading_missing',results:[] };
   const deadline = new Promise<never>((_,reject) => { timer=setTimeout(() => { reason='timeout'; stopped=true; reject(new Error('Attempt timeout')); },conversationTimeoutMs); });
   const bounded = <T>(p: Promise<T>) => Promise.race([p,deadline]);
   try {
@@ -96,7 +97,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
         if (!lost) {
           try { reading=await bounded(channel.snapshot(tenant)); } catch { reason ??= 'reading_failed'; }
           if (reading && !reason) {
-            try { verdict=await bounded(Promise.resolve(evaluate({ scenario:data.scenario,version,reply,transcript,toolCalls,reading }))); }
+            try { verdict=await bounded(Promise.resolve(evaluate({ scenario:data.scenario,version,reply,transcript,toolCalls,reading,expectedTenant:tenant }))); }
             catch { reason ??= 'bad_evaluator'; }
           }
         }
@@ -105,9 +106,10 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   } catch { reason ??= 'reading_failed'; }
   finally { clearTimeout(timer); clearInterval(beat); stopped=true; }
   if (lost) return { ...claim,lost:true };
-  if (!verdict || !['passed','failed','inconclusive'].includes(verdict.status)) { reason='bad_evaluator'; verdict=defaultEvaluator(); }
-  if (reason) verdict={ status:'inconclusive',reason,results:{} };
-  if (!reading && !reason) verdict={ status:'inconclusive',reason:'reading_failed',results:{} };
+  if (!verdict || !['passed','failed','inconclusive'].includes(verdict.status)) { reason='bad_evaluator'; verdict={ status:'inconclusive',reason:'bad_evaluator',results:[] }; }
+  const missingReadingResults = () => evaluate===recordChecksEvaluator ? recordChecksEvaluator({ scenario:data.scenario,reply,toolCalls,reading:undefined,expectedTenant:tenant }).results : {};
+  if (reason) verdict={ status:'inconclusive',reason,results:reading ? {} : missingReadingResults() };
+  if (!reading && !reason) verdict={ status:'inconclusive',reason:'reading_failed',results:missingReadingResults() };
   const status=verdict.status, resultReason=status==='inconclusive' ? code(verdict.reason) : verdict.reason ? code(verdict.reason) : null;
   const retry=status==='inconclusive' && infrastructure.has(resultReason!) && attempt<data.max_attempts;
   return work(async (db) => {

@@ -23,7 +23,7 @@ async function due(cid: unknown) { await db.owner.query("UPDATE nazir.conversati
 it.each(['baseline','planted_wrong_queue','planted_false_submit'].flatMap((version) => ['en','ar'].map((language) => ({ version,language }))))('plays $version in $language and persists inspection evidence',async ({ version,language }) => {
   const run=await enqueue(db,f,version,language); await next();
   const c=await row(run.id);
-  expect(c).toMatchObject({ status:'inconclusive',inconclusive_reason:'checks_missing',attempt:1 });
+  expect(c).toMatchObject({ status:version==='baseline'?'passed':'failed',inconclusive_reason:null,attempt:1 });
   const messages=(await db.owner.query('SELECT * FROM nazir.conversation_messages WHERE conversation_id=$1 ORDER BY seq',[c.id])).rows;
   expect(messages.filter((m) => m.speaker==='resident')).toHaveLength(3);
   expect(messages.map((m) => m.seq)).toEqual(messages.map((_,i) => i+1));
@@ -36,7 +36,7 @@ it.each(['baseline','planted_wrong_queue','planted_false_submit'].flatMap((versi
   expect(stored.reading.cases).toEqual(observed.cases); expect(stored.reading.receipts).toEqual(observed.receipts);
   expect(stored.reading.cases).toHaveLength(version==='planted_false_submit'?0:1);
   if (version!=='planted_false_submit') expect(stored.reading.cases[0]).toMatchObject({ category:'complaint',queue:version==='baseline'?'complaint_review':'general_information',priorRequestRef:language==='en'?'SR-1042':'SR-2077',escalation:{ queue:version==='baseline'?'complaint_review':'general_information' } });
-  expect((await status(run.id)).status).toBe('inconclusive');
+  expect((await status(run.id)).status).toBe(version==='baseline'?'passed':'failed');
 });
 it('accepts a scripted passed verdict and finishes the run',async () => {
   const run=await enqueue(db,f); await next({ evaluate:passed });

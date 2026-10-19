@@ -1,0 +1,8 @@
+PASS worker cannot read sandbox cases
+PASS case reference format
+PASS duplicate idempotency key refused
+PASS second escalation for the same case refused
+PASS sandbox role cannot read nazir schema
+PASS case cannot be deleted
+PASS another requester sees no case
+PASS own requester sees case and escalation

@@ -1,0 +1,58 @@
+
+> nazir@0.1.0 gate /workspace/nazir
+> node scripts/gate.mjs
+
+
+> nazir@0.1.0 lint /workspace/nazir
+> eslint .
+
+
+> nazir@0.1.0 typecheck /workspace/nazir
+> tsc --noEmit
+
+
+> nazir@0.1.0 test /workspace/nazir
+> vitest run
+
+
+ RUN  v4.1.12 /workspace/nazir
+
+
+ Test Files  35 passed (35)
+      Tests  903 passed (903)
+   Start at  14:50:56
+   Duration  11.67s (transform 1.43s, setup 0ms, import 5.35s, tests 70.98s, environment 3ms)
+
+
+> nazir@0.1.0 build /workspace/nazir
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 24ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 122ms
+  Running TypeScript ...
+  Finished TypeScript in 1265ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/8) ...
+  Generating static pages using 7 workers (2/8) 
+  Generating static pages using 7 workers (4/8) 
+  Generating static pages using 7 workers (6/8) 
+✓ Generating static pages using 7 workers (8/8) in 209ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/health
+├ ƒ /api/sandbox/agent
+├ ○ /icon.svg
+├ ○ /privacy
+└ ○ /terms
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

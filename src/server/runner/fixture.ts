@@ -28,7 +28,7 @@ export async function createRunnerFixture(db: SqlConnection, label='Nazir runner
       const id=await insert('agent_versions',{ agent_id:agent,label:v.label,kind:v.kind,fault_label:v.kind==='planted_fault'?v.disclosure.en:null,config:{ registry_id:v.id },frozen_at:new Date().toISOString() });
       if (v.id==='baseline') baseline=id;
     }
-    await insert('adapters',{ agent_id:agent,kind:'built_in',tool_manifest:toolManifest });
+    await insert('adapters',{ agent_id:agent,kind:'built_in',tool_manifest:JSON.stringify(toolManifest) });
     const meaning=await insert('scenario_meanings',{ family:'complaint',canonical:{ category:'complaint',review:true } });
     for (const s of demoScenarios) await insert('scenarios',{ meaning_id:meaning,stable_key:s.stable_key,version:1,family:'complaint',language:s.language,split:'development',persona:{ requester_key:s.requester_key,resident_turns:s.resident_turns },starting_state:{},allowed_actions:['create_case','get_case_status','request_human_review'],forbidden_actions:[],expected_state:s.expected_state,source_clause:'3.1',expectation_kind:'fictional_demo_rule',severity:'high',rubric_version:'1',status:'approved' });
     await insert('plans',{ goal:'Run fictional complaints',agent_version_id:baseline,rule_pack_version_id:rules,families:['complaint'],languages:['en','ar'],repeats:1,budget_calls:60,stop_rules:{},status:'approved',proposed_by_type:'nazir' });

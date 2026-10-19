@@ -5,6 +5,7 @@ import { poolDriver } from '../src/server/db/driver.ts';
 import { withWorker } from '../src/server/db/context.ts';
 import { enqueueRun } from '../src/server/runner/enqueue.ts';
 import { runNextConversation } from '../src/server/runner/worker.ts';
+import { recordChecksEvaluator } from '../src/server/checks/record-checks.ts';
 import { networkChatModel } from '../src/server/runner/network-model.ts';
 function cap(name,fallback,max) {
   const value=Number(process.env[name]??fallback);
@@ -34,13 +35,16 @@ export async function main() {
     const state=() => withWorker(driver,wid,async (db) => (await db.query('SELECT status FROM nazir.runs WHERE id=$1',[run.id])).rows[0].status);
     for (let n=0;n<maxConversations && calls<maxCalls;n++) {
       if (['passed','failed','inconclusive','cancelled'].includes(await state())) break;
-      const result=await runNextConversation({ driver,inspectionDriver,workerId:'runner_cli',chatModelFactory:(context) => networkChatModel(driver,context,{ fetch }) });
+      const result=await runNextConversation({ driver,inspectionDriver,workerId:'runner_cli',evaluate:recordChecksEvaluator,chatModelFactory:(context) => networkChatModel(driver,context,{ fetch }) });
       if (!result) break;
     }
-    const output=await withWorker(driver,wid,async (db) => (await db.query(`SELECT c.id,c.status,c.inconclusive_reason AS reason,c.last_error,c.model_provider AS provider,c.model_id AS model,c.failover,c.sandbox_tenant AS tenant,
+    const output=await withWorker(driver,wid,async (db) => (await db.query(`SELECT c.id,c.status,c.inconclusive_reason AS reason,c.last_error,c.result_summary,c.model_provider AS provider,c.model_id AS model,c.failover,c.sandbox_tenant AS tenant,
       (SELECT reading->'cases' FROM nazir.state_readings s WHERE s.conversation_id=c.id ORDER BY s.created_at DESC,s.id DESC LIMIT 1) AS cases
       FROM nazir.conversations c WHERE c.run_id=$1 ORDER BY c.created_at,c.id`,[run.id])).rows);
-    for (const c of output) console.log(JSON.stringify({ ...c,cases:(c.cases??[]).map((r) => ({ reference:r.reference,queue:r.queue,escalation_queue:r.escalation?.queue??null })) }));
+    for (const { result_summary,...c } of output) {
+      for (const check of result_summary?.results??[]) console.log(JSON.stringify({ conversation_id:c.id,id:check.id,status:check.status,expected:check.evidence.expected,observed:check.evidence.observed }));
+      console.log(JSON.stringify({ ...c,cases:(c.cases??[]).map((r) => ({ reference:r.reference,queue:r.queue,escalation_queue:r.escalation?.queue??null })) }));
+    }
     console.log(JSON.stringify({ run_id:run.id,status:await state(),calls }));
   } finally { await app.end(); await inspect.end(); }
 }
