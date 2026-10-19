@@ -184,3 +184,18 @@ it('expires the total budget while waiting for provider spacing without a networ
   expect(await result).toMatchObject({ attempts:[{ reason:'deadline',outcome:'skipped' }] }); expect(fetch).toHaveBeenCalledOnce();
   expect((await store.usageToday())[0]!.calls).toBe(1);
 });
+it('accepts a tool call reply that omits content, as OVH and Requesty send it (live probe, 19 Oct)', async () => {
+  const tools = [{ type: 'function' as const, function: { name: 'create_case', parameters: { type: 'object', properties: { needs_human_review: { type: 'boolean' } }, required: ['needs_human_review'], additionalProperties: false } } }];
+  const s = setup([Response.json({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', reasoning: 'x', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'create_case', arguments: '{"needs_human_review":true}' } }] } }] })]);
+  const result = await s.chain.chat({ ...input, tools });
+  expect(result.meta).toMatchObject({ provider: 'requesty', failover: false });
+  expect(result.content).toBeNull();
+  expect(result.tool_calls?.[0]?.name).toBe('create_case');
+});
+it('does not tag failover when the only earlier models have no key configured', async () => {
+  const s = setup([], { GEMINI_API_KEY: undefined });
+  const result = await s.chain.chat({ purpose: 'judge', task: 'test_run', messages: [], agentFamily: 'nvidia_nemotron' });
+  expect(result.meta.attempts[0]).toMatchObject({ provider: 'gemini', reason: 'no_key' });
+  expect(result.meta).toMatchObject({ provider: 'requesty', failover: false, failoverReason: null });
+  expect(s.store.records.at(-1)).toMatchObject({ failover: false });
+});

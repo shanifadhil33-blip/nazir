@@ -29,7 +29,9 @@ function cooldownDuration(reason: Reason): number {
 }
 function parseReply(body: unknown): ChatResponse | null {
   if (!body || typeof body !== 'object' || !('choices' in body) || !Array.isArray(body.choices)) return null;
-  const message = body.choices[0]?.message;
+  const raw = body.choices[0]?.message;
+  // Some providers (OVH gpt-oss, Requesty) omit content entirely on a tool call reply; treat a missing content as null.
+  const message = raw && typeof raw === 'object' ? { ...raw, content: raw.content === undefined ? null : raw.content } : raw;
   if (!message || (message.content !== null && typeof message.content !== 'string')) return null;
   let calls: ToolCall[] | undefined;
   if (message.tool_calls !== undefined) {
@@ -152,8 +154,10 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
         }
         const attempt: Attempt = { provider: provider.id, model, family, outcome, reason, httpStatus: status, latencyMs: Math.max(0,Math.round(now() - at)) };
         attempts.push(attempt);
-        await store.record({ ...attempt, at, task: request.task, purpose: request.purpose, failover: attempts.length > 1, attemptNo: attempts.length, workspaceId: request.workspaceId, conversationId: request.conversationId });
-        if (outcome === 'ok' && reply) return { ...reply, meta: { provider: provider.id, model, family, attempts, failover: attempts.length > 1, failoverReason: attempts.length > 1 ? attempts[0]!.reason : null } };
+        await store.record({ ...attempt, at, task: request.task, purpose: request.purpose, failover: attempts.slice(0, -1).some((item) => item.reason !== 'no_key'), attemptNo: attempts.length, workspaceId: request.workspaceId, conversationId: request.conversationId });
+        // A provider with no key configured is not a failover: the chain simply starts at the first configured model.
+        const tried = attempts.filter((item) => item.reason !== 'no_key');
+        if (outcome === 'ok' && reply) return { ...reply, meta: { provider: provider.id, model, family, attempts, failover: tried.length > 1, failoverReason: tried.length > 1 ? tried[0]!.reason : null } };
         if (reason === 'deadline') break;
       }
       throw new AiChainExhausted(attempts);

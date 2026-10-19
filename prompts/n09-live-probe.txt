@@ -1,0 +1,68 @@
+# N09 real probe, date: Mon, 19 Oct 2026 10:28:04 GMT (Dubai = UTC+4)
+## 1. agent chain, --scenarios (nothing down, then first answering provider down, then two), MAX_CALLS 6
+scenario 1
+requesty | nvidia/nemotron-3-ultra-550b-a55b | error | invalid_response | 200 | 3603ms
+kilo | nvidia/nemotron-3-ultra-550b-a55b:free | ok | ok | 200 | 1925ms
+answer kilo | failover true
+scenario 2
+requesty | nvidia/nemotron-3-ultra-550b-a55b | error | invalid_response | 200 | 3071ms
+kilo | nvidia/nemotron-3-ultra-550b-a55b:free | error | forced_down | none | 0ms
+openrouter | nvidia/nemotron-3-super-120b-a12b:free | ok | ok | 200 | 4300ms
+answer openrouter | failover true
+scenario 3
+requesty | nvidia/nemotron-3-ultra-550b-a55b | error | timeout | none | 12001ms
+kilo | nvidia/nemotron-3-ultra-550b-a55b:free | error | forced_down | none | 0ms
+openrouter | nvidia/nemotron-3-super-120b-a12b:free | error | forced_down | none | 0ms
+ovh | gpt-oss-120b | error | invalid_response | 200 | 12165ms
+ovh | Qwen3.5-397B-A17B | skipped | cap_reached | none | 0ms
+zai | glm-4.7-flash | skipped | cap_reached | none | 0ms
+cloudflare | @cf/openai/gpt-oss-120b | skipped | cap_reached | none | 0ms
+gemini | gemini-3.5-flash-lite | skipped | no_key | none | 0ms
+nvidia | nvidia/nemotron-3-super-120b-a12b | skipped | no_key | none | 0ms
+kilo | kilo-auto/free | error | forced_down | none | 0ms
+exhausted
+exit 0
+## 2. agent chain, PROBE_FORCE_DOWN=requesty,kilo,openrouter (fault injection), MAX_CALLS 3
+scenario 1
+requesty | nvidia/nemotron-3-ultra-550b-a55b | error | forced_down | none | 0ms
+kilo | nvidia/nemotron-3-ultra-550b-a55b:free | error | forced_down | none | 0ms
+openrouter | nvidia/nemotron-3-super-120b-a12b:free | error | forced_down | none | 0ms
+ovh | gpt-oss-120b | error | invalid_response | 200 | 25713ms
+ovh | Qwen3.5-397B-A17B | error | invalid_response | 200 | 4956ms
+zai | glm-4.7-flash | ok | ok | 200 | 3805ms
+answer zai | failover true
+exit 0
+## 3. judge chain for a Nemotron agent (family removed), MAX_CALLS 3
+scenario 1
+gemini | gemini-3.5-flash-lite | skipped | no_key | none | 0ms
+requesty | google/gemma-4-31b-it | error | invalid_response | 200 | 9124ms
+ovh | gpt-oss-120b | error | invalid_response | 200 | 13701ms
+zai | glm-4.7-flash | error | rate_limited | 429 | 770ms
+cloudflare | @cf/openai/gpt-oss-120b | skipped | cap_reached | none | 0ms
+exhausted
+exit 1
+date: Mon, 19 Oct 2026 10:29:51 GMT
+
+# Rerun after the fix (missing content on a tool call reply is now null), date: Mon, 19 Oct 2026 10:30:35 GMT
+## 4. agent chain, --scenarios, MAX_CALLS 4
+scenario 1
+requesty | nvidia/nemotron-3-ultra-550b-a55b | ok | ok | 200 | 3203ms
+answer requesty | failover false
+scenario 2
+requesty | nvidia/nemotron-3-ultra-550b-a55b | error | forced_down | none | 0ms
+kilo | nvidia/nemotron-3-ultra-550b-a55b:free | ok | ok | 200 | 3590ms
+answer kilo | failover true
+scenario 3
+requesty | nvidia/nemotron-3-ultra-550b-a55b | error | forced_down | none | 0ms
+kilo | nvidia/nemotron-3-ultra-550b-a55b:free | error | forced_down | none | 0ms
+openrouter | nvidia/nemotron-3-super-120b-a12b:free | error | invalid_response | 200 | 6743ms
+ovh | gpt-oss-120b | ok | ok | 200 | 11698ms
+answer ovh | failover true
+exit 0
+## 5. judge chain for a Nemotron agent, MAX_CALLS 2
+scenario 1
+gemini | gemini-3.5-flash-lite | skipped | no_key | none | 0ms
+requesty | google/gemma-4-31b-it | ok | ok | 200 | 8725ms
+answer requesty | failover true
+exit 0
+date: Mon, 19 Oct 2026 10:31:10 GMT

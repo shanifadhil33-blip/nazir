@@ -59,7 +59,7 @@ Active model and provider cooldowns are skipped as `cooling`. Provider cooldown 
 
 Other local reasons are `no_key`, `forced_down`, and `cap_reached`. `dropped` is reserved in the record vocabulary; active provider drops use `cooling`. Error bodies are redacted of environment credentials before classification, limited to 200 characters and discarded. Raw provider bodies and exception messages are never included in chain errors or records. When every entry fails, `AiChainExhausted` carries only the structured attempts.
 
-Successful replies include content, mapped tool calls and metadata: answering provider/model/family, attempts, failover and the first failed reason. Skipped entries count toward failover: an answer from a later configured slot has failover=true even when an earlier slot lacked credentials.
+Successful replies include content, mapped tool calls and metadata: answering provider/model/family, attempts, failover and the first failed reason. Slots skipped only because no key is configured (no_key) do not count toward failover, so a judge chain that starts at Requesty because Gemini has no key is not tagged; every other earlier attempt (cooling, cap_reached, forced_down, errors) does. Replies whose message has no content field at all (OVH gpt-oss and Requesty on a tool call, seen in the live probe on 19 Oct) are read as content null.
 
 ## Daily budgets and storage
 
