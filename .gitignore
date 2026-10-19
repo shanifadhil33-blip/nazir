@@ -31,3 +31,8 @@ test-results/
 .DS_Store
 .idea/
 .vscode/
+
+# local package cache and gate audits
+.pnpm-cache/
+.pnpm-state/
+.gate-audit*/

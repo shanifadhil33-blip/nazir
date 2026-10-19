@@ -1,0 +1,65 @@
+
+> nazir@0.1.0 gate /workspace/nazir
+> node scripts/gate.mjs
+
+
+> nazir@0.1.0 lint /workspace/nazir
+> eslint .
+
+
+> nazir@0.1.0 typecheck /workspace/nazir
+> tsc --noEmit
+
+
+> nazir@0.1.0 test /workspace/nazir
+> vitest run
+
+
+ RUN  v3.2.7 /workspace/nazir
+
+ ✓ tests/health.test.ts (2 tests) 5ms
+ ✓ tests/pages.test.tsx (4 tests) 11ms
+ ✓ tests/no-optional-copy.test.ts (5 tests) 23ms
+ ✓ tests/no-jargon.test.ts (29 tests) 31ms
+ ✓ tests/no-dash.test.ts (8 tests) 62ms
+ ✓ tests/no-ai-look.test.ts (23 tests) 31ms
+ ✓ tests/gate.test.ts (7 tests) 635ms
+
+ Test Files  7 passed (7)
+      Tests  78 passed (78)
+   Start at  10:20:16
+   Duration  893ms (transform 245ms, setup 0ms, collect 2.28s, tests 798ms, environment 1ms, prepare 527ms)
+
+
+> nazir@0.1.0 build /workspace/nazir
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 27ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 147ms
+  Running TypeScript ...
+  Finished TypeScript in 1185ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/7) ...
+  Generating static pages using 7 workers (1/7) 
+  Generating static pages using 7 workers (3/7) 
+  Generating static pages using 7 workers (5/7) 
+✓ Generating static pages using 7 workers (7/7) in 206ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/health
+├ ○ /icon.svg
+├ ○ /privacy
+└ ○ /terms
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+EXIT 0
