@@ -19,6 +19,7 @@ const matrix = {
   'plan.approve': ['service_owner', 'quality_reviewer'],
   'proposal.create': ['supplier_maintainer'],
   'proposal.decide': ['quality_reviewer'],
+  'finding.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
   'finding.override': ['quality_reviewer'],
   'finding.accept': ['service_owner', 'quality_reviewer'],
   'lesson.edit': ['service_owner', 'quality_reviewer'],

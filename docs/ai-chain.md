@@ -23,8 +23,8 @@ OVH Meta-Llama-3_3-70B-Instruct is excluded because preflight observed a boolean
 
 Agent order:
 
-1. Requesty Nemotron ultra
-2. Kilo Nemotron ultra free
+1. Kilo Nemotron ultra free
+2. Requesty Nemotron ultra
 3. OpenRouter Nemotron super free
 4. OVH gpt-oss-120b
 5. OVH Qwen3.5-397B-A17B
@@ -34,9 +34,9 @@ Agent order:
 9. NVIDIA Nemotron super
 10. Kilo auto free
 
-Judge order: Gemini, Requesty Gemma 4, OVH gpt-oss-120b, Z.ai glm-4.7-flash, Cloudflare gpt-oss-120b. Supply a known `agentFamily`; all matching family entries are removed before attempting the judge chain. Missing or unknown agent family is refused because separation cannot be established. Kilo auto is never a judge. Judge requests must choose a validation callback suited to their expected answer.
+Judge order: Gemini, Requesty Gemma 4, OVH gpt-oss-120b, Z.ai glm-4.7-flash, Cloudflare gpt-oss-120b. Supply known `agentFamilies` for every family that answered an agent call; all matching family entries are removed before attempting the judge chain. Missing, empty or unknown agent families are refused because separation cannot be established. Kilo auto is never a judge. Judge requests must choose a validation callback suited to their expected answer.
 
-`chain.chat` accepts purpose, task, messages, tools, token limit, temperature, validation callback, agent family, workspace and conversation IDs, and a deadline. The default deadline is 90 seconds for the entire chat; each network attempt also has its provider timeout. Attempts stop when the budget runs out, including time waiting for a provider queue. There are no retries within an entry. All registered providers currently allow one in flight, using FIFO queues shared by chain instances in a process with the same clock. Across processes, caps and cooldowns persist in PostgreSQL; concurrency and spacing remain process local. OVH's external per-IP rate limit can still apply when several processes share an IP.
+`chain.chat` accepts purpose, task, messages, tools, token limit, temperature, validation callback, agent family or family list, workspace and conversation IDs, and a deadline. The default deadline is 90 seconds for the entire chat; each network attempt also has its provider timeout. Attempts stop when the budget runs out, including time waiting for a provider queue. There are no retries within an entry. All registered providers currently allow one in flight, using FIFO queues shared by chain instances in a process with the same clock. Across processes, caps and cooldowns persist in PostgreSQL; concurrency and spacing remain process local. OVH's external per-IP rate limit can still apply when several processes share an IP.
 
 Tool calls must name a supplied tool and contain JSON arguments that match its schema. The checker supports objects, properties, required fields, additionalProperties=false, exact booleans and numeric types, strings with length/pattern/enum, and anyOf including null. Invalid calls are rejected before any sandbox tool runs. Caller validation can reject an answer too; arbitrary validation text is reduced to `invalid_response` (or `invalid_tool_args`) so it cannot enter metadata.
 
@@ -78,3 +78,5 @@ Recorded attempts contain timestamp, task, purpose, provider, model, family, out
 `forcedDown` accepts provider IDs or `provider/model` IDs. It records `forced_down` without fetching, reserving or cooling. `scripts/ai-chain-probe.mjs` uses a fixed synthetic Arabic create_case request, memory storage and the same chain. MAX_CALLS defaults to 6 and has a hard maximum of 20 network attempts, counting failures. PROBE_FORCE_DOWN is a comma list; PROBE_PURPOSE is agent or judge; judge also needs PROBE_AGENT_FAMILY. The probe validates that a tool call was returned. It is a transport/tool probe, not a judge-quality evaluation.
 
 With `--scenarios`, calls run sequentially with the configured fault set, then the first answering provider added to that set, then the next answering provider added too. It stops when the shared cap is spent or a scenario exhausts. The first scenario exhausting returns exit code 1. Output contains one line per attempt and the answering provider/failover flag, never full replies or keys. It loads TS with the same Node hooks as the sandbox smoke script. Do not run it as part of the gate. Unit tests exercise helpers with fake fetch; `node --check scripts/ai-chain-probe.mjs` checks parsing without network traffic.
+
+The 19 October agent order prefers Kilo ultra free, then Requesty ultra, based on the supplied live transport observations. All other slots and the judge order retain their earlier order. This phase made no live provider calls. The semantic judge and its calibration method are documented in [judge.md](judge.md).

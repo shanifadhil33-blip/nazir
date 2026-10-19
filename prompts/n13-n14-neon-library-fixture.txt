@@ -1,0 +1,7 @@
+# N13 library fixture on Neon (Nazir library fixture workspace), date: Mon, 19 Oct 2026 18:48:08 GMT
+run 1: exit 0 (imports 48 scenarios through the app login as the author, approvals by a second invented member Khalid Hamdan, quality reviewer)
+counts after run 1: {"lib":"48","approved":"48","hidden":"16","audit":"50","members":"2","budget":80}
+run 2: exit 0
+counts after run 2: {"lib":"48","approved":"48","hidden":"16","audit":"50","members":"2","budget":80}
+PASS run 2 output identical to run 1 (idempotent)
+scenario keys 48 versions 3

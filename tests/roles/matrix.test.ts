@@ -14,6 +14,7 @@ const expected: Record<Action, boolean[]> = {
   'plan.approve': [true, false, true, false],
   'proposal.create': [false, true, false, false],
   'proposal.decide': [false, false, true, false],
+  'finding.read': [true,true,true,true],
   'finding.override': [false, false, true, false],
   'finding.accept': [true, false, true, false],
   'lesson.edit': [true, false, true, false],

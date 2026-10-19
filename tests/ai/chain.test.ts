@@ -13,39 +13,39 @@ function setup(responses: (Response | Error)[] = [], overrides: Env = {}, forced
   const store = memoryAiStore(now);
   const fetch = vi.fn<typeof globalThis.fetch>(async () => { const response = responses.shift() ?? ok(); if (response instanceof Error) throw response; return response; });
   const chain = createAiChain({ fetch, store, now, sleep, env: { ...env, ...overrides }, forcedDown });
-  return { chain, fetch, store, now, advance: (ms: number) => { time += ms; } };
+  return { chain, fetch, store, now, sleep, advance: (ms: number) => { time += ms; } };
 }
 afterEach(() => vi.useRealTimers());
 it('answers with the first model and records its metadata', async () => {
   const { chain, store, fetch } = setup();
   const result = await chain.chat(input);
-  expect(result.meta).toMatchObject({ provider: 'requesty', model: 'nvidia/nemotron-3-ultra-550b-a55b', failover: false, failoverReason: null });
+  expect(result.meta).toMatchObject({ provider: 'kilo', model: 'nvidia/nemotron-3-ultra-550b-a55b:free', failover: false, failoverReason: null });
   expect(store.records).toHaveLength(1); expect(store.records[0]).toMatchObject({ outcome: 'ok', attemptNo: 1, task: 'test_run' });
   expect(fetch).toHaveBeenCalledOnce();
 });
 it.each(['per day','per-day','daily','neurons','free-models-per-day','quota'])('cools a day used response mentioning %s for an hour', async (text) => {
   const s = setup([new Response(text,{ status:429 })]);
   const first = await s.chain.chat(input);
-  expect(first.meta).toMatchObject({ provider: 'kilo', failover: true, failoverReason: 'day_used' });
+  expect(first.meta).toMatchObject({ provider: 'requesty', failover: true, failoverReason: 'day_used' });
   expect((await s.store.activeCooldowns())[0]!.until - s.now()).toBe(3600000);
   const second = await s.chain.chat(input); expect(second.meta.attempts[0]!.reason).toBe('cooling');
   s.advance(61 * 60000);
-  expect((await s.chain.chat(input)).meta.provider).toBe('requesty');
+  expect((await s.chain.chat(input)).meta.provider).toBe('kilo');
 });
 it('cools an ordinary rate limit for sixty seconds', async () => {
   const s = setup([new Response('too many concurrent requests',{ status:429 })]);
   await s.chain.chat(input);
   expect((await s.store.activeCooldowns())[0]!.until - s.now()).toBe(60000);
   expect((await s.chain.chat(input)).meta.attempts[0]!.reason).toBe('cooling');
-  s.advance(61000); expect((await s.chain.chat(input)).meta.provider).toBe('requesty');
+  s.advance(61000); expect((await s.chain.chat(input)).meta.provider).toBe('kilo');
 });
 it.each([402,401,403])('drops the whole provider for 24 hours on %s', async (status) => {
   const s = setup([new Response('refused',{ status })]);
   await s.chain.chat(input);
-  expect(await s.store.activeCooldowns()).toMatchObject([{ provider: 'requesty', model: '*', until: s.now() + 86400000 }]);
+  expect(await s.store.activeCooldowns()).toMatchObject([{ provider: 'kilo', model: '*', until: s.now() + 86400000 }]);
   const judge = await s.chain.chat({ ...input, purpose: 'judge', agentFamily: 'google_gemini' });
-  expect(judge.meta.attempts[0]).toMatchObject({ provider:'requesty', reason:'cooling' });
-  s.advance(86400001); expect((await s.chain.chat(input)).meta.provider).toBe('requesty');
+  expect(judge.meta.attempts[0]).toMatchObject({ provider:'requesty', reason:'ok' });
+  s.advance(86400001); expect((await s.chain.chat(input)).meta.provider).toBe('kilo');
 });
 it.each([
   [new Response('bad',{ status:503 }), 'http_5xx'], [new Error('network'), 'network'], [new DOMException('time','TimeoutError'), 'timeout'],
@@ -54,12 +54,12 @@ it.each([
   [Response.json({ choices:[{ message:{ content:null, tool_calls:{} } }] }),'invalid_response'],
 ])('moves on without cooldown for transient or malformed replies %#', async (response, reason) => {
   const s = setup([response]); const result = await s.chain.chat(input);
-  expect(result.meta.provider).toBe('kilo'); expect(result.meta.failoverReason).toBe(reason); expect(await s.store.activeCooldowns()).toEqual([]);
+  expect(result.meta.provider).toBe('requesty'); expect(result.meta.failoverReason).toBe(reason); expect(await s.store.activeCooldowns()).toEqual([]);
 });
 it('skips missing credentials without fetching them', async () => {
-  const s = setup([], { REQUESTY_API_KEY: undefined });
-  expect((await s.chain.chat(input)).meta.attempts[0]!.reason).toBe('no_key');
-  expect(s.fetch).toHaveBeenCalledOnce(); expect(s.fetch.mock.calls[0]![0]).toContain('kilo');
+  const s = setup([], { REQUESTY_API_KEY: undefined },new Set(['kilo']));
+  expect((await s.chain.chat(input)).meta.attempts[1]!.reason).toBe('no_key');
+  expect(s.fetch).toHaveBeenCalledOnce(); expect(s.fetch.mock.calls[0]![0]).toContain('openrouter');
 });
 it('requires both Cloudflare credentials', async () => {
   const s = setup([], { CLOUDFLARE_ACCOUNT_ID: undefined }, new Set(['requesty','kilo','openrouter','ovh','zai']));
@@ -88,7 +88,7 @@ it('stops at the total deadline during a network call even when fetch ignores ab
 it('uses provider timeout then tries the next model', async () => {
   vi.useFakeTimers(); const fetch = vi.fn<typeof globalThis.fetch>().mockImplementationOnce(() => new Promise(() => {})).mockResolvedValueOnce(ok());
   const result = createAiChain({ fetch, store: memoryAiStore(), env }).chat(input);
-  await vi.advanceTimersByTimeAsync(12001); expect((await result).meta.failoverReason).toBe('timeout');
+  await vi.advanceTimersByTimeAsync(30001); expect((await result).meta.failoverReason).toBe('timeout');
 });
 const tools = [{ type:'function', function:{ name:'create_case', parameters:{ type:'object', properties:{ confirmed:{ type:'boolean' }, category:{ type:'string', enum:['complaint'] } }, required:['confirmed','category'], additionalProperties:false } } }];
 const toolReply = (name: string, args: string) => Response.json({ choices:[{ message:{ content:null, tool_calls:[{ id:'one', type:'function', function:{ name, arguments:args } }] } }] });
@@ -98,7 +98,7 @@ it.each([
   ['create_case','{"confirmed":true}'],
 ])('rejects tool arguments and advances %#', async (name,args) => {
   const s = setup([toolReply(name,args)]);
-  const result = await s.chain.chat({ ...input, tools }); expect(result.meta.failoverReason).toBe('invalid_tool_args'); expect(result.meta.provider).toBe('kilo');
+  const result = await s.chain.chat({ ...input, tools }); expect(result.meta.failoverReason).toBe('invalid_tool_args'); expect(result.meta.provider).toBe('requesty');
 });
 it('accepts strict valid tool arguments and maps transcript calls to wire format', async () => {
   const s = setup([toolReply('create_case','{"confirmed":true,"category":"complaint"}')]);
@@ -124,7 +124,7 @@ it('applies caller validation without exposing arbitrary validation text', async
 it('pins the agent order and excludes agent families and unknown models from judges', async () => {
   const providers = providerRegistry({});
   expect(chainOrder(providers,'agent').map((m) => `${m.provider.id}/${m.model}`)).toEqual([
-    'requesty/nvidia/nemotron-3-ultra-550b-a55b','kilo/nvidia/nemotron-3-ultra-550b-a55b:free','openrouter/nvidia/nemotron-3-super-120b-a12b:free','ovh/gpt-oss-120b','ovh/Qwen3.5-397B-A17B','zai/glm-4.7-flash','cloudflare/@cf/openai/gpt-oss-120b','gemini/gemini-3.5-flash-lite','nvidia/nvidia/nemotron-3-super-120b-a12b','kilo/kilo-auto/free',
+    'kilo/nvidia/nemotron-3-ultra-550b-a55b:free','requesty/nvidia/nemotron-3-ultra-550b-a55b','openrouter/nvidia/nemotron-3-super-120b-a12b:free','ovh/gpt-oss-120b','ovh/Qwen3.5-397B-A17B','zai/glm-4.7-flash','cloudflare/@cf/openai/gpt-oss-120b','gemini/gemini-3.5-flash-lite','nvidia/nvidia/nemotron-3-super-120b-a12b','kilo/kilo-auto/free',
   ]);
   const judge = chainOrder(providers,'judge','nvidia_nemotron'); expect(judge.map((m) => m.provider.id)).toEqual(['gemini','requesty','ovh','zai','cloudflare']);
   for (const family of ['google_gemini','google_gemma','openai_gpt_oss','zhipu_glm','nvidia_nemotron'] as const) expect(chainOrder(providers,'judge',family).every((m) => m.family !== family && m.family !== 'unknown')).toBe(true);
@@ -142,12 +142,12 @@ it('rejects a reservation at task cap without reaching the network', async () =>
   await expect(s.chain.chat(input)).rejects.toBeInstanceOf(AiChainExhausted); expect(s.fetch).not.toHaveBeenCalled(); expect(s.store.records.every((r) => r.reason === 'cap_reached')).toBe(true);
 });
 it('advances past a provider cap', async () => {
-  const s = setup([], { AI_PROVIDER_CAP_REQUESTY:'0' }); const r = await s.chain.chat(input); expect(r.meta.failoverReason).toBe('cap_reached'); expect(r.meta.provider).toBe('kilo');
+  const s = setup([], { AI_PROVIDER_CAP_KILO:'0' }); const r = await s.chain.chat(input); expect(r.meta.failoverReason).toBe('cap_reached'); expect(r.meta.provider).toBe('requesty');
 });
 it('serializes Requesty across chain instances and spaces starts by twelve seconds', async () => {
   vi.useFakeTimers(); const now = () => Date.now(); const starts: number[] = []; let active = 0, maxActive = 0;
   const fetch = vi.fn<typeof globalThis.fetch>(async () => { starts.push(now()); active++; maxActive = Math.max(active,maxActive); await new Promise((r) => setTimeout(r,15000)); active--; return ok(); });
-  const store = memoryAiStore(now); const a = createAiChain({ fetch,store,now,env }), b = createAiChain({ fetch,store,now,env });
+  const store = memoryAiStore(now); const a = createAiChain({ fetch,store,now,env:{...env,AI_MODELS_KILO:''} }), b = createAiChain({ fetch,store,now,env:{...env,AI_MODELS_KILO:''} });
   // Keep each Requesty response below its timeout while holding it long enough to observe the queue.
   fetch.mockImplementation(async () => { starts.push(now()); active++; maxActive = Math.max(active,maxActive); await new Promise((r) => setTimeout(r,5000)); active--; return ok(); });
   const results = Promise.all([a.chat(input), b.chat(input), a.chat(input)]);
@@ -171,13 +171,13 @@ it('keeps keys out of attempts, database records, errors and exhaustion', async 
 it('shares model cooldowns with other chain instances using the same process clock', async () => {
   const s = setup([new Response('daily used',{ status:429 })]);
   await s.chain.chat(input);
-  const other = createAiChain({ fetch:s.fetch,store:s.store,now:s.now,env });
+  const other = createAiChain({ fetch:s.fetch,store:s.store,now:s.now,sleep:s.sleep,env });
   expect((await other.chat(input)).meta.attempts[0]!.reason).toBe('cooling');
 });
 it('expires the total budget while waiting for provider spacing without a network attempt', async () => {
   vi.useFakeTimers(); const now = () => Date.now(); const store = memoryAiStore(now);
   const fetch = vi.fn<typeof globalThis.fetch>(async () => ok());
-  const chain = createAiChain({ fetch,store,env,now });
+  const chain = createAiChain({ fetch,store,env:{...env,AI_MODELS_KILO:''},now });
   await chain.chat(input);
   const result = chain.chat({ ...input,deadlineMs:100 }).catch((error) => error);
   await vi.advanceTimersByTimeAsync(101);
@@ -188,7 +188,7 @@ it('accepts a tool call reply that omits content, as OVH and Requesty send it (l
   const tools = [{ type: 'function' as const, function: { name: 'create_case', parameters: { type: 'object', properties: { needs_human_review: { type: 'boolean' } }, required: ['needs_human_review'], additionalProperties: false } } }];
   const s = setup([Response.json({ choices: [{ finish_reason: 'tool_calls', message: { role: 'assistant', reasoning: 'x', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'create_case', arguments: '{"needs_human_review":true}' } }] } }] })]);
   const result = await s.chain.chat({ ...input, tools });
-  expect(result.meta).toMatchObject({ provider: 'requesty', failover: false });
+  expect(result.meta).toMatchObject({ provider: 'kilo', failover: false });
   expect(result.content).toBeNull();
   expect(result.tool_calls?.[0]?.name).toBe('create_case');
 });
@@ -198,4 +198,9 @@ it('does not tag failover when the only earlier models have no key configured', 
   expect(result.meta.attempts[0]).toMatchObject({ provider: 'gemini', reason: 'no_key' });
   expect(result.meta).toMatchObject({ provider: 'requesty', failover: false, failoverReason: null });
   expect(s.store.records.at(-1)).toMatchObject({ failover: false });
+});
+it('keeps Kilo ultra before Requesty ultra while preserving the complete judge order',()=>{
+  const providers=providerRegistry({});
+  expect(chainOrder(providers,'agent').slice(0,2).map(e=>[e.provider.id,e.model])).toEqual([['kilo','nvidia/nemotron-3-ultra-550b-a55b:free'],['requesty','nvidia/nemotron-3-ultra-550b-a55b']]);
+  expect(chainOrder(providers,'judge',['nvidia_nemotron']).map(e=>e.provider.id)).toEqual(['gemini','requesty','ovh','zai','cloudflare']);
 });

@@ -135,8 +135,8 @@ it('does not grant workers approval writes and preserves worker evidence rights'
   expect((await db.worker(a.workspace_id, (sql) => sql.query('SELECT * FROM nazir.tool_events'))).rows.length).toBeGreaterThan(0);
 });
 it('restricts viewer reads and audit calls while combining viewer with other roles', async () => {
-  for (const table of ['workspaces', 'members', 'member_roles', 'rule_packs', 'agents', 'runs', 'findings']) expect((await db.member(members.viewer, (sql) => sql.query(`SELECT * FROM nazir.${table}`))).rows.length, table).toBeGreaterThan(0);
-  for (const table of ['conversation_messages', 'tool_events', 'state_readings', 'adapters', 'agent_versions', 'scenarios', 'scenario_meanings', 'plans', 'proposals', 'lessons', 'lesson_revisions', 'audit_events', 'conversations']) {
+  for (const table of ['workspaces', 'members', 'member_roles', 'rule_packs', 'agents', 'runs']) expect((await db.member(members.viewer, (sql) => sql.query(`SELECT * FROM nazir.${table}`))).rows.length, table).toBeGreaterThan(0);
+  for (const table of ['findings', 'conversation_messages', 'tool_events', 'state_readings', 'adapters', 'agent_versions', 'scenarios', 'scenario_meanings', 'plans', 'proposals', 'lessons', 'lesson_revisions', 'audit_events', 'conversations']) {
     expect((await db.member(members.viewer, (sql) => sql.query(`SELECT * FROM nazir.${table}`))).rows, table).toHaveLength(0);
   }
   expect((await db.member(members.viewer, (sql) => sql.query('SELECT status FROM nazir.rule_pack_versions'))).rows.every((row) => row.status === 'approved')).toBe(true);

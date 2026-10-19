@@ -71,3 +71,7 @@ it('retains workspace isolation for runner writes and keys',async () => {
 it('registry references retain version kind and cannot disguise a planted fault',async () => {
   await expect(db.owner.query("INSERT INTO nazir.agent_versions(workspace_id,agent_id,label,kind,config) SELECT workspace_id,agent_id,'Disguised','baseline','{\"registry_id\":\"planted_wrong_queue\"}' FROM nazir.agent_versions WHERE id=$1",[f.versions[0]!.id])).rejects.toThrow('Registry kind mismatch');
 });
+it('freezes the n13 rubric and agent order with the records only setting',async()=>{
+ const r=await enqueue(db,f);const row=(await db.owner.query<{runner_version:string;frozen_manifest:{recordsOnly:boolean;rubricVersion:string;judgePromptHash:string;judgeChainOrder:unknown[];aiChainOrder:{provider:string}[]}}>('SELECT runner_version,frozen_manifest FROM nazir.runs WHERE id=$1',[r.id])).rows[0]!;
+ expect(row.runner_version).toBe('n13');expect(row.frozen_manifest).toMatchObject({recordsOnly:true,rubricVersion:'n13.1',judgePromptHash:expect.stringMatching(/^[a-f0-9]{64}$/)});expect(row.frozen_manifest.aiChainOrder.slice(0,2).map(e=>e.provider)).toEqual(['kilo','requesty']);expect(row.frozen_manifest.judgeChainOrder.length).toBeGreaterThan(0);
+});

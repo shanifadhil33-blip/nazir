@@ -6,7 +6,7 @@ export type ChatResponse = { content: string | null; tool_calls?: ToolCall[] };
 export type CallMeta = { provider: string; model: string; family: Family; attempts: Attempt[]; failover: boolean; failoverReason: Reason | null };
 export type ChatRequest = {
   purpose: 'agent' | 'judge'; task: Task; messages: Message[]; tools?: Tool[]; maxTokens?: number; temperature?: number;
-  validate?: (response: ChatResponse) => string | null; agentFamily?: Family; conversationId?: string; workspaceId?: string; deadlineMs?: number;
+  validate?: (response: ChatResponse) => string | null; agentFamily?: Family; agentFamilies?: Family[]; conversationId?: string; workspaceId?: string; deadlineMs?: number;
 };
 export class AiChainExhausted extends Error {
   constructor(public readonly attempts: Attempt[]) { super('AI chain exhausted'); this.name = 'AiChainExhausted'; }
@@ -62,7 +62,7 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
   const taskCaps = { test_run: capValue(env.AI_DAILY_CAP_TEST_RUN,300), live_demo: capValue(env.AI_DAILY_CAP_LIVE_DEMO,400), probe: capValue(env.AI_DAILY_CAP_PROBE,40) };
   return {
     async chat(request: ChatRequest): Promise<ChatResponse & { meta: CallMeta }> {
-      const plan = chainOrder(providers, request.purpose, request.agentFamily);
+      const plan = chainOrder(providers, request.purpose, request.agentFamilies ?? request.agentFamily);
       if (!Object.hasOwn(taskCaps, request.task)) throw new Error('Invalid AI task');
       const budget = request.deadlineMs ?? 90000;
       if (!Number.isFinite(budget) || budget <= 0) throw new Error('Invalid AI deadline');
@@ -106,7 +106,8 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
               at = now(); outcome = 'error';
               queue.starts.set(spacingKey, at);
               const controller = new AbortController();
-              const limit = Math.min(provider.timeoutMs,remaining());
+              // A judge reads a longer prompt than an agent turn; Requesty Gemma took 8 to 10 s on 19 Oct and timed out at 12 s.
+              const limit = Math.min(request.purpose==='judge' ? provider.judgeTimeoutMs ?? provider.timeoutMs : provider.timeoutMs,remaining());
               let timeout = false;
               const timer = setTimeout(() => { timeout = true; controller.abort(); }, Math.max(0,limit));
               try {

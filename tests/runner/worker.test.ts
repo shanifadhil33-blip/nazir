@@ -119,7 +119,7 @@ it('records every answered call, answering provider and failover with real N09 f
     return Response.json({ choices:[{ message:httpReply(response) }] });
   } });
   await next({ evaluate:passed,chatModelFactory:(ctx) => chainChatModel(chain,{ task:'test_run',...ctx }) });
-  const c=await row(run.id); expect(c).toMatchObject({ status:'passed',model_provider:'kilo',failover:true });
+  const c=await row(run.id); expect(c).toMatchObject({ status:'passed',model_provider:'requesty',failover:true });
   expect((c.result_summary as { calls: unknown[] }).calls).toHaveLength(7);
 });
 it('audit chain verifies and contains runner codes without transcript text',async () => {

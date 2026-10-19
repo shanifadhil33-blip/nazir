@@ -2,16 +2,16 @@ import 'server-only';
 import { sandboxIdentifier } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 
-export type InspectedCase = { id: string; reference: string; requesterKey: string; category: string; queue: string; status: string; priorRequestRef: string | null; escalation: { queue: string; status: string } | null };
+export type InspectedCase = { id: string; reference: string; requesterKey: string; category: string; queue: string; status: string; priorRequestRef: string | null; escalation: { id?: string; queue: string; status: string } | null };
 export type InspectedEscalation = { id: string; queue: string; status: string };
 export type InspectedReceipt = { id: string; tool: string; outcome: 'ok' | 'error'; error: string | null; createdAt: string };
-export type StateReading = { tenant: string; takenAt: string; cases: InspectedCase[]; receipts: InspectedReceipt[] };
-type CaseRow = { id: string; reference: string; requester_key: string; category: string; queue: string; status: string; prior_request_ref: string | null; escalation_queue: string | null; escalation_status: string | null };
+export type StateReading = { tenant: string; takenAt: string; cases: InspectedCase[]; receipts: InspectedReceipt[]; tenantFaults?: { tool: string }[] };
+type CaseRow = { id: string; reference: string; requester_key: string; category: string; queue: string; status: string; prior_request_ref: string | null; escalation_id: string | null; escalation_queue: string | null; escalation_status: string | null };
 type ReceiptRow = { id: string; tool: string; outcome: 'ok' | 'error'; error: string | null; created_at: Date | string };
 const iso = (value: Date | string) => new Date(value).toISOString();
-const caseQuery = `SELECT c.id,c.reference,c.requester_key,c.category,c.queue,c.status,c.prior_request_ref,e.queue AS escalation_queue,e.status AS escalation_status
+const caseQuery = `SELECT c.id,c.reference,c.requester_key,c.category,c.queue,c.status,c.prior_request_ref,e.id AS escalation_id,e.queue AS escalation_queue,e.status AS escalation_status
  FROM sandbox.cases c LEFT JOIN sandbox.escalations e ON e.tenant=c.tenant AND e.case_id=c.id`;
-const caseObject = (row: CaseRow): InspectedCase => ({ id: row.id, reference: row.reference, requesterKey: row.requester_key, category: row.category, queue: row.queue, status: row.status, priorRequestRef: row.prior_request_ref, escalation: row.escalation_queue === null ? null : { queue: row.escalation_queue, status: row.escalation_status! } });
+const caseObject = (row: CaseRow): InspectedCase => ({ id: row.id, reference: row.reference, requesterKey: row.requester_key, category: row.category, queue: row.queue, status: row.status, priorRequestRef: row.prior_request_ref, escalation: row.escalation_queue === null ? null : { id: row.escalation_id!, queue: row.escalation_queue, status: row.escalation_status! } });
 export function createInspectionChannel(driver: TransactionDriver) {
   function read<T>(tenant: string, work: (db: SqlConnection) => Promise<T>): Promise<T> {
     if (!sandboxIdentifier.test(tenant)) throw new Error('Invalid inspection tenant');
@@ -46,6 +46,7 @@ export function createInspectionChannel(driver: TransactionDriver) {
     readReceipts: (tenant: string, filter: { sinceId?: string; since?: string; limit: number }) => read(tenant, (db) => receipts(db, tenant, filter)),
     snapshot: (tenant: string): Promise<StateReading> => read(tenant, async (db) => ({
       tenant, takenAt: iso((await db.query<{ taken_at: Date | string }>('SELECT transaction_timestamp() AS taken_at')).rows[0]!.taken_at),
+      tenantFaults: (await db.query<{ tool: string }>('SELECT tool FROM sandbox.tenant_faults WHERE tenant=$1 ORDER BY tool', [tenant])).rows,
       cases: await cases(db, tenant), receipts: await receipts(db, tenant, { limit: null }),
     })),
   };

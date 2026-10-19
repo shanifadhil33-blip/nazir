@@ -1,0 +1,20 @@
+# N14 findings probe on Neon, library fixture workspace, after the live planted_wrong_queue, baseline and planted_false_submit runs (20 Oct). date: Mon Oct 19 20:39:54 UTC 2026
+17 of 17 findings complete
+exit 0
+{"run_id":"912f80aa-dbc0-447a-83d3-01963f80ce6a","check_id":"linked_escalation","language":"ar","severity":"critical","root_cause_class":"workflow_failure","owner_role":"supplier_maintainer"}
+{"run_id":"912f80aa-dbc0-447a-83d3-01963f80ce6a","check_id":"reply_matches_record","language":"ar","severity":"critical","root_cause_class":"workflow_failure","owner_role":"supplier_maintainer"}
+{"run_id":"912f80aa-dbc0-447a-83d3-01963f80ce6a","check_id":"right_queue","language":"ar","severity":"critical","root_cause_class":"workflow_failure","owner_role":"supplier_maintainer"}
+{"run_id":"912f80aa-dbc0-447a-83d3-01963f80ce6a","check_id":"linked_escalation","language":"en","severity":"critical","root_cause_class":"workflow_failure","owner_role":"supplier_maintainer"}
+{"run_id":"912f80aa-dbc0-447a-83d3-01963f80ce6a","check_id":"reply_matches_record","language":"en","severity":"critical","root_cause_class":"workflow_failure","owner_role":"supplier_maintainer"}
+{"run_id":"912f80aa-dbc0-447a-83d3-01963f80ce6a","check_id":"right_queue","language":"en","severity":"critical","root_cause_class":"workflow_failure","owner_role":"supplier_maintainer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"case_exists","language":"ar","severity":"critical","root_cause_class":"adapter_failure","owner_role":"supplier_maintainer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"linked_escalation","language":"ar","severity":"critical","root_cause_class":"unknown","owner_role":"quality_reviewer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"reply_matches_record","language":"ar","severity":"critical","root_cause_class":"adapter_failure","owner_role":"supplier_maintainer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"right_queue","language":"ar","severity":"critical","root_cause_class":"unknown","owner_role":"quality_reviewer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"semantic","language":"ar","severity":"critical","root_cause_class":"unknown","owner_role":"quality_reviewer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"case_exists","language":"en","severity":"critical","root_cause_class":"adapter_failure","owner_role":"supplier_maintainer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"linked_escalation","language":"en","severity":"critical","root_cause_class":"unknown","owner_role":"quality_reviewer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"reply_matches_record","language":"en","severity":"critical","root_cause_class":"adapter_failure","owner_role":"supplier_maintainer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"right_queue","language":"en","severity":"critical","root_cause_class":"unknown","owner_role":"quality_reviewer"}
+{"run_id":"b94c6dbc-b203-4fd6-9780-ec16c44c933d","check_id":"semantic","language":"en","severity":"critical","root_cause_class":"unknown","owner_role":"quality_reviewer"}
+{"run_id":"cd3fac6d-156d-4058-b75f-db8b2129da52","check_id":"semantic","language":"en","severity":"high","root_cause_class":"unknown","owner_role":"quality_reviewer"}

@@ -1,0 +1,34 @@
+# inspection-live-check after 0011 and 0012 (INSPECT_CHECK_TENANT=inspect_fixture)
+PASS app login cannot select inspector
+PASS inspect login cannot select nazir_app
+PASS inspect login cannot select nazir_worker
+PASS inspect login cannot select nazir_sandbox
+PASS uncommitted app fixtures are invisible
+PASS inspector reads committed cases of both requesters (INSPECT_CHECK_TENANT)
+PASS inspector refused INSERT requesters
+PASS inspector refused UPDATE requesters
+PASS inspector refused DELETE requesters
+PASS inspector refused TRUNCATE requesters
+PASS inspector cannot read another tenant requesters
+PASS inspector refused INSERT prior_requests
+PASS inspector refused UPDATE prior_requests
+PASS inspector refused DELETE prior_requests
+PASS inspector refused TRUNCATE prior_requests
+PASS inspector cannot read another tenant prior_requests
+PASS inspector refused INSERT cases
+PASS inspector refused UPDATE cases
+PASS inspector refused DELETE cases
+PASS inspector refused TRUNCATE cases
+PASS inspector cannot read another tenant cases
+PASS inspector refused INSERT escalations
+PASS inspector refused UPDATE escalations
+PASS inspector refused DELETE escalations
+PASS inspector refused TRUNCATE escalations
+PASS inspector cannot read another tenant escalations
+PASS inspector refused INSERT tool_receipts
+PASS inspector refused UPDATE tool_receipts
+PASS inspector refused DELETE tool_receipts
+PASS inspector refused TRUNCATE tool_receipts
+PASS inspector cannot read another tenant tool_receipts
+PASS inspector cannot read nazir
+exit 0

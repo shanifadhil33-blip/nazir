@@ -31,7 +31,7 @@ Call `importLibrary(driver, memberId, await loadLibrary(), source)` from trusted
 
 `approveScenario` requires `scenario.approve` and a different human from the author, following N05. Approval stamps the actor and time and records an audit event. Existing database triggers freeze every approved scenario content field; an added trigger also freezes its meaning. Changes require new draft versions and another approval. Source `generated` always imports as draft. `regressionSuite` returns approved rows only, including generated rows only after human approval. It requires the authority to read both splits.
 
-The library records applicable N11 check IDs, not a claim that record checks can judge every policy answer. N11's default evaluator remains the complaint journey evaluator. Information accuracy, refusal wording and cross-language meaning need semantic or human review; the library supplies the expected outcome and source for that review. The current runner does not automatically prepare the new existing-case or failed-tool fixtures from starting state. Tests validate the library, import and authorization lifecycle, not live model quality across all 48 cases.
+The library records applicable N11 check IDs, not a claim that record checks can judge every policy answer. N11's default evaluator remains the complaint journey evaluator. Information accuracy, refusal wording and cross-language meaning need semantic or human review; the library supplies the expected outcome and source for that review. The n13 runner prepares existing cases and service tool failures from the frozen starting state. PGlite journeys exercise these paths with scripted agents and fake judges, without measuring live model quality across all 48 cases.
 
 ## Twin exposure rule
 
@@ -46,3 +46,13 @@ Run schema and import tests, review both languages, and update the pinned librar
 ## Review still required
 
 Reviewed Gulf phrasing is excluded from these 12 families and is waiting for a native reviewer. The original MSA copy has not received independent native review either; no reviewed-language or fairness claim is made. Eastern Arabic digits and mixed-script names are exercised in Arabic; the English twins preserve the same supplied normalized identifier without Arabic script. All data is synthetic. No live AI or Google calls are needed for validation.
+
+## Fixture preparation
+
+`scripts/runner-library-fixture.mjs` prepares Nazir library fixture, with invented male author Omar Mansoor and reviewer Khalid Hamdan. It bootstraps the workspace through the worker login when needed, then prepares the registry, adapter, rules and the second member in an owner transaction, imports and approves through the app login with the real member checks (the hosted owner role cannot take the nazir_app role), and finishes the approved plan with an 80 call budget in a second owner transaction. Tests use createLibraryFixture, the same steps in one local transaction. Replaying the helper changes no rows or audit events. It prints workspaceId, planId, registry version row IDs and the 48 scenario IDs indexed by stable_key. The two legacy complaint scenarios are also retained in this workspace by the shared administration fixture helper.
+
+The worker calls seed_tenant then seed_tenant_state with the database scenario starting_state. The latter accepts only sandbox, up to ten strictly shaped cases and a tool_failure value of none or create_case. It refuses existing cases, receipts and failure settings. Seed references advance the shared sequence under a case table lock, so later tool creates cannot reuse them. Service failure settings are visible to inspection but inaccessible to sandbox tools; a security definer insert trigger makes the real create fail, preserving the existing savepoint and error receipt behavior. No sandbox TypeScript changes are required.
+
+The first reading must exactly match seeded references, requesters, queues and statuses, with no escalations or receipts and the expected service availability. An unexpected extra case is still dirty_tenant. An empty legacy starting state means no cases or service failures.
+
+For live preparation the fixture script needs DATABASE_URL_OWNER and DATABASE_URL; it is excluded from the gate. runner-run accepts RUN_WORKSPACE=library or an explicit WORKSPACE_ID, and RUN_SCENARIOS as comma separated stable keys. RECORDS_ONLY=true or false selects the frozen semantic setting. Only script syntax was checked in this phase.

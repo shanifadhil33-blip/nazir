@@ -42,7 +42,7 @@ it.each([false,true])('runs a full service journey through fake HTTP, Arabic=%s'
   }
   const rows = (await db.owner.query('SELECT c.reference,c.status,c.queue,e.queue AS review_queue FROM sandbox.cases c JOIN sandbox.escalations e ON c.id=e.case_id WHERE c.tenant=$1',[tenant])).rows;
   expect(rows).toHaveLength(1); expect(rows[0]).toMatchObject({ status:'in_review',queue:'complaint_review',review_queue:'complaint_review' });
-  expect(final!.reply).toContain(rows[0]!.reference); expect(final!.toolCalls).toHaveLength(4); expect(meta).toHaveLength(7); expect(meta.every((m) => m.provider === 'requesty' && !m.failover)).toBe(true);
+  expect(final!.reply).toContain(rows[0]!.reference); expect(final!.toolCalls).toHaveLength(4); expect(meta).toHaveLength(7); expect(meta.every((m) => m.provider === 'kilo' && !m.failover)).toBe(true);
   const calls = (await db.owner.query('SELECT task,purpose,workspace_id,conversation_id FROM nazir.ai_calls WHERE conversation_id=$1',[conversationId])).rows;
   expect(calls).toHaveLength(7); expect(calls.every((c) => c.workspace_id === wid && c.task === 'test_run' && c.purpose === 'agent')).toBe(true);
 });
@@ -54,6 +54,6 @@ it('skips a malformed provider tool argument before executing sandbox tools', as
   const chain = createAiChain({ fetch,store:postgresAiStore(db.driver),env:{ REQUESTY_API_KEY:'test-key' },now:() => time,sleep:async (ms) => { time += ms; } });
   const model = chainChatModel(chain,{ task:'live_demo',onCall:(m) => metas.push(m) });
   const result = await runServiceAgent({ model,version:baselineVersion,messages:[],sandbox:{ driver:db.driver,tenant,requesterKey:'saeed' },conversationKey:tenant });
-  expect(result.toolCalls).toHaveLength(1); expect(result.toolCalls[0]!.result.ok).toBe(true); expect(metas[0]).toMatchObject({ provider:'kilo',failover:true,failoverReason:'invalid_tool_args' });
+  expect(result.toolCalls).toHaveLength(1); expect(result.toolCalls[0]!.result.ok).toBe(true); expect(metas[0]).toMatchObject({ provider:'requesty',failover:true,failoverReason:'invalid_tool_args' });
   expect((await db.owner.query('SELECT * FROM sandbox.tool_receipts WHERE tenant=$1',[tenant])).rows).toHaveLength(1);
 });

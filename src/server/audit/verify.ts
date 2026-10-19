@@ -41,6 +41,6 @@ export async function readAuditChain(connection: SqlConnection, workspaceId: str
   const result = await connection.query<AuditRow>(`SELECT workspace_id::text,seq::text,
     to_char(at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS at,
     actor_type,actor_member_id::text,actor_name_at_event,actor_roles_at_event,action,target_type,target_id,
-    payload::text,prev_hash,hash FROM nazir.audit_events WHERE workspace_id=$1 ORDER BY seq`, [workspaceId]);
+    payload::text,prev_hash,hash FROM nazir.audit_events e WHERE workspace_id=$1 ORDER BY e.seq`, [workspaceId]);
   return result.rows;
 }

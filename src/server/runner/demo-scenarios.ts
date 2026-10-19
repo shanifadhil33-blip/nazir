@@ -8,4 +8,4 @@ export const demoScenarios = definitions.map(({ prior_request_ref, ...data }) =>
   const scenario = { ...data, expected_state: { category: 'complaint', queue: 'complaint_review', escalation_queue: 'complaint_review', prior_request_ref, cases: 1 } };
   return Object.freeze({ ...scenario, content_hash: hash(scenario) });
 });
-export type RunnerScenario = { id: string; stable_key: string; language: string; content_hash: string; persona: { requester_key: string; resident_turns: string[] }; expected_state: unknown };
+export type RunnerScenario = { id: string; stable_key: string; language: string; content_hash: string; persona: { requester_key: string; resident_turns: string[] }; expected_state: unknown; starting_state?: { seed?: string; cases?: { reference: string; requester_key: string; queue: string; status: string }[]; tool_failure?: string }; checks?: string[]; severity?: 'critical' | 'high' | 'medium' | 'low'; source_clause?: string; canonical?: { outcome?: string }; };
