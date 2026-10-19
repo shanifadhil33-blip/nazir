@@ -28,7 +28,7 @@ const success = (data: Record<string, unknown>): ToolResult => ({ ok: true, data
 async function caseByReference(db: SqlConnection, tenant: string, ref: string) {
   return (await db.query<CaseRow>('SELECT id,reference,category,queue,status FROM sandbox.cases WHERE tenant=$1 AND reference=$2', [tenant, ref])).rows[0];
 }
-export function createSandboxTools(context: SandboxContext, version: { routingMap: RoutingMap } = { routingMap }) {
+export function createSandboxTools(context: SandboxContext, version: { routingMap: RoutingMap; faults?: { createCase: 'fail' } } = { routingMap }) {
   async function execute(name: string, args: unknown, options: { idempotencyKey: string }): Promise<ToolResult> {
     const schema = Object.hasOwn(schemas, name) ? schemas[name as keyof typeof schemas] : undefined;
     const parsed = schema?.safeParse(args);
@@ -42,6 +42,7 @@ export function createSandboxTools(context: SandboxContext, version: { routingMa
         return success({ version: demoRulePack.version, hash: rulePackHash(), ...(clause ? { clause } : { clauses: demoRulePack.clauses }) });
       }
       if (name === 'create_case') {
+        if (version.faults?.createCase === 'fail') return failure('tool_failed');
         const input = schemas.create_case.parse(args);
         // Serialize matching attempts before checking for the existing record.
         await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [tenant + ':' + options.idempotencyKey]);

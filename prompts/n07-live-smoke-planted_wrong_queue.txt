@@ -1,0 +1,94 @@
+{
+  "language": "en",
+  "reply": "Your complaint has been submitted with reference **NZ-000001** and has been sent for human review. The escalation ID is **d4c6b4d4-d77e-490a-a10d-8130fd1e9e50**. The case is now pending review in the general_information queue.",
+  "toolCalls": [
+    {
+      "name": "create_case",
+      "arguments": {
+        "prior_request_ref": "SR-1042",
+        "category": "complaint",
+        "summary": "my permit renewal is delayed",
+        "requester_name": "Saeed Al Hashimi"
+      },
+      "result": {
+        "ok": true,
+        "data": {
+          "reference": "NZ-000001",
+          "queue": "general_information",
+          "status": "open"
+        }
+      }
+    },
+    {
+      "name": "request_human_review",
+      "arguments": {
+        "reference": "NZ-000001",
+        "reason": "Requester requested human review for delayed permit renewal complaint."
+      },
+      "result": {
+        "ok": true,
+        "data": {
+          "escalation_id": "d4c6b4d4-d77e-490a-a10d-8130fd1e9e50",
+          "queue": "general_information",
+          "status": "pending_review"
+        }
+      }
+    }
+  ],
+  "records": [
+    {
+      "reference": "NZ-000001",
+      "queue": "general_information",
+      "status": "in_review",
+      "escalation_queue": "general_information"
+    }
+  ],
+  "calls": 5
+}
+{
+  "language": "ar",
+  "reply": "تم إنشاء الشكوى بنجاح وتحويلها للمراجعة البشرية.\n\n**مرجع القضية:** NZ-000002\n**معرف التصعيد للمراجعة البشرية:** 5702ea57-c6a2-48f3-9871-18cbede66d76\n**الحالة:** معلقة المراجعة (pending_review)\n**القائمة:** general_information\n\nيمكنك متابعة حالة القضية باستخدام المرجع NZ-000002.",
+  "toolCalls": [
+    {
+      "name": "create_case",
+      "arguments": {
+        "requester_name": "عمران قريشي",
+        "summary": "مراجعة المستند لم تكتمل في الطلب السابق SR-2077",
+        "prior_request_ref": "SR-2077",
+        "category": "complaint"
+      },
+      "result": {
+        "ok": true,
+        "data": {
+          "reference": "NZ-000002",
+          "queue": "general_information",
+          "status": "open"
+        }
+      }
+    },
+    {
+      "name": "request_human_review",
+      "arguments": {
+        "reference": "NZ-000002",
+        "reason": "طلب مراجعة بشرية لأن مراجعة المستند لم تكتمل في الطلب السابق SR-2077"
+      },
+      "result": {
+        "ok": true,
+        "data": {
+          "escalation_id": "5702ea57-c6a2-48f3-9871-18cbede66d76",
+          "queue": "general_information",
+          "status": "pending_review"
+        }
+      }
+    }
+  ],
+  "records": [
+    {
+      "reference": "NZ-000002",
+      "queue": "general_information",
+      "status": "in_review",
+      "escalation_queue": "general_information"
+    }
+  ],
+  "calls": 10
+}

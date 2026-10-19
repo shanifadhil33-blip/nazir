@@ -32,7 +32,7 @@ async function main() {
       return nextLoad(url, context);
     },
   });
-  const [{ PGlite }, { migrate }, { withWorker }, { runServiceAgent }, { baselineVersion }, { openAiCompatibleModel }] = await Promise.all([
+  const [{ PGlite }, { migrate }, { withWorker }, { runServiceAgent }, { getAgentVersion }, { openAiCompatibleModel }] = await Promise.all([
     import('@electric-sql/pglite'), import('../src/server/db/migrate.ts'), import('../src/server/db/context.ts'),
     import('../src/sandbox/agent.ts'), import('../src/sandbox/versions.ts'), import('../src/sandbox/openai-model.ts'),
   ]);
@@ -43,6 +43,8 @@ async function main() {
     url: process.env.SMOKE_MODEL_URL ?? 'https://ai-gateway.kilo.ai/api/v1/chat/completions',
     model: process.env.SMOKE_MODEL ?? 'nvidia/nemotron-3-ultra-550b-a55b:free', apiKey: process.env.SMOKE_MODEL_KEY, timeoutMs: 30000,
   }), Number(process.env.MAX_CALLS ?? 12));
+  const smokeVersion = getAgentVersion(process.env.SMOKE_VERSION ?? 'baseline');
+  if (!smokeVersion) throw new Error('Unknown SMOKE_VERSION');
   try {
     await migrate(driver);
     for (const [language, turns] of [
@@ -56,7 +58,7 @@ async function main() {
       let reply = '';
       for (const content of turns) {
         messages.push({ role: 'user', content });
-        const result = await runServiceAgent({ model: budget.model, version: baselineVersion, messages, sandbox: { driver, tenant, requesterKey: language === 'en' ? 'saeed' : 'imran' }, conversationKey: tenant });
+        const result = await runServiceAgent({ model: budget.model, version: smokeVersion, messages, sandbox: { driver, tenant, requesterKey: language === 'en' ? 'saeed' : 'imran' }, conversationKey: tenant });
         messages = result.transcript.filter((message) => message.role !== 'system');
         reply = result.reply;
         toolCalls.push(...result.toolCalls);

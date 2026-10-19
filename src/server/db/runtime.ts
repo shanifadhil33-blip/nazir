@@ -26,3 +26,10 @@ export async function databaseHealth(): Promise<'up' | 'down' | 'not_configured'
     clearTimeout(timer);
   }
 }
+
+let inspectionPool: Pool | undefined;
+export function inspectionRuntimeDriver() {
+  if (!process.env.INSPECT_DATABASE_URL) throw new Error('INSPECT_DATABASE_URL is required for inspection');
+  inspectionPool ??= new Pool({ connectionString: process.env.INSPECT_DATABASE_URL, connectionTimeoutMillis: 3000, query_timeout: 3000 });
+  return poolDriver(inspectionPool);
+}

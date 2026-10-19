@@ -22,7 +22,14 @@ it('uses the injected scripted model and seeds the tenant', async () => {
   mocks.model.mockResolvedValue({ content: 'How can I help?' });
   const response = await POST(request());
   expect(response.status).toBe(200); expect(response.headers.get('Cache-Control')).toBe('no-store');
-  expect(await response.json()).toEqual({ reply: 'How can I help?', tool_calls: [] });
+  expect(await response.json()).toEqual({ reply: 'How can I help?', tool_calls: [], version: { id: 'baseline', label: 'baseline v1', kind: 'baseline', disclosure: { en: 'Baseline version, no planted fault.', ar: 'النسخة الأساسية، دون خلل مزروع.' } } });
   expect((await db.owner.query("SELECT * FROM sandbox.prior_requests WHERE tenant='route'")).rows).toHaveLength(2);
   expect(mocks.model).toHaveBeenCalledTimes(1);
 });
+
+it.each(['planted_wrong_queue', 'planted_false_submit'])('accepts version %s', async (version) => {
+  mocks.model.mockResolvedValue({ content: 'Hello' });
+  const response = await POST(request({ ...body, version }));
+  expect(response.status).toBe(200); expect((await response.json()).version.id).toBe(version);
+});
+it('rejects an unknown version', async () => { const response = await POST(request({ ...body, version: 'unknown' })); expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: 'Unknown agent version.' }); });

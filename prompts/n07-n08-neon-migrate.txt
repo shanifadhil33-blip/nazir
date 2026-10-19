@@ -1,0 +1,2 @@
+0006_inspection.sql
+1 migrations
