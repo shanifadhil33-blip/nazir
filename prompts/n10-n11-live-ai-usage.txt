@@ -1,0 +1,20 @@
+{"provider":"cloudflare","model":"@cf/openai/gpt-oss-120b","outcome":"error","reason":"forced_down","n":1}
+{"provider":"gemini","model":"gemini-3.5-flash-lite","outcome":"error","reason":"forced_down","n":1}
+{"provider":"kilo","model":"kilo-auto/free","outcome":"error","reason":"forced_down","n":1}
+{"provider":"kilo","model":"nvidia/nemotron-3-ultra-550b-a55b:free","outcome":"error","reason":"forced_down","n":1}
+{"provider":"kilo","model":"nvidia/nemotron-3-ultra-550b-a55b:free","outcome":"error","reason":"timeout","n":1}
+{"provider":"kilo","model":"nvidia/nemotron-3-ultra-550b-a55b:free","outcome":"ok","reason":"ok","n":39}
+{"provider":"nvidia","model":"nvidia/nemotron-3-super-120b-a12b","outcome":"error","reason":"forced_down","n":1}
+{"provider":"openrouter","model":"nvidia/nemotron-3-super-120b-a12b:free","outcome":"error","reason":"forced_down","n":1}
+{"provider":"openrouter","model":"nvidia/nemotron-3-super-120b-a12b:free","outcome":"ok","reason":"ok","n":1}
+{"provider":"ovh","model":"Qwen3.5-397B-A17B","outcome":"error","reason":"forced_down","n":1}
+{"provider":"ovh","model":"gpt-oss-120b","outcome":"error","reason":"forced_down","n":1}
+{"provider":"requesty","model":"nvidia/nemotron-3-ultra-550b-a55b","outcome":"error","reason":"forced_down","n":1}
+{"provider":"requesty","model":"nvidia/nemotron-3-ultra-550b-a55b","outcome":"error","reason":"rate_limited","n":5}
+{"provider":"requesty","model":"nvidia/nemotron-3-ultra-550b-a55b","outcome":"error","reason":"timeout","n":6}
+{"provider":"requesty","model":"nvidia/nemotron-3-ultra-550b-a55b","outcome":"ok","reason":"ok","n":3}
+{"provider":"requesty","model":"nvidia/nemotron-3-ultra-550b-a55b","outcome":"skipped","reason":"cooling","n":29}
+{"provider":"zai","model":"glm-4.7-flash","outcome":"error","reason":"forced_down","n":1}
+usage {"task":"test_run","provider":"kilo","calls":40,"ok":39,"failed":1}
+usage {"task":"test_run","provider":"openrouter","calls":1,"ok":1,"failed":0}
+usage {"task":"test_run","provider":"requesty","calls":14,"ok":3,"failed":11}

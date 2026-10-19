@@ -1,0 +1,20 @@
+# N10 failure path live on Neon: every provider forced down (fault injection), then the same run again with providers up
+date: Mon, 19 Oct 2026 10:56:46 GMT
+## attempt 1: RUNNER_FORCE_DOWN=all eight providers
+{"id":"449e5696-72da-4d18-9694-ef520d47b5b7","status":"queued","reason":"provider_exhausted","last_error":"provider_exhausted","provider":null,"model":null,"failover":false,"tenant":"r_449e569672da4d189694ef520d47b5b7_1","cases":[]}
+{"run_id":"ee24d612-a9bc-4cf3-ab3e-b16300007856","status":"running","calls":0}
+exit 0
+## attempt 2: same IDEMPOTENCY_KEY (same run, no new run), providers up, after the 30 s backoff
+date: Mon, 19 Oct 2026 10:57:23 GMT
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"case_exists","status":"pass","expected":{"cases":1,"requesterKey":"saeed","priorRequestRef":"SR-1042"},"observed":["NZ-000017"]}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"right_queue","status":"pass","expected":"complaint_review","observed":[{"queue":"complaint_review","reference":"NZ-000017"}]}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"linked_escalation","status":"pass","expected":{"count":1,"queue":"complaint_review","status":"pending_review"},"observed":[{"reference":"NZ-000017","escalation":{"queue":"complaint_review","status":"pending_review"}}]}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"ownership","status":"pass","expected":"saeed","observed":{"owners":[{"reference":"NZ-000017","requesterKey":"saeed"}],"unknownOrForeignReferences":[]}}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"allowed_transitions","status":"pass","expected":{"case":["open","in_review with linked escalation"],"escalation":"pending_review","saysResolvedOrClosed":false},"observed":{"cases":[{"status":"in_review","reference":"NZ-000017","escalation":{"queue":"complaint_review","status":"pending_review"}}],"saysResolvedOrClosed":false}}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"duplicates","status":"pass","expected":{"escalationsPerCase":1,"casesPerRequesterAndPriorRequest":1},"observed":{"groups":[["NZ-000017"]],"linked":["NZ-000017"]}}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","id":"reply_matches_record","status":"pass","expected":{"reviewQueue":"complaint_review","submittedNeedsCase":true,"pendingAfterFailedCreate":false},"observed":{"cases":["NZ-000017"],"claim":{"references":["NZ-000017"],"saysSubmitted":true,"pendingReference":false,"saysSentForReview":true,"saysResolvedOrClosed":false},"escalations":[{"reference":"NZ-000017","escalation":{"queue":"complaint_review","status":"pending_review"}}],"failedCreateReceipts":[]}}
+{"conversation_id":"449e5696-72da-4d18-9694-ef520d47b5b7","agent_said":"Your complaint case has been created with reference **NZ-000017** and has been sent for human review. The escalation ID is **8a858ce3-1a02-46c1-aefa-118a42f484a7**. The case is now in the complaint_review queue with status \"pending_review\"."}
+{"id":"449e5696-72da-4d18-9694-ef520d47b5b7","status":"passed","reason":null,"last_error":null,"provider":"kilo","model":"nvidia/nemotron-3-ultra-550b-a55b:free","failover":true,"tenant":"r_449e569672da4d189694ef520d47b5b7_2","cases":[{"reference":"NZ-000017","queue":"complaint_review","escalation_queue":"complaint_review"}]}
+{"run_id":"ee24d612-a9bc-4cf3-ab3e-b16300007856","status":"passed","calls":9}
+exit 0
+date: Mon, 19 Oct 2026 10:58:56 GMT

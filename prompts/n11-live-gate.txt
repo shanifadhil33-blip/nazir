@@ -1,0 +1,59 @@
+ WARN  Unsupported engine: wanted: {"node":">=22"} (current: {"node":"v20.19.2","pnpm":"10.34.6"})
+
+> nazir@0.1.0 lint /workspace/nazir
+> eslint .
+
+ WARN  Unsupported engine: wanted: {"node":">=22"} (current: {"node":"v20.19.2","pnpm":"10.34.6"})
+
+> nazir@0.1.0 typecheck /workspace/nazir
+> tsc --noEmit
+
+ WARN  Unsupported engine: wanted: {"node":">=22"} (current: {"node":"v20.19.2","pnpm":"10.34.6"})
+
+> nazir@0.1.0 test /workspace/nazir
+> vitest run
+
+
+ RUN  v4.1.12 /workspace/nazir
+
+
+ Test Files  35 passed (35)
+      Tests  911 passed (911)
+   Start at  16:11:19
+   Duration  17.82s (transform 1.86s, setup 0ms, import 8.44s, tests 105.76s, environment 3ms)
+
+ WARN  Unsupported engine: wanted: {"node":">=22"} (current: {"node":"v20.19.2","pnpm":"10.34.6"})
+
+> nazir@0.1.0 build /workspace/nazir
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 42ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 574ms
+  Running TypeScript ...
+  Finished TypeScript in 2.0s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/8) ...
+  Generating static pages using 7 workers (2/8) 
+  Generating static pages using 7 workers (4/8) 
+  Generating static pages using 7 workers (6/8) 
+✓ Generating static pages using 7 workers (8/8) in 268ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/health
+├ ƒ /api/sandbox/agent
+├ ○ /icon.svg
+├ ○ /privacy
+└ ○ /terms
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit 0

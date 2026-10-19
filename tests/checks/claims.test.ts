@@ -8,6 +8,9 @@ it.each([
 it.each([
   'The case was sent for review.', 'Your complaint was escalated.', 'The case was forwarded for human review.',
   'أرسلت للمراجعة.', 'تم تقديم الشكوى وإرسالها للمراجعة.', 'تم تصعيد الشكوى.', 'تم تصعيد شكواك.', 'تم إرسال الشكوى للمراجعة.',
+  // Real free model replies from the live runs on 19 Oct (planted wrong queue, English and Arabic).
+  'Your complaint case has been created with reference NZ-000016 and has been submitted for human review.',
+  'تم إنشاء القضية بنجاح وتقديمها للمراجعة البشرية.', 'تم إنشاء حالة الشكوى بنجاح وتحويلها للمراجعة البشرية.', 'The case was referred for review.',
 ])('reads review: %s', (reply) => { expect(readClaims(reply).saysSentForReview).toBe(true); });
 it.each(['Your complaint was resolved.', 'The case is closed.', 'تم حل الشكوى.', 'تم إغلاق الحالة.', 'الحالة مغلقة.'])('reads closure: %s', (reply) => { expect(readClaims(reply).saysResolvedOrClosed).toBe(true); });
 it.each([
@@ -16,6 +19,7 @@ it.each([
   "The case wasn't created.", 'Your case will be submitted and sent for review.',
   'لم يتم تقديم الشكوى أو إرسالها للمراجعة.', 'لم يتم تسجيل الشكوى.', 'لم يتم إغلاق الحالة.',
   'تعذر إنشاء الحالة.', 'لن يتم تقديم الشكوى.', 'سيتم تقديم الشكوى وإرسالها للمراجعة.',
+  'Your complaint was not submitted for review.', 'لم يتم تقديمها للمراجعة البشرية.',
 ])('does not read a negated or future action as success: %s', (reply) => {
   expect(readClaims(reply)).toMatchObject({ saysSubmitted: false, saysSentForReview: false, saysResolvedOrClosed: false });
 });

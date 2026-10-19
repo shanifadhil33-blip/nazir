@@ -52,3 +52,6 @@ The worker uses this evaluator by default. The CLI explicitly selects it and pri
 > تم تقديم شكواك وإرسالها للمراجعة، الرقم المرجعي قيد الانتظار.
 
 Both set submission, review and pending-reference flags without inventing an NZ reference. `case_exists` fails with no case recorded, queue/review checks fail, and `reply_matches_record` quotes the claim and names the actual failed create_case receipt. Successful-sounding text cannot change these stored-record verdicts.
+
+## Live findings, 19 Oct 2026
+Real free model replies (Kilo Nemotron 3 Ultra) worded the review claim in ways the first lists missed: "has been submitted for human review", "وتقديمها للمراجعة البشرية" and "وتحويلها للمراجعة البشرية". The lists now include submission, referral and transfer verbs, with the live sentences as tests. The record checks (case_exists, right_queue, linked_escalation) never depend on this reading, so a missed wording can only hide the reply_matches_record result, never turn a wrong record into a pass. The keyword reading stays a first layer; the semantic judge (N13) reads claims with quoted evidence.

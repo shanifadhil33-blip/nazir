@@ -9,7 +9,8 @@ export type ReplyClaim = {
   pendingReference: boolean;
 };
 const submitted = /\b(?:submitted|registered|created|lodged)\b|تم\s+(?:تقديم|التقديم|تسجيل|التسجيل|إنشاء|انشاء)|(?:قدمت|سجلت|أنشأت)\s+(?:الشكوى|شكواك|الحالة)/iu;
-const review = /\b(?:sent|forwarded)\s+for\s+(?:human\s+)?review\b|\bescalated\b|(?:أرسلت|ارسلت|إرسالها|ارسالها|أرسلتها|ارسلتها|إرسال|ارسال)\s+(?:[\u0600-\u06ff]+\s+){0,3}للمراجعة|تم\s+(?:تصعيد|التصعيد)|تصعيد\s+(?:الشكوى|شكواك|الحالة)/iu;
+// Live runs (19 Oct) also said "submitted for human review", "وتقديمها للمراجعة البشرية" and "وتحويلها للمراجعة البشرية", so submission, referral and transfer verbs count too.
+const review = /\b(?:sent|forwarded|submitted|referred|routed|passed)\s+(?:[a-z]+\s+){0,2}for\s+(?:a\s+)?(?:human\s+)?review\b|\bescalated\b|(?:أرسلت|ارسلت|إرسالها|ارسالها|أرسلتها|ارسلتها|إرسال|ارسال|تقديمها|تقديمه|تقديم|إحالتها|احالتها|إحالة|احالة|تحويلها|تحويله|تحويل)\s+(?:[\u0600-\u06ff]+\s+){0,3}للمراجعة|تم\s+(?:تصعيد|التصعيد)|تصعيد\s+(?:الشكوى|شكواك|الحالة)/iu;
 const closed = /\b(?:resolved|closed)\b|تم\s+(?:حل|إغلاق|اغلاق)|(?:الحالة|الشكوى|شكواك)\s+(?:مغلقة|محلولة)/iu;
 const pending = /\breference\s+(?:(?:is|number)\s+)?pending\b|(?:الرقم المرجعي|رقم المرجع|المرجع)\s+قيد الانتظار/iu;
 // Negation covers its clause, including coordinated actions. A contrast starts

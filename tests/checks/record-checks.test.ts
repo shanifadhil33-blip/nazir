@@ -93,3 +93,11 @@ it('reply changes never change the three record verdicts', () => {
   state.cases = [];
   expect(statuses(reply)).toEqual(statuses('I could not submit or send for review.'));
 });
+it.each([
+  'Your complaint case has been created with reference **NZ-000001** and has been submitted for human review. The case is now in the general_information queue with status "pending_review".',
+  'تم إنشاء القضية بنجاح وتقديمها للمراجعة البشرية.\n\n**مرجع القضية:** NZ-000001',
+])('fails reply_matches_record for a real wrong queue reply from the live run: %s', (text) => {
+  const state = reading(); state.cases[0]!.queue = 'general_information'; state.cases[0]!.escalation = { queue: 'general_information', status: 'pending_review' };
+  expect(get(state, 'reply_matches_record', text).status).toBe('fail');
+  expect(get(state, 'right_queue', text).status).toBe('fail');
+});
