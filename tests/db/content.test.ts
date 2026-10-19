@@ -38,6 +38,7 @@ it('freezes agent versions and requires planted fault labels', async () => {
 it('keeps run manifests immutable while status progresses', async () => {
   await expect(db.worker(a.workspace_id, (sql) => sql.query("UPDATE nazir.runs SET frozen_manifest='{\"changed\":true}' WHERE id=$1", [a.ids.runs]))).rejects.toThrow('Manifest is immutable');
   await expect(db.owner.query("UPDATE nazir.runs SET manifest_hash='fake' WHERE id=$1", [a.ids.runs])).rejects.toThrow('Manifest is immutable');
+  await db.worker(a.workspace_id, (sql) => sql.query("UPDATE nazir.runs SET status='queued' WHERE id=$1", [a.ids.runs]));
   await db.worker(a.workspace_id, (sql) => sql.query("UPDATE nazir.runs SET status='running' WHERE id=$1", [a.ids.runs]));
 });
 it('freezes all finding fields except status and owner role', async () => {
