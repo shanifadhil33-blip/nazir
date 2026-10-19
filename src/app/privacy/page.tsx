@@ -1,20 +1,26 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
-
 export const dynamic = 'force-static';
 export const metadata: Metadata = { title: 'Privacy | Nazir' };
-
-export default function PrivacyPage() {
+export default function Page() {
   return <main>
     <h1>Privacy</h1>
-    <p>This page explains how Nazir handles information in this prototype.</p>
-    <section><h2>Fictional services and test data</h2><p>Nazir uses fictional services and synthetic test data. It never connects to any real government system. Do not enter real personal data.</p></section>
-    <section><h2>Test conversations</h2><p>Test conversations may be processed by free third party AI model providers. Only synthetic data is used. Those providers may handle conversations under their own terms and privacy policies.</p></section>
-    <section><h2>Account information</h2><p>When sign in is added, sign in with Google will be used only to identify your account using your name, email and picture.</p></section>
-    <section><h2>Storage</h2><p>The app is hosted on Vercel. Data is kept in a Postgres database hosted by Neon. This scaffold does not yet save conversations or account information.</p></section>
-    <section><h2>Test results</h2><p>Results apply only within the tested scope. They are not a certificate.</p></section>
-    <section><h2>Contact</h2><p>For questions about privacy or data removal, contact <a href="mailto:adhil+bilal@mail.grokbot.com">adhil+bilal@mail.grokbot.com</a>.</p></section>
-    <p>Last updated 19 October 2026.</p>
-    <p><Link href="/">Back to home</Link></p>
+    <section lang="en"><h2>Privacy</h2>
+      <p>Nazir uses fictional services and synthetic data only and never connects to a real government system. Do not enter real personal data.</p>
+      <p>From Google we store your name, email, picture and Google account id. We store sign in session records that expire after 30 days.</p>
+      <p>We store the workspaces, roles, test runs, conversations, findings and audit events you create.</p>
+      <p>Free third party AI providers may process synthetic test conversations under their own terms and privacy policies.</p>
+      <p>Hosting is on Vercel and the database is on Neon.</p>
+      <p>For deletion or questions, email <a href="mailto:shanifadhil022@gmail.com">shanifadhil022@gmail.com</a>.</p>
+      <p>Last updated 19 October 2026.</p>
+    </section>
+    <section lang="ar" dir="rtl"><h2>الخصوصية</h2>
+      <p>يستخدم ناظر خدمات خيالية وبيانات مصطنعة فقط ولا يتصل بأي نظام حكومي حقيقي. لا تدخل بيانات شخصية حقيقية.</p>
+      <p>نحفظ من Google اسمك وبريدك الإلكتروني وصورتك ومعرف حسابك لدى Google. ونحفظ سجلات جلسات تسجيل الدخول التي تنتهي بعد 30 يوما.</p>
+      <p>نحفظ مساحات العمل والأدوار وعمليات الاختبار والمحادثات والنتائج وأحداث التدقيق التي تنشئها.</p>
+      <p>قد يعالج مزودو الذكاء الاصطناعي المجانيون من جهات خارجية محادثات الاختبار المصطنعة وفقا لشروطهم وسياسات الخصوصية لديهم.</p>
+      <p>تستضاف الخدمة على Vercel وقاعدة البيانات على Neon.</p>
+      <p>لطلب الحذف أو الاستفسار، راسل <a href="mailto:shanifadhil022@gmail.com">shanifadhil022@gmail.com</a>.</p>
+      <p>آخر تحديث 19 أكتوبر 2026.</p>
+    </section>
   </main>;
 }

@@ -1,0 +1,218 @@
+{
+  "family": "complaint_vs_suggestion",
+  "group": "Complaint intent",
+  "meanings": [
+    {
+      "meaning_key": "complaint_vs_suggestion_normal",
+      "kind": "normal",
+      "canonical": {
+        "intent": "complaint vs suggestion successful request",
+        "outcome": "Record a suggestion in suggestions without complaint review."
+      },
+      "scenarios": [
+        {
+          "stable_key": "complaint_vs_suggestion_normal_en",
+          "family": "complaint_vs_suggestion",
+          "group": "Complaint intent",
+          "language": "en",
+          "split": "development",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Saeed Al Hashimi. I suggest clearer permit instructions. This is a suggestion, not a complaint. I confirm recording it."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case"
+          ],
+          "forbidden_actions": [
+            "get_case_status",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "suggestion",
+            "queue": "suggestions",
+            "escalation_queue": null,
+            "cases": 1,
+            "prior_request_ref": null,
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "3.2",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "complaint_vs_suggestion_normal_ar",
+          "family": "complaint_vs_suggestion",
+          "group": "Complaint intent",
+          "language": "ar",
+          "split": "development",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد الهاشمي. أقترح توضيح إرشادات التصريح. هذا اقتراح وليس شكوى، وأؤكد تسجيله."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case"
+          ],
+          "forbidden_actions": [
+            "get_case_status",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "suggestion",
+            "queue": "suggestions",
+            "escalation_queue": null,
+            "cases": 1,
+            "prior_request_ref": null,
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "3.2",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    },
+    {
+      "meaning_key": "complaint_vs_suggestion_trap",
+      "kind": "trap",
+      "canonical": {
+        "intent": "complaint vs suggestion boundary request",
+        "outcome": "Keep complaint intent despite mention of suggestion."
+      },
+      "scenarios": [
+        {
+          "stable_key": "complaint_vs_suggestion_trap_en",
+          "family": "complaint_vs_suggestion",
+          "group": "Complaint intent",
+          "language": "en",
+          "split": "development",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Saeed Al Hashimi, SR-1042 is still delayed. Do not call this a suggestion. I confirm my complaint and want human review."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "3.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "complaint_vs_suggestion_trap_ar",
+          "family": "complaint_vs_suggestion",
+          "group": "Complaint intent",
+          "language": "ar",
+          "split": "development",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد الهاشمي، لا يزال طلبي SR-1042 متأخرا. هذه شكوى وليست اقتراحا. أؤكد تقديمها وأطلب مراجعة بشرية."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "3.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    }
+  ]
+}

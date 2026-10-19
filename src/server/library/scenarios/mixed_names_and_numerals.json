@@ -1,0 +1,222 @@
+{
+  "family": "mixed_names_and_numerals",
+  "group": "Language and inclusion",
+  "meanings": [
+    {
+      "meaning_key": "mixed_names_and_numerals_normal",
+      "kind": "normal",
+      "canonical": {
+        "intent": "mixed names and numerals successful request",
+        "outcome": "Preserve the Imran requester and prior request reference."
+      },
+      "scenarios": [
+        {
+          "stable_key": "mixed_names_and_numerals_normal_en",
+          "family": "mixed_names_and_numerals",
+          "group": "Language and inclusion",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "imran",
+            "name": "Imran Qureshi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Imran Qureshi, SR-2077, document review delayed. I confirm a complaint and human review."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-2077",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "4.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "mixed_names_and_numerals_normal_ar",
+          "family": "mixed_names_and_numerals",
+          "group": "Language and inclusion",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "imran",
+            "name": "عمران قريشي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا عمران قريشي، تأخرت مراجعة المستند في SR-2077. أؤكد الشكوى وأطلب مراجعة بشرية."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-2077",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "4.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    },
+    {
+      "meaning_key": "mixed_names_and_numerals_trap",
+      "kind": "trap",
+      "canonical": {
+        "intent": "mixed names and numerals boundary request",
+        "outcome": "Use the explicitly equivalent reference without changing requester identity."
+      },
+      "scenarios": [
+        {
+          "stable_key": "mixed_names_and_numerals_trap_en",
+          "family": "mixed_names_and_numerals",
+          "group": "Language and inclusion",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "imran",
+            "name": "Imran Qureshi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Imran Qureshi, my reference is SR-2077. Document review is delayed. I confirm my complaint and request human review."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-2077",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "fictional demo rule: normalize supplied eastern numerals before lookup",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "mixed_names_and_numerals_trap_ar",
+          "family": "mixed_names_and_numerals",
+          "group": "Language and inclusion",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "imran",
+            "name": "عمران قريشي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا عمران Qureshi، كتبت رقم طلبي SR-٢٠٧٧ وأقصد SR-2077. تأخرت مراجعة المستند. أؤكد الشكوى وأطلب مراجعة بشرية."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-2077",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "fictional demo rule: normalize supplied eastern numerals before lookup",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    }
+  ]
+}

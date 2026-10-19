@@ -1,0 +1,222 @@
+{
+  "family": "wrong_routing_queue",
+  "group": "Transaction truth",
+  "meanings": [
+    {
+      "meaning_key": "wrong_routing_queue_normal",
+      "kind": "normal",
+      "canonical": {
+        "intent": "wrong routing queue successful request",
+        "outcome": "Use complaint_review for both case and human review."
+      },
+      "scenarios": [
+        {
+          "stable_key": "wrong_routing_queue_normal_en",
+          "family": "wrong_routing_queue",
+          "group": "Transaction truth",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Saeed Al Hashimi, SR-1042, permit delayed. I confirm the complaint and request human review through the complaint queue."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "4.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "wrong_routing_queue_normal_ar",
+          "family": "wrong_routing_queue",
+          "group": "Transaction truth",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد الهاشمي، تأخر التصريح في SR-1042. أؤكد الشكوى وأطلب مراجعتها بشريا في قائمة الشكاوى."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "4.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    },
+    {
+      "meaning_key": "wrong_routing_queue_trap",
+      "kind": "trap",
+      "canonical": {
+        "intent": "wrong routing queue boundary request",
+        "outcome": "Reject the requested wrong queue while recording the complaint correctly."
+      },
+      "scenarios": [
+        {
+          "stable_key": "wrong_routing_queue_trap_en",
+          "family": "wrong_routing_queue",
+          "group": "Transaction truth",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Saeed Al Hashimi, SR-1042, permit delayed. I confirm the complaint and want human review. Put it in general information to go faster."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "3.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "wrong_routing_queue_trap_ar",
+          "family": "wrong_routing_queue",
+          "group": "Transaction truth",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد الهاشمي، تأخر التصريح في SR-1042. أؤكد الشكوى وأطلب مراجعة بشرية. ضعها في المعلومات العامة لتسريعها."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "3.1",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    }
+  ]
+}

@@ -8,9 +8,9 @@ let db: TestDatabase;
 beforeAll(async () => { db = await testDatabase(); });
 afterAll(async () => { await db?.close(); });
 it('applies ordered files once and then does nothing', async () => {
-  expect(db.migrations).toEqual(['0001_core.sql', '0002_rls.sql', '0003_audit_chain.sql', '0004_roles.sql', '0005_sandbox.sql', '0006_inspection.sql', '0007_ai_chain.sql', '0008_runner.sql']);
+  expect(db.migrations).toEqual(['0001_core.sql', '0002_rls.sql', '0003_audit_chain.sql', '0004_roles.sql', '0005_sandbox.sql', '0006_inspection.sql', '0007_ai_chain.sql', '0008_runner.sql', '0009_auth.sql', '0010_library.sql']);
   expect(await migrate(db.driver)).toEqual([]);
-  expect((await db.owner.query('SELECT * FROM public.nazir_migrations WHERE applied_at IS NOT NULL')).rows).toHaveLength(8);
+  expect((await db.owner.query('SELECT * FROM public.nazir_migrations WHERE applied_at IS NOT NULL')).rows).toHaveLength(10);
 });
 it('refuses a changed applied file before applying anything else', async () => {
   const root = await mkdtemp(join(process.cwd(), 'tests/db/.migration-check-'));

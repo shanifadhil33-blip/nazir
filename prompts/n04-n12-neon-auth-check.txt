@@ -1,0 +1,2 @@
+auth fn ok rows 0
+app refused sessions: ok

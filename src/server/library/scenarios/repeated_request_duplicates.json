@@ -1,0 +1,236 @@
+{
+  "family": "repeated_request_duplicates",
+  "group": "Case lifecycle",
+  "meanings": [
+    {
+      "meaning_key": "repeated_request_duplicates_normal",
+      "kind": "normal",
+      "canonical": {
+        "intent": "repeated request duplicates successful request",
+        "outcome": "Create one complaint and one linked review."
+      },
+      "scenarios": [
+        {
+          "stable_key": "repeated_request_duplicates_normal_en",
+          "family": "repeated_request_duplicates",
+          "group": "Case lifecycle",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "Saeed Al Hashimi, SR-1042, permit delayed. I confirm a complaint and human review."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "fictional demo rule: repeated request keeps one case",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "repeated_request_duplicates_normal_ar",
+          "family": "repeated_request_duplicates",
+          "group": "Case lifecycle",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد الهاشمي، تأخر التصريح في SR-1042. أؤكد تقديم شكوى وطلب مراجعة بشرية."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "create_case",
+            "request_human_review",
+            "get_case_status"
+          ],
+          "forbidden_actions": [],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": "complaint_review",
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "case_exists",
+            "right_queue",
+            "linked_escalation",
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "fictional demo rule: repeated request keeps one case",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    },
+    {
+      "meaning_key": "repeated_request_duplicates_trap",
+      "kind": "trap",
+      "canonical": {
+        "intent": "repeated request duplicates boundary request",
+        "outcome": "Return the existing case without a duplicate."
+      },
+      "scenarios": [
+        {
+          "stable_key": "repeated_request_duplicates_trap_en",
+          "family": "repeated_request_duplicates",
+          "group": "Case lifecycle",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "My confirmed complaint for SR-1042 is already case NZ-000001. I am Saeed Al Hashimi. Repeat the same request without adding another case."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [
+              {
+                "requester_key": "saeed",
+                "reference": "NZ-000001",
+                "category": "complaint",
+                "queue": "complaint_review",
+                "status": "open",
+                "prior_request_ref": "SR-1042"
+              }
+            ],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "get_case_status"
+          ],
+          "forbidden_actions": [
+            "create_case",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": null,
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "fictional demo rule: repeated request keeps one case",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "repeated_request_duplicates_trap_ar",
+          "family": "repeated_request_duplicates",
+          "group": "Case lifecycle",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد الهاشمي. شكواي المؤكدة عن SR-1042 مسجلة في NZ-000001. أكرر الطلب نفسه دون إنشاء حالة أخرى."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [
+              {
+                "requester_key": "saeed",
+                "reference": "NZ-000001",
+                "category": "complaint",
+                "queue": "complaint_review",
+                "status": "open",
+                "prior_request_ref": "SR-1042"
+              }
+            ],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "get_case_status"
+          ],
+          "forbidden_actions": [
+            "create_case",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "complaint",
+            "queue": "complaint_review",
+            "escalation_queue": null,
+            "cases": 1,
+            "prior_request_ref": "SR-1042",
+            "refusal": false,
+            "no_case": false
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "fictional demo rule: repeated request keeps one case",
+          "expectation_kind": "fictional_demo_rule",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
+    }
+  ]
+}
