@@ -1,0 +1,5 @@
+rows left after live check: workspaces 0, audit 0, users 0; migrations recorded 3; tables 23
+caller seq and hash ignored: seq 1, hash length 64, prev is zeros true
+PASS owner UPDATE refused (P0001)
+PASS owner DELETE refused (P0001)
+PASS owner TRUNCATE refused (P0001)

@@ -1,0 +1,20 @@
+import { expect, it } from 'vitest';
+import { runLiveCheck } from '../../scripts/db-live-check.mjs';
+import { loadTs } from '../../scripts/load-ts.mjs';
+import { testDatabase } from '../helpers/pglite';
+
+it('executes the live check locally and rolls every row back', async () => {
+  const db = await testDatabase();
+  try {
+    await db.owner.query('CREATE ROLE nazir_login LOGIN NOINHERIT; GRANT nazir_app,nazir_worker TO nazir_login; SET ROLE nazir_login');
+    const audit = await loadTs('../src/server/audit/verify.ts');
+    const lines: string[] = [];
+    expect(await runLiveCheck(db.owner, audit, (line: string) => lines.push(line))).toBe(true);
+    expect(lines).toHaveLength(10);
+    expect(lines.every((line) => line.startsWith('PASS '))).toBe(true);
+    await db.owner.query('RESET ROLE');
+    for (const table of ['users', 'workspaces', 'members', 'rule_packs', 'audit_events']) {
+      expect((await db.owner.query(`SELECT * FROM nazir.${table}`)).rows, table).toHaveLength(0);
+    }
+  } finally { await db.close(); }
+});
