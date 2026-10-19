@@ -9,8 +9,9 @@ it('executes the live check locally and rolls every row back', async () => {
     await db.owner.query('CREATE ROLE nazir_login LOGIN NOINHERIT; GRANT nazir_app,nazir_worker TO nazir_login; SET ROLE nazir_login');
     const audit = await loadTs('../src/server/audit/verify.ts');
     const lines: string[] = [];
-    expect(await runLiveCheck(db.owner, audit, (line: string) => lines.push(line))).toBe(true);
-    expect(lines).toHaveLength(10);
+    const ok = await runLiveCheck(db.owner, audit, (line: string) => lines.push(line));
+    expect(ok, lines.join("\n")).toBe(true);
+    expect(lines).toHaveLength(12);
     expect(lines.every((line) => line.startsWith('PASS '))).toBe(true);
     await db.owner.query('RESET ROLE');
     for (const table of ['users', 'workspaces', 'members', 'rule_packs', 'audit_events']) {

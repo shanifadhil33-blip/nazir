@@ -12,7 +12,42 @@ This phase stores fictional sandbox tests in schema `nazir`. Plain numbered SQL 
 
 Every ordinary tenant table has a workspace id and unique `(workspace_id,id)`. Parent references use composite foreign keys. Member roles use `(member_id,role)` as their primary key and retain a generated id with a composite unique key. Audit events instead use `(workspace_id,seq)` as their identity. Structured evidence JSON, lesson source conversation arrays, and polymorphic approval subject ids are references for the application to validate, not relational foreign keys. They do not grant access to another workspace's records.
 
-Both app roles may select records within their context. Neither has DELETE or TRUNCATE. Members manage definitions, plans, proposals and lessons; workers write execution records. Members can change finding status and owner role; workers can change only finding status. Bootstrap is the only app-accessible path to create a workspace, user and first member. Role-based approval authority is deferred to N05. This phase records decisions without introducing those rules.
+Both app roles may select records within their context. Neither has DELETE or TRUNCATE. Members manage definitions, plans, proposals and lessons; workers write execution records. Members can change finding status and owner role; workers can change only finding status. Bootstrap is the only app-accessible path to create a workspace, user and first member. N05 adds member authority with restrictive role policies and transition triggers, described below.
+
+## Roles
+
+A member may hold several roles. Permissions are their union. The pure `can` matrix in `src/server/auth/roles.ts` supplies the same authority to future app routes and agent tools. Every service validates its input with Zod, enters `withMember`, calls `requireRole` on that transaction connection, checks the subject, writes with bound values, and appends an audit event in the same transaction. Forbidden, missing record and validation errors map to 403, 404 and 400; other errors return 500 without internal details. These functions accept a trusted backend member context; sign in and HTTP routes are later work.
+
+| Action | Service owner | Supplier maintainer | Service quality reviewer | Viewer |
+| --- | --- | --- | --- | --- |
+| Draft rule versions and write rule packs | Yes | Yes | No | No |
+| Approve or retire rule versions | Yes | No | No | No |
+| Register or edit adapters | No | Yes | No | No |
+| Create or edit agents and versions | Yes | Yes | No | No |
+| Create planted fault versions | Yes | No | No | No |
+| Write scenarios and meanings | Yes | No | Yes | No |
+| Approve scenario status | Yes | No | Yes | No |
+| Record scenario approval | No | No | Yes | No |
+| Propose and approve plans | Yes | No | Yes | No |
+| Propose repairs | No | Yes | No | No |
+| Approve or reject proposals | No | No | Yes | No |
+| Override findings | No | No | Yes | No |
+| Accept findings | Yes | No | Yes | No |
+| Edit lessons and confirm small lessons | Yes | No | Yes | No |
+| Activate or approve big lessons | Yes | No | No | No |
+| Record release decisions | Yes | No | No | No |
+| Read evidence and audit | Yes | Yes | Yes | No |
+| Read hidden scenarios and meanings | Yes | No | Yes | No |
+
+The detailed N05 database rules allow owners to draft rule versions and write agents and versions. Scenario status approval allows owners or reviewers; a scenario approval record requires a reviewer. Worker grants otherwise remain unchanged and workers have no approval insertion grant. The worker can create baseline or planted fault configurations only through its existing or future controlled execution paths; this migration adds no direct agent version grant to workers.
+
+A viewer can read workspaces, members, member roles, rule packs, approved rule versions, agents, runs, findings and release approval records. Other approval subjects are hidden. Conversations, messages, tool events, state readings, adapters, agent versions, scenarios, meanings, plans, proposals, lessons, revisions and audit records require a nonviewer role. Suppliers see development scenarios but no hidden scenarios. A meaning linked to any hidden scenario is hidden from suppliers even if also linked to a development scenario. Adding viewer to another role does not remove that role's permissions.
+
+The database is an independent enforcement boundary: restrictive command policies intersect the original workspace policy. Fixed search path security definer helpers resolve only an active app member. Triggers prevent author spoofing and author changes, constrain status transitions, check approval subject workspace and authority, and replace approval actor snapshots with event time name and sorted roles. Direct SQL cannot bypass these checks. Evidence immutability remains enforced. Scenario hashes exclude the new author metadata so existing approved hashes remain stable.
+
+Four eyes always wins over combined roles: nobody can decide their own proposal or approve their own rule version, plan or scenario. Both approval rows and direct status transitions check authors. `created_by` is nullable for historical rows on rule versions, scenarios, plans, agent versions and adapters. App inserts always stamp it from the active member. Plan and proposal proposer fields are also stamped and immutable. Historical plan proposers remain protected; authors of older rows without recorded authors cannot be reconstructed and remain null.
+
+`append_audit` refuses viewer only members; its internal implementation has no application or worker execute grant. Successful service events keep member name and roles at event time. The worker only `add_member(email,display_name,roles)` provisioning function derives workspace from worker context, validates the role list and appends a membership audit event. It provides the live check's real viewer and combined supplier/reviewer fixtures without granting membership writes to application members. The live check seeds real evidence and a proposal, checks both refusals and always rolls the whole transaction back.
 
 ## users
 
@@ -92,7 +127,7 @@ Evidence and suggested JSON patches linked to findings, expected benefits, regre
 
 ## approvals
 
-Decision, subject type and id, reason, evidence-opened flag and member name and roles at decision time. Members append; reasons must contain at least three trimmed characters. Records cannot change after insertion. Caller-supplied decision snapshots and authority will be controlled by N05 workflows.
+Decision, subject type and id, reason, evidence-opened flag and member name and roles at decision time. Members append; reasons must contain at least three trimmed characters. Records cannot change after insertion. N05 derives decision snapshots from the current active member and enforces subject authority and four eyes in the database.
 
 ## lessons
 

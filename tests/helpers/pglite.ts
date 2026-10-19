@@ -27,6 +27,12 @@ export async function testDatabase() {
         return result.rows[0]!;
       });
     },
+    async createMember(workspaceId: string, roles: import('../../src/server/auth/roles').Role[], name = 'Member') {
+      const user = (await owner.query<{ id: string }>('INSERT INTO nazir.users(email,name) VALUES($1,$2) RETURNING id', [crypto.randomUUID() + '@example.test', name])).rows[0]!;
+      const member = (await owner.query<{ id: string }>('INSERT INTO nazir.members(workspace_id,user_id,display_name) VALUES($1,$2,$3) RETURNING id', [workspaceId, user.id, name])).rows[0]!;
+      for (const role of roles) await owner.query('INSERT INTO nazir.member_roles(workspace_id,member_id,role) VALUES($1,$2,$3)', [workspaceId, member.id, role]);
+      return member.id;
+    },
     close: () => pg.close(),
   };
 }
