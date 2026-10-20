@@ -3,11 +3,13 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { safeHttpsUrl } from './agent-settings';
 
+// 198.18.0.0/15 is the benchmark range; a fake IP DNS proxy (the build box) answers from it. Only scripts on such a box set
+// NAZIR_ALLOW_BENCHMARK_DNS=1; production never does.
 export function privateAddress(address: string): boolean {
   const v = isIP(address);
   if (v === 4) {
     const [a, b] = address.split('.').map(Number) as [number, number];
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19) && process.env.NAZIR_ALLOW_BENCHMARK_DNS !== '1') || a >= 224;
   }
   if (v === 6) {
     const x = address.toLowerCase();
