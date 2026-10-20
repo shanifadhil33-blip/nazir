@@ -93,13 +93,13 @@ const sections = [['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['
 
 export function WorkspaceScreen({
   lang, copy, demo, seat, roles, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
-  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings,
+  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null,
 }: {
   lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
   onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
-  avatar?: string; onSettings?: () => void;
+  avatar?: string; onSettings?: () => void; measured?: Measured | null;
 }) {
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -240,6 +240,7 @@ export function WorkspaceScreen({
             })}
           </tbody>
         </table> : null}
+        {measured ? <MeasuredTable copy={copy} lang={lang} data={measured} /> : null}
         <h3>{copy.ui.fixesApplied}</h3>
         {model.fixes.length === 0 ? <p className="nz-empty">{copy.ui.noRepair}</p> : <ul className="nz-fixes">{model.fixes.map((fix) => <li key={fix.id}><strong>{fix.title}</strong><span>{fill(copy.ui.approvedBy, { name: fix.name, role: fix.role })} {dubaiStamp(fix.at, lang)}, {copy.ui.dubai}</span></li>)}</ul>}
         <p className="nz-coverage">{model.coverage}</p>
@@ -253,5 +254,21 @@ export function WorkspaceScreen({
     <nav className="nz-tabs-bar" aria-label={copy.ui.sections}>
       {sections.map(([id, icon]) => <button type="button" key={id} className="nz-nav-btn" aria-current={screen === id ? 'page' : undefined} onClick={() => open(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
     </nav>
+  </div>;
+}
+
+export type Measured = { conversations: number; runs?: number; metrics: { id: string; value: number | null; numerator: number; denominator: number; unit: 'percent' | 'points' | 'calls' }[] };
+function MeasuredTable({ copy, lang, data }: { copy: Messages; lang: Lang; data: Measured }) {
+  const ui = copy.ui as unknown as Record<string, string>;
+  const num = (v: number) => v.toLocaleString(lang === 'ar' ? 'ar-AE' : 'en-US');
+  return <div className="nz-measured" data-state="measured">
+    <h3>{ui.measured}</h3>
+    {data.conversations === 0 ? <p className="nz-empty">{ui.measuredEmpty}</p> : <>
+      <p className="nz-note">{fill(ui.measuredNote!, { n: num(data.conversations), runs: num(data.runs ?? 0) })}</p>
+      <table className="nz-table"><thead><tr><th>{copy.ui.measure}</th><th>{ui.mValue}</th><th>{ui.mBasis}</th></tr></thead><tbody>
+        {data.metrics.map((m) => <tr key={m.id} data-metric={m.id}><th>{ui[`m_${m.id}`]}</th>
+          <td>{m.value === null ? '' : m.unit === 'percent' ? `${num(m.value)}%` : fill(ui[m.unit === 'points' ? 'mPoints' : 'mCalls']!, { v: num(m.value) })}</td>
+          <td>{num(m.numerator)} / {num(m.denominator)}</td></tr>)}
+      </tbody></table></>}
   </div>;
 }

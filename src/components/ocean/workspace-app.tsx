@@ -6,6 +6,7 @@ import { messagesFor, type Lang, type Messages } from './copy';
 import { canApprove, canRunRecheck, emptyModel, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
+import type { Measured } from './screen';
 import { AgentSettingsPanel, defaultSettings, type SettingsView } from './agent-settings';
 
 type Bundle = { latest: ReportBody; previous: ReportBody | null; agentName: string; sample: boolean } | 'sample';
@@ -44,6 +45,7 @@ export function WorkspaceApp({
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
   const [settings, setSettings] = useState<SettingsView | null>(null);
+  const [measured, setMeasured] = useState<Measured | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const thread = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -79,6 +81,7 @@ export function WorkspaceApp({
       setUserName(nextName);
       const headers = { 'accept-language': langRef.current };
       const settingsResponse = await fetch(`/api/workspaces/${workspaceId}/settings`, { headers }).catch(() => null);
+      void fetch(`/api/workspaces/${workspaceId}/results`, { headers }).then((r) => r.ok ? r.json() : null).then((m) => { if (!cancel && m && Array.isArray(m.metrics)) setMeasured(m as Measured); }).catch(() => undefined);
       const settingsBody = settingsResponse?.ok ? await settingsResponse.json().catch(() => null) as SettingsView | null : null;
       if (cancel) return;
       if (settingsBody) {
@@ -230,7 +233,7 @@ export function WorkspaceApp({
     pending={pending} copied={copied} copyError={copyError} onScreen={go} onLang={setLang} onApprove={approve} onSkip={skip}
     onReplay={() => void send(lang === 'ar' ? 'اقترح خطة' : 'propose a plan', copy.ui.replay)}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
-    onRecheck={recheck} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
+    onRecheck={recheck} measured={preview ? null : measured} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
   />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}</>;
 }
 
