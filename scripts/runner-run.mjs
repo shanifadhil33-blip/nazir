@@ -16,7 +16,7 @@ export async function main() {
   // Fault injection for live failure paths: providers listed here fail as forced_down without a network call.
   const forcedDown=new Set((process.env.RUNNER_FORCE_DOWN??'').split(',').map((id) => id.trim()).filter(Boolean));
   if (!process.env.DATABASE_URL || !process.env.INSPECT_DATABASE_URL || !process.env.IDEMPOTENCY_KEY) throw new Error('Runner environment required');
-  const maxConversations=cap('MAX_CONVERSATIONS',2,6),maxCalls=cap('MAX_CALLS',24,60);
+  const maxConversations=cap('MAX_CONVERSATIONS',2,48),maxCalls=cap('MAX_CALLS',24,200);
   const version=process.env.VERSION??'baseline',languages=(process.env.LANGUAGES??'en,ar').split(',');
   if (!languages.length || languages.some((l) => !['en','ar'].includes(l)) || new Set(languages).size!==languages.length) throw new Error('Invalid languages');
   const app=new Pool({ connectionString:process.env.DATABASE_URL }),inspect=new Pool({ connectionString:process.env.INSPECT_DATABASE_URL });
