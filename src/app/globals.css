@@ -371,7 +371,7 @@ a { color: var(--teal); }
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     position: fixed;
-    z-index: 20;
+    z-index: 31;
     left: 0;
     right: 0;
     bottom: 0;
@@ -401,8 +401,9 @@ a { color: var(--teal); }
     z-index: 30;
     left: 0;
     right: 0;
-    bottom: 0;
-    max-height: min(85vh, 720px);
+    /* The sheet sits above the tab bar so Chat, Score and Report stay one tap away. */
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    max-height: min(calc(85vh - 64px), 720px);
     overflow: auto;
     border-radius: 20px 20px 0 0;
     transform: translateY(110%);
