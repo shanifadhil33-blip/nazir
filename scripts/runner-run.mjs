@@ -41,7 +41,7 @@ export async function main() {
     const state=() => withWorker(driver,wid,async (db) => (await db.query('SELECT status FROM nazir.runs WHERE id=$1',[run.id])).rows[0].status);
     for (let n=0;n<maxConversations && calls<maxCalls;n++) {
       if (['passed','failed','inconclusive','cancelled'].includes(await state())) break;
-      const result=await runNextConversation({ driver,inspectionDriver,workerId:'runner_cli',judgeFactory:(context) => networkJudge(driver,context,{fetch,forcedDown}),chatModelFactory:(context) => networkChatModel(driver,context,{ fetch,forcedDown }) });
+      const result=await runNextConversation({ driver,inspectionDriver,workerId:'runner_cli',runId:run.id,judgeFactory:(context) => networkJudge(driver,context,{fetch,forcedDown}),chatModelFactory:(context) => networkChatModel(driver,context,{ fetch,forcedDown }) });
       if (!result) break;
     }
     const output=await withWorker(driver,wid,async (db) => (await db.query(`SELECT c.id,c.status,c.inconclusive_reason AS reason,c.last_error,c.result_summary,c.model_provider AS provider,c.model_id AS model,c.failover,c.sandbox_tenant AS tenant,

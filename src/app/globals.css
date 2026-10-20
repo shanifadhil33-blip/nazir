@@ -547,9 +547,11 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: rgba(255, 255
 .nz-live-switch { display: flex; gap: 12px; align-items: flex-start; }
 .nz-live-switch p { margin: 2px 0 0; }
 .nz-switch { flex: none; width: 48px; height: 28px; min-height: 28px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); position: relative; cursor: pointer; }
-.nz-switch span { position: absolute; top: 3px; inset-inline-start: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-muted); transition: inset-inline-start 150ms var(--ease), background 150ms var(--ease); }
+.nz-switch span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-muted); transition: left 150ms var(--ease), right 150ms var(--ease), background 150ms var(--ease); }
+[dir="rtl"] .nz-switch span { left: auto; right: 3px; }
 .nz-switch[aria-checked="true"] { background: rgba(255, 127, 102, .25); }
-.nz-switch[aria-checked="true"] span { inset-inline-start: 23px; background: var(--coral, #e8664f); }
+.nz-switch[aria-checked="true"] span { left: 23px; background: var(--coral, #e8664f); }
+[dir="rtl"] .nz-switch[aria-checked="true"] span { left: auto; right: 23px; }
 .nz-live-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
 .nz-live-sides h4 { margin: 4px 0 0; font-size: 13px; color: var(--ink-muted); }
 .nz-live-sides p, .nz-live-sides ul { margin: 0; overflow-wrap: anywhere; }
