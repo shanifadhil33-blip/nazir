@@ -14,5 +14,8 @@ Scope: backend only. No new routes, pages or API handlers in this chunk; new ser
 5 Abuse: live scripts have hard call caps (repair 80, memory 12 and 40, compare 20). Comparison pair review capped at 20.
 6 Data exposure: retest view shows hidden cases to suppliers only as a count; comparison projection hides hidden details.
 7 Headers: no change this chunk.
-8 Dependencies: pnpm audit needs the network; the box network was down for this turn (TLS EOF to every host). To run next turn.
-10 Live re-test: blocked by the same outage (Neon not reachable). To run next turn with the live checks.
+8 Dependencies (run 20 Oct 2026, 4:20 AM Dubai, UTC+4, network back): pnpm audit: 1 high, braces <=3.0.3 (GHSA-vfj7-8cjw-p6xm) through eslint-config-next > @next/eslint-plugin-next > fast-glob > micromatch, lint tooling only, never shipped, no patched release (same accepted item as the first deploy audit). pnpm audit --prod: No known vulnerabilities found.
+10 Live re-test on Neon (20 Oct 2026, after migrations 0013 to 0015):
+  * db-live-check 12 of 12 PASS, sandbox-live-check 8 of 8 PASS, inspection-live-check 32 of 32 PASS (prompts/n15-n17-neon-*.txt).
+  * New scripts/workspace-live-check.mjs (app login, one rolled back transaction): a fresh workspace B, as its owner member and as a worker in its context, sees 0 fixture rows in comparisons, proposals, approvals, lessons, lesson_revisions, plans, runs, findings and agent_versions (the fixture's own context sees 2, 1, 4, 3, 6, 9, 10, 28, 4, so the check is not vacuous); B cannot insert a lesson or a comparison into the fixture or update its lessons. 22 of 22 PASS (prompts/n15-n17-neon-workspace-live-check.txt).
+  * Live fixes this turn, none security relevant: talk to correct prompt and parser (src/server/memory/talk.ts) still take only an allowlisted effect and a listed lesson id; the parser now takes the LAST valid intent object, so text before it cannot add permissions (effects still go through checkEffect, roles and the routing map).

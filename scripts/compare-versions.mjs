@@ -4,8 +4,8 @@ import { pathToFileURL } from 'node:url';
 import { cap,redact,counter } from './live-helpers.mjs';
 // N17 live check: compare two finished runs with denominators, regressions, inconclusive counted apart, and paired results.
 export async function main() {
-  const [{ poolDriver },{ withWorker },{ compareRuns },{ createAiChain },{ postgresAiStore },{ judgePair }]=await Promise.all([
-    import('../src/server/db/driver.ts'),import('../src/server/db/context.ts'),import('../src/server/compare/compare.ts'),import('../src/server/ai/chain.ts'),import('../src/server/ai/store.ts'),import('../src/server/judge/pair.ts')]);
+  const [{ poolDriver },{ withWorker },{ compareRuns },{ createAiChain },{ postgresAiStore },{ judgePair },{ clauseText }]=await Promise.all([
+    import('../src/server/db/driver.ts'),import('../src/server/db/context.ts'),import('../src/server/compare/compare.ts'),import('../src/server/ai/chain.ts'),import('../src/server/ai/store.ts'),import('../src/server/judge/pair.ts'),import('../src/server/judge/rubric.ts')]);
   if (!process.env.DATABASE_URL) throw new Error('Database required');
   const app=new Pool({ connectionString:process.env.DATABASE_URL }),driver=poolDriver(app);
   try {
@@ -25,7 +25,15 @@ export async function main() {
     const judgePairs=process.env.JUDGE_PAIRS==='true',meter=counter(cap('MAX_CALLS',10,20));
     if (judgePairs) {
       const chain=createAiChain({ store:postgresAiStore(driver),fetch:meter.fetch });
-      pairJudge=async ({ a,b,seed }) => { try { return await judgePair({ chain,a,b,seed,agentFamilies:['nvidia_nemotron'],task:'test_run' }); } catch { return { better:'uncertain' }; } };
+      // Service evidence for both replies: the approved rule clause and expected state of the frozen scenario (never version names).
+      // Without it the judge only sees reply text and prefers the more detailed reply even when it names the wrong queue.
+      const context=async (key) => withWorker(driver,wid,async (db) => {
+        const s=(await db.query("SELECT language,source_clause,expected_state FROM nazir.scenarios WHERE stable_key=$1 AND status='approved' ORDER BY version DESC LIMIT 1",[key])).rows[0];
+        if (!s) return '';
+        const clause=clauseText(s.source_clause);
+        return JSON.stringify({ rule:s.language==='ar'?{ ar:clause.ar,en:clause.en }:{ en:clause.en },expectedState:s.expected_state });
+      });
+      pairJudge=async ({ a,b,seed,pair }) => { try { return await judgePair({ chain,a,b,seed,context:await context(pair.scenario_key),swapCheck:true,agentFamilies:['nvidia_nemotron'],task:'test_run' }); } catch { return { better:'uncertain' }; } };
     }
     const result=await compareRuns(driver,ctx.reviewer,{ runA:ctx.a,runB:ctx.b,pairJudge,maxJudgePairs:Number(process.env.MAX_JUDGE_PAIRS??4) });
     console.log(JSON.stringify({ comparison_id:result.id,summary_hash:result.summary_hash,run_a:ctx.a,run_b:ctx.b }));

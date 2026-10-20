@@ -24,7 +24,7 @@ export async function main() {
       return { supplier:await member('Yusuf Rahman'),reviewer:await member('Khalid Hamdan'),finding };
     });
     if (!ctx.supplier || !ctx.reviewer || !ctx.finding) throw new Error('Supplier, reviewer and an open planted queue finding are required');
-    const before=await evidenceDigest(driver,wid,ctx.finding.run_id);
+    const before=(await evidenceDigest(driver,wid,ctx.finding.run_id)).digest;
     let proposalId=process.env.PROPOSAL_ID,decided=null;
     if (!proposalId) {
       const proposal=await submitRepair(driver,ctx.supplier,{ finding_id:ctx.finding.id,evidence:'Stored case queue differs from the approved routing map while the reply said success.' });
@@ -40,7 +40,7 @@ export async function main() {
       for (const r of rows) console.log(JSON.stringify({ set:name,...r }));
       console.log(JSON.stringify({ set:name,run_id:id,cancelled_at_cap:left.includes(id),...tally(rows) }));
     }
-    const after=await evidenceDigest(driver,wid,ctx.finding.run_id);
+    const after=(await evidenceDigest(driver,wid,ctx.finding.run_id)).digest;
     console.log(`OLD_RECORDS ${before===after?'SAME':'CHANGED'} ${before.slice(0,16)} ${after.slice(0,16)}`);
     console.log(JSON.stringify({ proposal_id:proposalId,calls:meter.calls,max_calls:maxCalls }));
     if (before!==after) process.exitCode=1;

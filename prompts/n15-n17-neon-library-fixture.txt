@@ -1,0 +1,8 @@
+# N15 library fixture on Neon (Nazir library fixture workspace), date: Tue, 20 Oct 2026 00:11:11 GMT
+counts before: {"lib":"48","approved":"48","hidden":"16","audit":"100","members":"2","budget":80}
+run 1: exit 0 (adds the invented supplier member Yusuf Rahman, library_supplier@example.test)
+counts after run 1: {"lib":"48","approved":"48","hidden":"16","audit":"100","members":"3","budget":80}
+run 2: exit 0
+counts after run 2: {"lib":"48","approved":"48","hidden":"16","audit":"100","members":"3","budget":80}
+PASS run 2 output identical to run 1 and counts unchanged (idempotent)
+members: [{"display_name":"Khalid Hamdan","email":"library_reviewer@example.test"},{"display_name":"Omar Mansoor","email":"runner_nazirlibraryfixture@example.test"},{"display_name":"Yusuf Rahman","email":"library_supplier@example.test"}]

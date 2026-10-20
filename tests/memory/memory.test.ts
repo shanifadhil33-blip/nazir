@@ -177,3 +177,22 @@ it('keeps lessons inside their own workspace', async () => {
   // The other workspace has no approved scenarios of its own and never sees this workspace's lessons.
   expect(plan instanceof Error || plan.lessonsUsed.length === 0).toBe(true);
 });
+
+// Live fix (Oct 20): a free model on Kilo wrote its reasoning, with braces, before the JSON answer.
+it('reads the last valid intent after reasoning text with braces', async () => {
+  const { parseIntent } = await import('../../src/server/memory/talk');
+  const answer = '{"action":"remember","lesson_id":null,"text":"Check the complaint queue first.","effect":{"kind":"check_queue","category":"complaint","queue":"complaint_review"}}';
+  const reasoning = 'The format is {"action":...,"effect":object or null}. The effect could be {"kind":"check_queue"} with queue complaint_review.\n';
+  expect(parseIntent(reasoning + answer, new Set()).effect).toEqual({ kind: 'check_queue', category: 'complaint', queue: 'complaint_review' });
+  expect(() => parseIntent(reasoning, new Set())).toThrow('invalid_response');
+  expect(() => parseIntent('no json here', new Set())).toThrow('invalid_response');
+});
+it('names the allowed queues and families and gives the model room to answer', async () => {
+  let seen: { content: string; maxTokens?: number } | null = null;
+  const capture: TalkChain = { chat: async (r) => { seen = { content: String(r.messages[0]!.content), maxTokens: r.maxTokens }; throw new Error('stop'); } };
+  await talkToCorrect(db.driver, lib.members.reviewer, { message: 'Next time, check the complaint queue first.', language: 'en' }, capture);
+  expect(seen!.content).toContain('complaint with complaint_review');
+  expect(seen!.content).toContain('success_without_case');
+  expect(seen!.content).toContain('For remember, lesson_id is null');
+  expect(seen!.maxTokens).toBeGreaterThanOrEqual(1500);
+});

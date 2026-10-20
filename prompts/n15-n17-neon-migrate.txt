@@ -1,0 +1,6 @@
+# N15 N17 migrations on Neon (muddy-violet-20208073), date: Tue, 20 Oct 2026 00:10:21 GMT
+0013_compare.sql
+0014_repair.sql
+0015_memory.sql
+3 migrations
+exit 0

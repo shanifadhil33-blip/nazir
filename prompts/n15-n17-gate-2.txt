@@ -1,0 +1,124 @@
+
+> nazir@0.1.0 gate /workspace/nazir
+> node scripts/gate.mjs
+
+
+> nazir@0.1.0 lint /workspace/nazir
+> eslint .
+
+
+> nazir@0.1.0 typecheck /workspace/nazir
+> tsc --noEmit
+
+
+> nazir@0.1.0 test /workspace/nazir
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/workspace/nazir[39m
+
+ [32m✓[39m tests/repair/repair.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 3767[2mms[22m[39m
+   [33m[2m✓[22m[39m runs the full repair cycle and keeps the old records unchanged [33m 737[2mms[22m[39m
+   [33m[2m✓[22m[39m keeps four eyes, requires reasons, and creates nothing on reject [33m 493[2mms[22m[39m
+   [33m[2m✓[22m[39m refuses approval without a patch, drifted versions and viewer reads [33m 303[2mms[22m[39m
+ [32m✓[39m tests/runner/worker.test.ts [2m([22m[2m32 tests[22m[2m)[22m[33m 4322[2mms[22m[39m
+ [32m✓[39m tests/inspection/channel.test.ts [2m([22m[2m44 tests[22m[2m)[22m[33m 3581[2mms[22m[39m
+   [33m[2m✓[22m[39m proves login role separation and sandbox cannot select inspector [33m 1531[2mms[22m[39m
+ [32m✓[39m tests/library/import.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 3434[2mms[22m[39m
+   [33m[2m✓[22m[39m marks both twins and later versions as seen after either twin is used for a fix [33m 366[2mms[22m[39m
+   [33m[2m✓[22m[39m carries fix exposure across new canonical meaning versions [33m 595[2mms[22m[39m
+ [32m✓[39m tests/checks/journeys.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 3199[2mms[22m[39m
+ [32m✓[39m tests/findings/journeys.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 3202[2mms[22m[39m
+   [33m[2m✓[22m[39m restricts raw reads, filters hidden cases and redacts viewer cards [33m 479[2mms[22m[39m
+ [32m✓[39m tests/memory/memory.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2677[2mms[22m[39m
+ [32m✓[39m tests/compare/compare.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 2716[2mms[22m[39m
+   [33m[2m✓[22m[39m stores a reproducible comparison of a planted and a baseline run with paired EN and AR results [33m 336[2mms[22m[39m
+ [32m✓[39m tests/roles/database.test.ts [2m([22m[2m136 tests[22m[2m)[22m[33m 2307[2mms[22m[39m
+ [32m✓[39m tests/runner/library-journeys.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 2645[2mms[22m[39m
+ [32m✓[39m tests/runner/library-fixture.test.ts [2m([22m[2m35 tests[22m[2m)[22m[33m 2237[2mms[22m[39m
+   [33m[2m✓[22m[39m prepares the entire library once without changing rows or audit on replay [33m 375[2mms[22m[39m
+ [32m✓[39m tests/runner/state.test.ts [2m([22m[2m206 tests[22m[2m)[22m[33m 2304[2mms[22m[39m
+ [32m✓[39m tests/runner/queue.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 2038[2mms[22m[39m
+ [32m✓[39m tests/db/security.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2112[2mms[22m[39m
+ [32m✓[39m tests/roles/services.test.ts [2m([22m[2m64 tests[22m[2m)[22m[33m 2030[2mms[22m[39m
+ [32m✓[39m tests/db/live-check.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 2063[2mms[22m[39m
+   [33m[2m✓[22m[39m executes the live check locally and rolls every row back [33m 2061[2mms[22m[39m
+ [32m✓[39m tests/sandbox/agent.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1999[2mms[22m[39m
+ [32m✓[39m tests/ai/store.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 1933[2mms[22m[39m
+ [32m✓[39m tests/db/content.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1959[2mms[22m[39m
+ [32m✓[39m tests/ai/chat-model.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1888[2mms[22m[39m
+ [32m✓[39m tests/sandbox/planted.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1880[2mms[22m[39m
+ [32m✓[39m tests/auth/adapter.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 1822[2mms[22m[39m
+ [32m✓[39m tests/db/audit.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 1814[2mms[22m[39m
+ [32m✓[39m tests/auth/session.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1826[2mms[22m[39m
+ [32m✓[39m tests/db/migrations.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 1817[2mms[22m[39m
+ [32m✓[39m tests/runner/upgrade.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1889[2mms[22m[39m
+   [33m[2m✓[22m[39m upgrades a populated 0010 database without changing legacy evidence [33m 1888[2mms[22m[39m
+ [32m✓[39m tests/sandbox/route.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1824[2mms[22m[39m
+ [32m✓[39m tests/db/driver.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1789[2mms[22m[39m
+   [33m[2m✓[22m[39m clears role and context after a committed or failed request [33m 1784[2mms[22m[39m
+ [32m✓[39m tests/gate.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 530[2mms[22m[39m
+ [32m✓[39m tests/runner/scripts.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 248[2mms[22m[39m
+ [32m✓[39m tests/no-ai-look.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 227[2mms[22m[39m
+ [32m✓[39m tests/no-dash.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 133[2mms[22m[39m
+ [32m✓[39m tests/no-jargon.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 184[2mms[22m[39m
+ [32m✓[39m tests/ai/chain.test.ts [2m([22m[2m46 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m tests/ai/probe.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m tests/no-optional-copy.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 129[2mms[22m[39m
+ [32m✓[39m tests/judge/judge.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m tests/library/schema.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m tests/sandbox/model.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m tests/db/runtime.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m tests/health.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/pages.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/auth/config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m tests/checks/record-checks.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m tests/roles/matrix.test.ts [2m([22m[2m102 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/checks/claims.test.ts [2m([22m[2m45 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/auth/routes.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/findings/probe.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/sandbox/smoke.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/sandbox/versions.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m50 passed[39m[22m[90m (50)[39m
+[2m      Tests [22m [1m[32m1158 passed[39m[22m[90m (1158)[39m
+[2m   Start at [22m 04:40:40
+[2m   Duration [22m 39.68s[2m (transform 1.25s, setup 0ms, import 5.66s, tests 68.88s, environment 3ms)[22m
+
+
+> nazir@0.1.0 build /workspace/nazir
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 41ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 215ms
+  Running TypeScript ...
+  Finished TypeScript in 2.4s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/8) ...
+  Generating static pages using 7 workers (2/8) 
+  Generating static pages using 7 workers (4/8) 
+  Generating static pages using 7 workers (6/8) 
+✓ Generating static pages using 7 workers (8/8) in 273ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/health
+├ ƒ /api/me
+├ ƒ /api/sandbox/agent
+├ ƒ /api/workspaces
+├ ○ /icon.svg
+├ ○ /privacy
+└ ○ /terms
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0

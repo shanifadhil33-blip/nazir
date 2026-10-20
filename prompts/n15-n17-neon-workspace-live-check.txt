@@ -1,0 +1,25 @@
+# workspace-live-check on Neon after 0013 to 0015 and the live checks (app login, rolled back)
+fixture rows seen by its own worker context: {"comparisons":2,"proposals":1,"approvals":4,"lessons":3,"lesson_revisions":6,"plans":9,"runs":10,"findings":28,"agent_versions":4}
+PASS B owner sees none of the fixture comparisons
+PASS B owner sees none of the fixture proposals
+PASS B owner sees none of the fixture approvals
+PASS B owner sees none of the fixture lessons
+PASS B owner sees none of the fixture lesson_revisions
+PASS B owner sees none of the fixture plans
+PASS B owner sees none of the fixture runs
+PASS B owner sees none of the fixture findings
+PASS B owner sees none of the fixture agent_versions
+PASS B owner cannot insert a lesson into the fixture
+PASS B owner cannot insert a comparison into the fixture
+PASS B owner cannot update fixture lessons
+PASS B worker context sees none of the fixture comparisons
+PASS B worker context sees none of the fixture proposals
+PASS B worker context sees none of the fixture approvals
+PASS B worker context sees none of the fixture lessons
+PASS B worker context sees none of the fixture lesson_revisions
+PASS B worker context sees none of the fixture plans
+PASS B worker context sees none of the fixture runs
+PASS B worker context sees none of the fixture findings
+PASS B worker context sees none of the fixture agent_versions
+PASS B worker context cannot insert a lesson into the fixture
+exit 0

@@ -42,6 +42,7 @@ export async function main() {
     const used=after.lessonsUsed.find((l) => l.lesson_id===lesson.id);
     console.log(JSON.stringify({ step:'plan_after',order:after.order,scenarios:after.scenarioIds.length,lessons:after.lessonsUsed.map((l) => ({ id:l.lesson_id,reason:l.reason })) }));
     const changed=JSON.stringify(after.scenarioIds)!==JSON.stringify(before.scenarioIds)&&!!used;
+    if (!changed && used && before.order[0]===after.order[0]) console.log('NOTE the lesson family was already first from failure history; pick FAMILIES where another family leads');
     console.log(`LESSON_CHANGED_PLAN ${changed?'YES':'NO'}`);
     await approvePlan(driver,ctx.reviewer,{ id:after.id,reason:'The order follows the remembered lesson.',evidence_opened:true });
     const run=await startNextPlan(driver,ctx.reviewer,after.id);
@@ -52,7 +53,9 @@ export async function main() {
     console.log(JSON.stringify({ run_id:run.id,cancelled_at_cap:left.includes(run.id),...tally(rows),calls:meter.calls }));
     const named=await withWorker(driver,wid,async (db) => (await db.query('SELECT id,check_id,language,lessons_used FROM nazir.findings WHERE run_id=$1 AND lessons_used IS NOT NULL',[run.id])).rows);
     for (const f of named) console.log(JSON.stringify({ finding_id:f.id,check_id:f.check_id,language:f.language,lessons_used:f.lessons_used.map((l) => ({ id:l.lesson_id,reason:l.reason })) }));
-    console.log(`LESSON_NAMED_IN_FINDING ${named.some((f) => f.lessons_used.some((l) => l.lesson_id===lesson.id))?'YES':'NO'}`);
+    const isNamed=named.some((f) => f.lessons_used.some((l) => l.lesson_id===lesson.id));
+    console.log(`LESSON_NAMED_IN_FINDING ${isNamed?'YES':'NO'}`);
+    if (!changed || !isNamed) process.exitCode=1;
     if (process.env.KEEP_LESSON!=='true') { await deleteLesson(driver,ctx.reviewer,lesson.id); console.log(JSON.stringify({ step:'lesson_deleted_after_check',id:lesson.id })); }
   } finally { await app.end(); await inspect.end(); }
 }
