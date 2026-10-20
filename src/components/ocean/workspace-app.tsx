@@ -154,8 +154,8 @@ export function WorkspaceApp({
     if (!canWrite(seat, shared)) return;
     if (!id) { push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.nothingChanged }); return; }
     const message = lang === 'ar'
-      ? `أوافق على الإصلاح ${id} لأن دليل الخدمة هو مصدر التواريخ والحالة. اطلعت على الدليل.`
-      : `I approve repair ${id} because the service book is the source for dates and status. I opened the evidence.`;
+      ? `أوافق على الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية في عرض الخطأ. اطلعت على الدليل.`
+      : `I approve repair ${id} because I reviewed the expected and actual answers in the failure view. I opened the evidence.`;
     void send(message, copy.ui.approve);
   }
 
@@ -163,8 +163,8 @@ export function WorkspaceApp({
     if (!canWrite(seat, shared)) return;
     if (!id) { push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.nothingChanged }); return; }
     const message = lang === 'ar'
-      ? `أرفض الإصلاح ${id} لأن الدليل لا يكفي لتغيير الخدمة الآن. اطلعت على الدليل.`
-      : `I reject repair ${id} because the evidence does not support a change yet. I opened the evidence.`;
+      ? `أرفض الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية ولا أوافق على التغيير الآن. اطلعت على الدليل.`
+      : `I reject repair ${id} because I reviewed the expected and actual answers and do not accept this change yet. I opened the evidence.`;
     void send(message, copy.ui.skip);
   }
 

@@ -140,10 +140,8 @@ export function WorkspaceScreen({
                 <div>
                   {event.title ? <strong>{event.title}</strong> : null}
                   <p>{event.body}</p>
-                  {event.kind === 'fix' && allow ? <div className="nz-actions">
-                    <button type="button" className="nz-btn nz-btn-rust" data-action="approve" disabled={pending} onClick={() => onApprove(event.proposalId)}>{pending ? <span className="nz-spin" /> : copy.ui.approve}</button>
-                    <button type="button" className="nz-btn nz-btn-ghost" data-action="edit" onClick={edit}>{copy.ui.editFix}</button>
-                    <button type="button" className="nz-btn nz-btn-ghost" data-action="skip" onClick={() => onSkip(event.proposalId)}>{copy.ui.skip}</button>
+                  {event.kind === 'fix' ? <div className="nz-actions">
+                    <button type="button" className="nz-btn nz-btn-rust" data-action="open-failure" onClick={() => onScreen('failures')}>{copy.ui.openFailure}</button>
                   </div> : null}
                   {event.kind === 'recheck' ? <button type="button" className="nz-btn nz-btn-ghost" onClick={() => onScreen('report')}>{copy.ui.report}</button> : null}
                 </div>

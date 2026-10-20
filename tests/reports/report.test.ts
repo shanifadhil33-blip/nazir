@@ -82,13 +82,16 @@ it('gives a viewer the normal report and still refuses a viewer write', async ()
   expect(JSON.stringify(full)).toContain('SAEED-SAID-DEV');
   expect(JSON.stringify(full)).toContain('IMRAN-SAID-HIDDEN');
   expect(JSON.stringify(asViewer)).toContain('SAEED-SAID-DEV');
-  expect(JSON.stringify(asViewer)).toContain('IMRAN-SAID-HIDDEN');
-  expect(asViewer.findings.map((finding) => finding.id).sort()).toEqual(full.findings.map((finding) => finding.id).sort());
+  expect(JSON.stringify(asViewer)).not.toContain('IMRAN-SAID-HIDDEN');
+  expect(asViewer.findings.map((finding) => finding.id).sort()).toEqual(safe.findings.map((finding) => finding.id).sort());
   expect(asViewer.messages.length).toBeGreaterThan(0);
   expect(JSON.stringify(safe)).toContain('SAEED-SAID-DEV');
   expect(JSON.stringify(safe)).not.toContain('IMRAN-SAID-HIDDEN');
   expect((await listReports(db.driver, owner)).reports.some((row) => row.id === created.id)).toBe(true);
-  expect((await listReports(db.driver, viewer)).reports).toEqual([]);
+  const viewerList = await listReports(db.driver, viewer);
+  expect(viewerList.reports.some((row) => row.id === created.id)).toBe(true);
+  expect(JSON.stringify(viewerList)).not.toContain('IMRAN-SAID-HIDDEN');
+  expect(JSON.stringify(await listReports(db.driver, supplier))).not.toContain('IMRAN-SAID-HIDDEN');
   let refusal: unknown;
   try {
     await createReport(db.driver, viewer, { run_id: runId });

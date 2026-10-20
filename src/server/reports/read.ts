@@ -31,7 +31,7 @@ async function stored(sql: SqlConnection, id: string, fn: 'read_report' | 'read_
   return row.body;
 }
 
-/** Saves one evidence snapshot. The viewer column keeps the normal report; the supplier column drops hidden cases. */
+/** Saves one evidence snapshot. Supplier and viewer get the normal development report: hidden cases drop out, nothing else is redacted. */
 export async function createReport(driver: TransactionDriver, memberId: string, value: unknown) {
   const input = createInput.parse(value);
   return withMember(driver, memberId, async (sql) => {
@@ -39,7 +39,7 @@ export async function createReport(driver: TransactionDriver, memberId: string, 
     const full = await evidence(sql, input.run_id);
     const supplier = projectReport(full, 'development');
     const row = (await sql.query<{ id: string; body_hash: string }>(`INSERT INTO nazir.reports(workspace_id,run_id,body,supplier_body,viewer_body)
-      VALUES(nazir.current_workspace_id(),$1,$2::jsonb,$3::jsonb,$4::jsonb) RETURNING id,body_hash`, [input.run_id, JSON.stringify(full), JSON.stringify(supplier), JSON.stringify(full)])).rows[0]!;
+      VALUES(nazir.current_workspace_id(),$1,$2::jsonb,$3::jsonb,$4::jsonb) RETURNING id,body_hash`, [input.run_id, JSON.stringify(full), JSON.stringify(supplier), JSON.stringify(supplier)])).rows[0]!;
     await sql.query("SELECT nazir.append_audit('report.created','report',$1,$2)", [row.id, JSON.stringify({ run_id: input.run_id, body_hash: row.body_hash })]);
     return { id: row.id, body_hash: row.body_hash, scope: full.scope, counts: full.counts };
   });
@@ -60,9 +60,10 @@ export async function listReports(driver: TransactionDriver, memberId: string) {
   return withMember(driver, memberId, async (sql) => {
     const roles = await rolesOf(sql);
     if (!can(roles, 'report.read') && !can(roles, 'report.viewer')) throw new Forbidden();
-    const rows = (await sql.query<{ id: string; created_at: string; run_id: string; body: ReportBody }>(
-      'SELECT id, created_at, run_id, body FROM nazir.reports ORDER BY created_at DESC, id DESC LIMIT 20',
-    )).rows;
-    return { reports: rows };
+    const fn = can(roles, 'report.read') ? 'read_report' : 'read_report_viewer';
+    const ids = (await sql.query<{ id: string; created_at: string; run_id: string }>('SELECT id, created_at, run_id FROM nazir.list_reports()')).rows;
+    const reports = [];
+    for (const row of ids) reports.push({ ...row, body: await stored(sql, row.id, fn) });
+    return { reports };
   });
 }
