@@ -49,6 +49,15 @@ it('proposes a plan inside the stated call budget', async () => {
   expect(row.budget_calls).toBeLessThanOrEqual(callsPerScenario);
   expect((await db.owner.query("SELECT action FROM nazir.audit_events WHERE action='agent.message' AND target_id=$1", [proposed.thread_id])).rows.length).toBeGreaterThan(0);
 });
+it('proposes a valid plan when the message states no budget', async () => {
+  const proposed = await agentChat(db.driver, reviewer, { message: 'propose a plan' }, null);
+  expect(proposed.done).toBe(true);
+  expect(proposed.reply.en).toMatch(/uses \d+ calls/);
+  expect(proposed.reply.ar).toMatch(/[\u0600-\u06FF]/);
+  const data = proposed.data as { plannedCalls: number; budget: { max: number } };
+  expect(data.plannedCalls).toBeGreaterThan(0);
+  expect(data.plannedCalls).toBeLessThanOrEqual(data.budget.max);
+});
 it('stores a hashed MCP token, revokes it, and keeps the same role refusal', async () => {
   const issued = await issueMcpToken(db.driver, viewer, { label: 'Viewer connector' });
   const stored = (await db.owner.query<{ token_hash: string }>('SELECT token_hash FROM nazir.mcp_tokens WHERE id=$1', [issued.id])).rows[0]!;

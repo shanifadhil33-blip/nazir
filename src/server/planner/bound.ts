@@ -6,6 +6,8 @@ import { requireRole } from '../auth/guard';
 import { withMember } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { Coded, NotFound } from '../http/errors';
+import { planInputs, planOrder } from '../memory/planner';
+import type { FrozenLesson } from '../memory/frozen';
 import { enqueueRun } from '../runner/enqueue';
 import { callsPerScenario } from '../repair/retest';
 
@@ -17,6 +19,16 @@ export const plannerPermissions = ['plan.propose', 'finding.read', 'run.read'] a
 export type PlannerPermission = typeof plannerPermissions[number];
 export const sandboxToolNames = toolManifest.map((tool) => tool.function.name);
 export { callsPerScenario };
+
+/** Calls the first chosen test needs. An empty list falls back to one ordinary test. */
+export function defaultCallBudget(calls: number[]) {
+  const first = calls[0];
+  return Number.isInteger(first) && (first ?? 0) > 0 ? first! : callsPerScenario;
+}
+
+export function rankFamilies(families: string[], failures: Record<string, number>, boost: Record<string, number> = {}) {
+  return [...families].sort((a, b) => (boost[b] ?? 0) - (boost[a] ?? 0) || (failures[b] ?? 0) - (failures[a] ?? 0) || a.localeCompare(b));
+}
 
 export type Budget = { kind: 'calls'; max: number } | { kind: 'cost'; max: number; perCall: number };
 export type PlanCandidate = { id: string; family: string; language: string; calls: number };
@@ -61,6 +73,7 @@ export function boundPlan(input: {
   failures: Record<string, number>;
   budget: Budget;
   failureStreak?: number;
+  boost?: Record<string, number>;
   allowedTools: readonly string[];
   requestedTools?: readonly string[];
   heldPermissions: readonly PlannerPermission[];
@@ -82,7 +95,7 @@ export function boundPlan(input: {
   const callCeiling = budget.kind === 'calls' ? budget.max : Math.floor(budget.max / budget.perCall);
   if (callCeiling < 1) throw new Coded(400, 'budget_too_small', 'The budget is too small for a test.');
   const families = [...new Set(input.scenarios.map((scenario) => scenario.family))];
-  const order = families.sort((a, b) => (input.failures[b] ?? 0) - (input.failures[a] ?? 0) || a.localeCompare(b));
+  const order = rankFamilies(families, input.failures, input.boost);
   const ranked = order.flatMap((family) => input.scenarios.filter((scenario) => scenario.family === family).sort((a, b) => a.language.localeCompare(b.language) || a.id.localeCompare(b.id)));
   const chosen: PlanCandidate[] = [];
   let plannedCalls = 0;
@@ -116,7 +129,7 @@ export function shouldStop(state: { callsUsed: number; callCeiling: number; fail
 const proposeInput = z.object({
   agent_version_id: z.uuid(),
   rule_pack_version_id: z.uuid(),
-  budget: budgetInput,
+  budget: budgetInput.optional(),
   failure_streak: z.number().int().min(1).max(20).optional(),
   families: z.array(z.string().min(1).max(60)).max(20).optional(),
   languages: z.array(z.enum(['en', 'ar'])).min(1).max(2).optional(),
@@ -152,21 +165,33 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     const allowedTools = toolNames(manifest) ?? sandboxToolNames;
     const roles = (await sql.query<{ role: Role }>('SELECT role FROM nazir.member_roles WHERE member_id=nazir.current_member_id()')).rows.map((row) => row.role);
     const held = plannerPermissions.filter((action) => can(roles, action));
-    const { scenarios, failures } = await loadCandidates(sql, input.families, input.languages);
+    const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages);
+    const ordered = planOrder(scenarios, failures, lessons);
+    if (!ordered.scenarioIds.length) throw new Coded(409, 'no_tests', 'There is no approved test to plan.');
+    const byId = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
+    const candidates = ordered.scenarioIds.flatMap((id) => {
+      const scenario = byId.get(id);
+      return scenario ? [{ id: scenario.id, family: scenario.family, language: scenario.language, calls: callsPerScenario * (ordered.repeatsFor[id] ?? 1) }] : [];
+    });
+    const boost = Object.fromEntries(ordered.order.map((family, index) => [family, ordered.order.length - index]));
+    const ranked = rankFamilies([...new Set(candidates.map((scenario) => scenario.family))], failures, boost)
+      .flatMap((family) => candidates.filter((scenario) => scenario.family === family).sort((a, b) => a.language.localeCompare(b.language) || a.id.localeCompare(b.id)));
+    const budget = input.budget ?? { kind: 'calls' as const, max: defaultCallBudget(ranked.map((scenario) => scenario.calls)) };
     const plan = boundPlan({
-      scenarios: scenarios.map((scenario) => ({ ...scenario, calls: callsPerScenario })),
-      failures, budget: input.budget, failureStreak: input.failure_streak, allowedTools,
+      scenarios: candidates, failures, budget, boost, failureStreak: input.failure_streak, allowedTools,
       ...(input.tools ? { requestedTools: input.tools } : {}),
       heldPermissions: held,
       ...(input.permissions ? { requestedPermissions: input.permissions } : {}),
     });
+    const repeatsFor = Object.fromEntries(Object.entries(ordered.repeatsFor).filter(([id]) => plan.scenarioIds.includes(id)));
     const languages = input.languages ?? [...new Set(scenarios.filter((scenario) => plan.scenarioIds.includes(scenario.id)).map((scenario) => scenario.language))];
-    const stopRules = { set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling };
-    const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type)
-      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,1,$5,$6::jsonb,'member') RETURNING id`,
-    [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules)])).rows[0]!;
-    await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order })]);
-    return { id: row.id, ...plan };
+    const stopRules = { set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling, repeats_for: repeatsFor };
+    const lessonsUsed = ordered.lessonsUsed;
+    const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used)
+      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,1,$5,$6::jsonb,'member',$7::jsonb) RETURNING id`,
+    [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules), lessonsUsed.length ? JSON.stringify(lessonsUsed) : null])).rows[0]!;
+    await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order, lessons: lessonsUsed.map((lesson) => lesson.lesson_id) })]);
+    return { id: row.id, ...plan, lessonsUsed };
   });
 }
 
@@ -175,12 +200,13 @@ export async function startBoundedRun(driver: TransactionDriver, memberId: strin
   z.uuid().parse(planId);
   const plan = await withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
-    return (await sql.query<{ workspace_id: string; agent_version_id: string; stop_rules: { set?: string; scenario_ids?: string[] } }>(
-      "SELECT workspace_id,agent_version_id,stop_rules FROM nazir.plans WHERE id=$1 AND status='approved'",
+    return (await sql.query<{ workspace_id: string; agent_version_id: string; stop_rules: { set?: string; scenario_ids?: string[]; repeats_for?: Record<string, number> }; lessons_used: FrozenLesson[] | null }>(
+      "SELECT workspace_id,agent_version_id,stop_rules,lessons_used FROM nazir.plans WHERE id=$1 AND status='approved'",
       [planId],
     )).rows[0] ?? null;
   });
   if (!plan || plan.stop_rules.set !== 'bounded' || !plan.stop_rules.scenario_ids?.length) throw new Coded(409, 'not_approved', 'An approved plan is required.');
+  const repeatsFor = plan.stop_rules.repeats_for && Object.keys(plan.stop_rules.repeats_for).length ? plan.stop_rules.repeats_for : undefined;
   return enqueueRun(driver, {
     workspaceId: plan.workspace_id,
     planId,
@@ -189,5 +215,7 @@ export async function startBoundedRun(driver: TransactionDriver, memberId: strin
     repeats: 1,
     idempotencyKey: `bounded:${planId}`,
     order: plan.stop_rules.scenario_ids,
+    ...(repeatsFor ? { repeatsFor } : {}),
+    lessons: plan.lessons_used ?? [],
   });
 }

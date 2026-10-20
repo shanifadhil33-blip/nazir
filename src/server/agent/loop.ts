@@ -4,7 +4,7 @@ import { can, type Action, type Role } from '../auth/roles';
 import { requireRole, Forbidden } from '../auth/guard';
 import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Coded, NotFound } from '../http/errors';
+import { Coded, NotFound, errorLines, type ErrorCode } from '../http/errors';
 import { listFindings } from '../findings/read';
 import { approvePlan } from '../memory/planner';
 import { proposeBoundedPlan, startBoundedRun } from '../planner/bound';
@@ -13,7 +13,7 @@ import { RepairRefused, resolveExecutable } from '../repair/executable';
 import { decideRepair, startRetest, submitRepair } from '../repair/proposals';
 import {
   actionErrors, agentTools, asksImpersonation, budgetFrom, causeCopy, exactPlan, exactRepair, identityOverride,
-  idsIn, mcpPlan, mcpRepair, replyFor, successReply, type ActionError, type AgentTool, type Bilingual,
+  idsIn, mcpPlan, mcpRepair, planCostReply, replyFor, successReply, type ActionError, type AgentTool, type Bilingual,
 } from './intent';
 
 export type AgentResult = { done: boolean; reply: Bilingual; data: unknown };
@@ -29,9 +29,10 @@ function normalize(error: unknown): ActionError {
   if (error instanceof NotFound) return actionErrors.not_found;
   if (error instanceof RepairRefused) return actionErrors.repair;
   if (error instanceof Coded) {
-    const known = Object.values(actionErrors).find((item) => item.code === error.code);
-    // Both languages must say the same thing: an unlisted code falls back to the generic line in both.
-    return known ? { code: error.code, message: known.message, ar: known.ar } : { code: error.code, message: actionErrors.failed.message, ar: actionErrors.failed.ar };
+    const line = (errorLines as Record<string, { en: string; ar: string }>)[error.code];
+    const code = (line ? error.code : 'failed') as ErrorCode;
+    const chosen = errorLines[code];
+    return { code, message: chosen.en, ar: chosen.ar };
   }
   const text = error instanceof Error ? error.message : '';
   if (text.includes('Another member must decide')) return actionErrors.four_eyes;
@@ -107,10 +108,12 @@ async function propose(driver: TransactionDriver, memberId: string, args: unknow
     if (!found) return { done: false, reply: successReply.missing, data: null };
     record.agent_version_id = found.agent_version_id;
     record.rule_pack_version_id = found.rule_pack_version_id;
-    record.budget ??= budgetFrom(origin.message ?? '');
+    const stated = origin.message ? budgetFrom(origin.message) : null;
+    if (stated) record.budget = stated;
   }
   const data = await proposeBoundedPlan(driver, memberId, record);
-  return finished('propose_plan', data);
+  const calls = data && typeof data === 'object' && 'plannedCalls' in data ? Number(data.plannedCalls) : 0;
+  return finished('propose_plan', data, planCostReply(calls));
 }
 async function startRun(driver: TransactionDriver, memberId: string, args: unknown, origin: Origin): Promise<AgentResult> {
   await allow(driver, memberId, 'plan.approve');

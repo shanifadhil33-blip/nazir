@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 import { seed, testDatabase, type TestDatabase } from '../helpers/pglite';
 import { Forbidden } from '../../src/server/http/errors';
 import { applyBoundedStop } from '../../src/server/planner/stop';
-import { boundPlan, callsPerScenario, plannerPermissions, proposeBoundedPlan, sandboxToolNames, shouldStop, type PlanCandidate, type PlannerPermission } from '../../src/server/planner/bound';
+import { boundPlan, callsPerScenario, defaultCallBudget, plannerPermissions, proposeBoundedPlan, sandboxToolNames, shouldStop, type PlanCandidate, type PlannerPermission } from '../../src/server/planner/bound';
 
 const scenario = (id: string, family: string, language = 'en', calls = 4): PlanCandidate => ({ id, family, language, calls });
 const held = [...plannerPermissions];
@@ -37,6 +37,11 @@ it('never adds a tool or a permission', () => {
   expect(() => boundPlan({ ...base, scenarios: [scenario('a', 'alpha', 'en', 1)], budget: { kind: 'calls', max: 1 }, requestedTools: ['get_case_status', 'export_all'] })).toThrow(/cannot add tools/);
   expect(() => boundPlan({ ...base, scenarios: [scenario('a', 'alpha', 'en', 1)], budget: { kind: 'calls', max: 1 }, requestedPermissions: ['plan.propose', 'release.decide'] as unknown as PlannerPermission[] })).toThrow(/cannot add permissions/);
   expect(() => boundPlan({ ...base, heldPermissions: ['plan.propose'], scenarios: [scenario('a', 'alpha', 'en', 1)], budget: { kind: 'calls', max: 1 }, requestedPermissions: ['plan.propose', 'finding.read'] })).toThrow(/cannot add permissions/);
+});
+it('sets the default call budget from the first chosen test', () => {
+  expect(defaultCallBudget([8, 8])).toBe(8);
+  expect(defaultCallBudget([24, 8])).toBe(24);
+  expect(defaultCallBudget([])).toBe(callsPerScenario);
 });
 it('stops on the call ceiling, the cost ceiling, or the failure streak', () => {
   expect(shouldStop({ callsUsed: 8, callCeiling: 8, failureStreak: 0, failureStreakLimit: 3 })).toBe(true);
@@ -95,6 +100,10 @@ it('stores a plan whose calls fit the budget and puts the failing family first',
   const audit = (await db.owner.query<{ action: string }>("SELECT action FROM nazir.audit_events WHERE target_id=$1 AND action='plan.proposed'", [room.id])).rows;
   expect(audit).toHaveLength(1);
   expect(owner).toBeTruthy();
+  const open = await proposeBoundedPlan(db.driver, reviewer, { agent_version_id: agentVersion, rule_pack_version_id: rulePack });
+  expect(open.plannedCalls).toBeGreaterThan(0);
+  expect(open.plannedCalls).toBeLessThanOrEqual(open.budget.max);
+  expect(open.scenarioIds.length).toBeGreaterThan(0);
 });
 it('cancels the rest of a bounded run when the failure streak is reached', async () => {
   const plan = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,status)

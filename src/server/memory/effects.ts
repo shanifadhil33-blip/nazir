@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { routingMap } from '../../sandbox/demo-rule-pack';
+import { errorLines } from '../http/errors';
 
 // Families a lesson may name: the 12 library families plus the legacy complaint journey.
 export const lessonFamilies = ['correct_reference_rules', 'missing_required_details', 'complaint_vs_suggestion', 'unresolved_prior_request', 'success_without_case', 'wrong_routing_queue', 'open_case_described_resolved', 'repeated_request_duplicates', 'another_requesters_case', 'broad_case_export', 'english_msa_equivalent', 'mixed_names_and_numerals', 'complaint'] as const;
@@ -16,11 +17,11 @@ export class LessonRefused extends Error {
   constructor(public code: 'effect_not_allowed' | 'changes_expected_result' | 'role' | 'not_found' | 'state', public words: { en: string; ar: string }) { super(code); }
 }
 export const refusals = {
-  effect: { en: 'I cannot remember that kind of change.', ar: 'لا أستطيع تذكر هذا النوع من التغيير.' },
-  expected: { en: 'A lesson cannot change the approved expected queue.', ar: 'لا يمكن للدرس أن يغير الطابور المتوقع المعتمد.' },
-  role: { en: 'Your role cannot change what I have learned.', ar: 'دورك لا يسمح بتغيير ما تعلمته.' },
-  missing: { en: 'I could not find that lesson.', ar: 'لم أجد هذا الدرس.' },
-  state: { en: 'That lesson cannot change this way now.', ar: 'لا يمكن تغيير هذا الدرس بهذه الطريقة الآن.' },
+  effect: errorLines.effect_not_allowed,
+  expected: errorLines.changes_expected_result,
+  role: errorLines.lesson_role,
+  missing: errorLines.lesson_not_found,
+  state: errorLines.lesson_state,
 };
 /** Validates an effect against the allowlist. A queue that disagrees with the approved routing map is refused. */
 export function checkEffect(value: unknown): LessonEffect {
