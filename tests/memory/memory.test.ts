@@ -8,7 +8,7 @@ import { checkEffect, LessonRefused, lessonReason } from '../../src/server/memor
 import { judgeNotes, lessonsForFinding, type FrozenLesson } from '../../src/server/memory/frozen';
 import { planOrder, proposeNextPlan, approvePlan, startNextPlan, type PlanScenario } from '../../src/server/memory/planner';
 import { rememberLesson, suggestLessonFromCorrection, answerLessonSuggestion, listLessons, editLesson, deleteLesson, undoLesson, lessonHistory, approveBigLesson } from '../../src/server/memory/lessons';
-import { talkToCorrect, fallbackIntent, type TalkChain } from '../../src/server/memory/talk';
+import { talkToCorrect, fallbackIntent, lessonTextFor, type TalkChain } from '../../src/server/memory/talk';
 import { buildJudgeInput } from '../../src/server/judge/rubric';
 import { overrideFinding } from '../../src/server/services';
 
@@ -195,4 +195,13 @@ it('names the allowed queues and families and gives the model room to answer', a
   expect(seen!.content).toContain('success_without_case');
   expect(seen!.content).toContain('For remember, lesson_id is null');
   expect(seen!.maxTokens).toBeGreaterThanOrEqual(1500);
+});
+
+it('talk to correct keeps an Arabic lesson in Arabic', () => {
+  const said = 'في المرة القادمة افحص طابور الشكاوى أولا.';
+  expect(lessonTextFor('Check the complaint queue first.', said, 'ar')).toBe(said);
+  expect(lessonTextFor('افحص طابور الشكاوى أولا.', said, 'ar')).toBe('افحص طابور الشكاوى أولا.');
+  expect(lessonTextFor('Check the complaint queue first.', 'Next time check it first.', 'en')).toBe('Check the complaint queue first.');
+  expect(lessonTextFor(null, said, 'ar')).toBeNull();
+  expect(lessonTextFor('x', 'ب'.repeat(900), 'ar')).toHaveLength(500);
 });

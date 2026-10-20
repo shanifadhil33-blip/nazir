@@ -1,0 +1,2 @@
+No known vulnerabilities found
+Change scope: talk to correct prompt line and a pure text guard; no auth, role, route or data access changes.
