@@ -53,7 +53,7 @@ function RecordDetail({ copy, lines }: { copy: Messages; lines: { text: string; 
   if (!lines.length) return null;
   return <details className="nz-raw">
     <summary>{copy.ui.recordDetail}</summary>
-    {lines.map((line, index) => <p key={`${line.lang ?? 'raw'}-${index}`} lang={line.lang} dir={line.lang === 'ar' ? 'rtl' : undefined}>{line.text}</p>)}
+    {lines.map((line, index) => <p key={`${line.lang ?? 'raw'}-${index}`} lang={line.lang} dir={line.lang === 'ar' ? 'rtl' : line.lang === 'en' ? 'ltr' : undefined}>{line.text}</p>)}
   </details>;
 }
 
@@ -72,9 +72,9 @@ function FailureBody({ copy, item, decide, pending, onApprove, onSkip, onEdit }:
     <div className="nz-case-line"><div><p className="nz-case">{item.caseLabel}</p><h3>{copy.ui.openFailure}</h3></div><span className="nz-chip">{copy.ui.critical}</span></div>
     <p className="nz-kicker">{copy.ui.expectedVersus}</p>
     <div className="nz-versus">
-      <article className="nz-expect"><h4>{copy.ui.expected}</h4><p lang="en">{item.expectedEn}</p><p lang="ar" dir="rtl">{item.expectedAr}</p></article>
+      <article className="nz-expect"><h4>{copy.ui.expected}</h4><p lang="en" dir="ltr">{item.expectedEn}</p><p lang="ar" dir="rtl">{item.expectedAr}</p></article>
       <p className="nz-versus-word">{copy.ui.versus}</p>
-      <article className="nz-actual"><h4>{copy.ui.actual}</h4><p lang="en">{item.actualEn}</p><p lang="ar" dir="rtl">{item.actualAr}</p></article>
+      <article className="nz-actual"><h4>{copy.ui.actual}</h4><p lang="en" dir="ltr">{item.actualEn}</p><p lang="ar" dir="rtl">{item.actualAr}</p></article>
     </div>
     <div className="nz-split">
       <section><h4>{copy.ui.diagnosis}</h4><p>{item.diagnosis}</p></section>
