@@ -1,9 +1,10 @@
 import 'server-only';
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { withMember } from '../db/context';
+import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Forbidden } from '../http/errors';
+import { Coded, Forbidden } from '../http/errors';
+import { publicHttpsUrl, type Resolver } from './net-guard';
 
 export const avatarPresets = ['preset:1', 'preset:2', 'preset:3', 'preset:4', 'preset:5', 'preset:6'] as const;
 export const integrationIds = ['slack', 'gmail', 'google_drive', 'github', 'notion', 'microsoft_teams', 'whatsapp_business', 'zendesk'] as const;
@@ -93,8 +94,12 @@ export async function readAgentSettings(driver: TransactionDriver, memberId: str
   });
 }
 
-export async function saveAgentSettings(driver: TransactionDriver, memberId: string, value: unknown, secret?: string) {
+export async function saveAgentSettings(driver: TransactionDriver, memberId: string, value: unknown, secret?: string, resolve?: Resolver) {
   const input = settingsInput.parse(value);
+  // Names must resolve to public addresses only (the literal check alone misses a name that points inward).
+  for (const url of [...input.mcp_servers.map((s) => s.url), ...(input.llm?.provider === 'custom' && input.llm.base_url ? [input.llm.base_url] : [])]) {
+    if (!await publicHttpsUrl(url, resolve)) throw new Coded(400, 'validation', 'Check the details and try again.');
+  }
   const llm = input.llm;
   const sealed = llm?.api_key ? sealKey(llm.api_key, secret) : null;
   const payload = {
@@ -122,4 +127,15 @@ export async function ownModelFor(driver: TransactionDriver, memberId: string, s
     }
     return { model, instructions: row.instructions ?? '' };
   });
+}
+
+/** Worker side: the decrypted own model for the workspace a test run belongs to, or null. */
+export async function ownModelForWorker(driver: TransactionDriver, workspaceId: string, secret?: string): Promise<OwnModel> {
+  try {
+    return await withWorker(driver, workspaceId, async (sql) => {
+      const row = (await sql.query<{ provider: LlmProvider | null; base_url: string | null; model: string | null; key_cipher: string | null }>('SELECT * FROM nazir.agent_model_secret_worker()')).rows[0];
+      if (!row?.provider || !row.base_url || !row.model || !row.key_cipher || !safeHttpsUrl(row.base_url)) return null;
+      try { return { provider: row.provider, baseUrl: row.base_url, model: row.model, key: openKey(row.key_cipher, secret) }; } catch { return null; }
+    });
+  } catch { return null; }
 }

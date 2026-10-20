@@ -5,6 +5,7 @@ import { openKey, ownModelFor, readAgentSettings, safeHttpsUrl, saveAgentSetting
 import { withOwnModel } from '../../src/server/settings/own-model';
 import { agentChat, type ChatChain } from '../../src/server/agent/chat';
 
+const resolve = async (host: string) => [{ address: host.includes('inward') ? '10.0.0.5' : '93.184.215.14' }];
 const secret = 'test-secret-for-agent-settings-1234567890';
 process.env.AUTH_SECRET = secret;
 let db: TestDatabase; let owner: string; let reviewer: string; let viewer: string; let other: string;
@@ -34,7 +35,7 @@ it('refuses inward or plain addresses', () => {
 });
 
 it('lets only the owner save, never returns the key, masks it to the last 4, hides it from a viewer', async () => {
-  const saved = await saveAgentSettings(db.driver, owner, { ...base, llm: { provider: 'openai', model: 'gpt-4o-mini', api_key: key } }, secret);
+  const saved = await saveAgentSettings(db.driver, owner, { ...base, llm: { provider: 'openai', model: 'gpt-4o-mini', api_key: key } }, secret, resolve);
   expect(JSON.stringify(saved)).not.toContain(key);
   expect(saved.llm?.key_last4).toBe('wxyz');
   expect(saved.integrations).toEqual(['slack', 'github']);
@@ -47,14 +48,14 @@ it('lets only the owner save, never returns the key, masks it to the last 4, hid
   expect(seen.mcp_servers[0]?.host).toBe('mcp.example.com');
   expect(seen.can_edit).toBe(false);
   expect(seen.name).toBe('Amal Desk');
-  await expect(saveAgentSettings(db.driver, viewer, { ...base, llm: null }, secret)).rejects.toBeInstanceOf(Forbidden);
-  await expect(saveAgentSettings(db.driver, reviewer, { ...base, llm: null }, secret)).rejects.toBeInstanceOf(Forbidden);
+  await expect(saveAgentSettings(db.driver, viewer, { ...base, llm: null }, secret, resolve)).rejects.toBeInstanceOf(Forbidden);
+  await expect(saveAgentSettings(db.driver, reviewer, { ...base, llm: null }, secret, resolve)).rejects.toBeInstanceOf(Forbidden);
   expect((await readAgentSettings(db.driver, other)).name).toBeNull();
   // Saving again without a new key keeps the old one; clearing removes it.
-  expect((await saveAgentSettings(db.driver, owner, { ...base, llm: { provider: 'openai', model: 'gpt-4o-mini' } }, secret)).llm?.key_last4).toBe('wxyz');
+  expect((await saveAgentSettings(db.driver, owner, { ...base, llm: { provider: 'openai', model: 'gpt-4o-mini' } }, secret, resolve)).llm?.key_last4).toBe('wxyz');
   expect((await ownModelFor(db.driver, reviewer, secret)).model?.key).toBe(key);
   expect((await ownModelFor(db.driver, other, secret)).model).toBeNull();
-  expect((await saveAgentSettings(db.driver, owner, { ...base, llm: { provider: 'openai', model: 'gpt-4o-mini', clear_key: true } }, secret)).llm?.key_last4).toBeNull();
+  expect((await saveAgentSettings(db.driver, owner, { ...base, llm: { provider: 'openai', model: 'gpt-4o-mini', clear_key: true } }, secret, resolve)).llm?.key_last4).toBeNull();
   expect((await ownModelFor(db.driver, owner, secret)).model).toBeNull();
 });
 
@@ -64,11 +65,13 @@ it('refuses unsafe avatars, custom urls and bad input', async () => {
     { ...base, avatar: 'data:image/png;base64,' + Buffer.from('not a png').toString('base64') },
     { ...base, mcp_servers: [{ name: 'x', url: 'http://mcp.example.com' }] },
     { ...base, integrations: ['bank'] },
+    { ...base, mcp_servers: [{ name: 'x', url: 'https://inward.example.com/mcp' }] },
+    { ...base, llm: { provider: 'custom', model: 'm', base_url: 'https://inward.example.com/v1', api_key: key } },
     { ...base, llm: { provider: 'custom', model: 'm', api_key: key } },
     { ...base, llm: { provider: 'custom', model: 'm', base_url: 'https://127.0.0.1/v1', api_key: key } },
-  ]) await expect(saveAgentSettings(db.driver, owner, bad, secret)).rejects.toThrow();
+  ]) await expect(saveAgentSettings(db.driver, owner, bad, secret, resolve)).rejects.toThrow();
   const png = 'data:image/png;base64,' + Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2]).toString('base64');
-  expect((await saveAgentSettings(db.driver, owner, { ...base, avatar: png, llm: null }, secret)).avatar).toBe(png);
+  expect((await saveAgentSettings(db.driver, owner, { ...base, avatar: png, llm: null }, secret, resolve)).avatar).toBe(png);
 });
 
 it('uses the own model first and falls back to the free chain when it fails', async () => {
@@ -76,12 +79,12 @@ it('uses the own model first and falls back to the free chain when it fails', as
   const free: ChatChain = { chat: async () => ({ content: '{"tool":"list_runs"}', meta }) };
   const own = { provider: 'openai' as const, baseUrl: 'https://api.openai.com/v1', model: 'gpt', key };
   let sent: RequestInit | undefined;
-  const good = withOwnModel(own, free, (async (_u: unknown, init?: RequestInit) => { sent = init; return Response.json({ choices: [{ message: { content: '{"tool":"list_findings"}' } }] }); }) as typeof fetch)!;
+  const good = withOwnModel(own, free, (async (_u: unknown, init?: RequestInit) => { sent = init; return Response.json({ choices: [{ message: { content: '{"tool":"list_findings"}' } }] }); }) as typeof fetch, resolve)!;
   const a = await good.chat({ purpose: 'agent', task: 'live_demo', messages: [{ role: 'user', content: 'hi' }] });
   expect(a.meta.provider).toBe('own_openai');
   expect(a.content).toContain('list_findings');
   expect(sent?.redirect).toBe('error');
-  const down = withOwnModel(own, free, (async () => new Response('no', { status: 401 })) as typeof fetch)!;
+  const down = withOwnModel(own, free, (async () => new Response('no', { status: 401 })) as typeof fetch, resolve)!;
   const b = await down.chat({ purpose: 'agent', task: 'live_demo', messages: [{ role: 'user', content: 'hi' }] });
   expect(b.meta.provider).toBe('free');
   expect(b.meta.failover).toBe(true);
