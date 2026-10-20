@@ -1,6 +1,6 @@
 import { lessonFamilies, type LessonEffect } from './effects';
 
-const lasting = /always|دائما|next time|في المرة/i;
+const lasting = /\balways\b|\bnext time\b|دائما|في المرة/i;
 const arabic = /[\u0600-\u06FF]/;
 const queues: { pattern: RegExp; category: 'complaint' | 'suggestion' | 'information'; queue: string }[] = [
   { pattern: /طابور الشكاوى|complaint queue|complaints queue/i, category: 'complaint', queue: 'complaint_review' },
@@ -17,6 +17,8 @@ export function hasLastingPhrase(message: string) {
 export function correctionFrom(message: string): { text: string; language: 'en' | 'ar'; effect: LessonEffect } | null {
   if (!hasLastingPhrase(message)) return null;
   const text = message.trim().slice(0, 500);
+  // A question is not a correction: "Why does it always fail?" must not become a lesson.
+  if (/[?؟]\s*$/.test(text)) return null;
   if (text.length < 3) return null;
   const language = arabic.test(text) ? 'ar' : 'en';
   const queue = queues.find((item) => item.pattern.test(text));

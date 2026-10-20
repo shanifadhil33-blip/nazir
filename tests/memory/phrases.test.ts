@@ -11,3 +11,10 @@ it('matches a lasting phrase anywhere in the sentence', () => {
   expect(hasLastingPhrase('hello')).toBe(false);
   expect(correctionFrom('hello')).toBeNull();
 });
+
+it('questions and words that only contain always are not lessons', () => {
+  expect(correctionFrom('Why does it always fail?')).toBeNull();
+  expect(correctionFrom('لماذا يفشل دائما؟')).toBeNull();
+  expect(correctionFrom('Check the hallways queue')).toBeNull();
+  expect(correctionFrom('Please check the complaint queue first always')).not.toBeNull();
+});

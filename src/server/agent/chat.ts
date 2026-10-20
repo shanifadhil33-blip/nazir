@@ -8,7 +8,7 @@ import { Coded, Forbidden, errorLines, type ErrorCode } from '../http/errors';
 import { LessonRefused } from '../memory/effects';
 import { rememberLesson } from '../memory/lessons';
 import { correctionFrom } from '../memory/phrases';
-import { agentTools, budgetFrom, claimsDone, pickTool, replyFor, successReply, type ActionError, type AgentToolName } from './intent';
+import { agentTools, asksImpersonation, budgetFrom, claimsDone, pickTool, replyFor, successReply, type ActionError, type AgentToolName } from './intent';
 import { runAgentTool } from './loop';
 
 export type ChatChain = { chat(request: ChatRequest): Promise<ChatResponse & { meta: CallMeta }> };
@@ -76,6 +76,8 @@ export async function agentChat(driver: TransactionDriver, memberId: string, val
   }
   const tool = pickTool(input.message, modelTool);
   if (source === 'model' && tool !== modelTool) source = 'fallback';
+  // Refuse acting as someone else before anything is saved.
+  if (asksImpersonation(input.message)) throw new Coded(403, 'impersonation', errorLines.impersonation.en);
   const correction = correctionFrom(input.message);
   if (correction) {
     try {
