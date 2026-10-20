@@ -509,7 +509,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: rgba(255, 255
 .nz-settings-who h2 { margin: 0; font-size: 22px; }
 .nz-settings-who p { margin: 2px 0 0; color: var(--ink-muted); }
 .nz-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.nz-settings-card { margin: 0; min-width: 0; padding: 16px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); display: grid; gap: 10px; align-content: start; }
+.nz-settings-card { margin: 0; min-width: 0; padding: 16px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; overflow: hidden; }
 .nz-settings-card legend { float: left; width: 100%; padding: 0; font-weight: 600; margin-bottom: 4px; }
 .nz-settings-card h3 { margin: 6px 0 0; font-size: 15px; }
 .nz-settings-card label { display: grid; gap: 6px; font-size: 14px; color: var(--ink-muted); }
@@ -528,7 +528,8 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: rgba(255, 255
 .nz-servers { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .nz-servers li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--mint); }
 .nz-servers span { color: var(--ink-muted); font-size: 13px; overflow-wrap: anywhere; flex: 1; }
-.nz-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px; }
+.nz-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; }
+.nz-row input, .nz-settings-card input:not([type=checkbox]):not([type=file]), .nz-settings-card textarea, .nz-settings-card select { min-width: 0; width: 100%; box-sizing: border-box; }
 .nz-apps { display: flex; flex-wrap: wrap; gap: 8px; }
 .nz-app-chip { display: inline-flex !important; grid-auto-flow: column; align-items: center; gap: 6px !important; padding: 6px 12px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--ink) !important; cursor: pointer; }
 .nz-app-chip small { color: var(--coral); font-size: 11px; }
