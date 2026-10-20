@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-static';
 export const metadata: Metadata = { title: 'Privacy | Nazir' };
 export default function Page() {
-  return <main>
+  return <main className="nz-legal">
     <h1>Privacy</h1>
     <section lang="en"><h2>Privacy</h2>
       <p>Nazir uses fictional services and synthetic data only and never connects to a real government system. Do not enter real personal data.</p>

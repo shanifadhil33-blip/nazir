@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-static';
 export const metadata: Metadata = { title: 'Terms | Nazir' };
 export default function Page() {
-  return <main>
+  return <main className="nz-legal">
     <h1>Terms</h1>
     <section lang="en"><h2>Terms</h2>
       <p>Nazir is a prototype for demonstration using fictional services and synthetic data only. There is no live government connection.</p>

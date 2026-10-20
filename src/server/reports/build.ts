@@ -76,65 +76,23 @@ export function assembleReport(input: { run: ReportBody['run']; conversations: R
   };
 }
 
-function withoutSecrets(finding: ReportFinding): ReportFinding {
+/** Development copy for a supplier: hidden cases drop out, quotes stay. There is no redacted viewer copy. */
+export function projectReport(full: ReportBody, mode: 'full' | 'development'): ReportBody {
+  if (mode === 'full') return { ...full, scope: scopeLine };
+  const conversations = full.conversations.filter((row) => row.split !== 'hidden');
+  const findings = full.findings.filter((finding) => finding.split !== 'hidden');
+  const messages = full.messages.filter((message) => message.split !== 'hidden');
+  const counts = countsOf(conversations, findings.length);
   return {
-    id: finding.id, check_id: finding.check_id, severity: finding.severity, title: finding.title, title_ar: finding.title_ar,
-    really_happened: finding.really_happened, really_happened_ar: finding.really_happened_ar, split: finding.split, family: finding.family, language: finding.language,
-  };
-}
-
-/** One snapshot, three copies. The viewer copy drops quotes, evidence, message text and hidden cases. */
-export function projectReport(full: ReportBody, mode: 'full' | 'development' | 'viewer'): ReportBody {
-  const development = mode === 'full' ? full : {
     ...full,
-    conversations: full.conversations.filter((row) => row.split !== 'hidden'),
-    findings: full.findings.filter((finding) => finding.split !== 'hidden'),
-    messages: full.messages.filter((message) => message.split !== 'hidden'),
-  };
-  const findings = mode === 'viewer' ? development.findings.map(withoutSecrets) : development.findings;
-  const messages = mode === 'viewer' ? [] : development.messages;
-  const counts = countsOf(development.conversations, findings.length);
-  return {
-    ...development,
-    findings, messages, counts,
+    conversations,
+    findings,
+    messages,
+    counts,
     hidden_findings: full.findings.filter((finding) => finding.split === 'hidden').length,
     sentences: sentences(counts),
     scope: scopeLine,
   };
-}
-
-const escapeMap: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-export function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => escapeMap[char] ?? char);
-}
-
-/** Print ready HTML. No remote assets. The same saved copy supplies both languages. */
-export function reportHtml(body: ReportBody) {
-  const finding = (item: ReportFinding, language: 'en' | 'ar') => {
-    const title = language === 'ar' ? (item.title_ar || item.title) : item.title;
-    const happened = language === 'ar' ? (item.really_happened_ar || item.really_happened) : item.really_happened;
-    const quote = item.agent_said ? `<blockquote>${escapeHtml(item.agent_said)}</blockquote>` : '';
-    return `<section><h3>${escapeHtml(title)}</h3><p>${escapeHtml(item.severity)}</p><p>${escapeHtml(happened)}</p>${quote}</section>`;
-  };
-  const list = (lines: string[]) => lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('');
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Nazir test report</title><style>
-@page { margin: 16mm; }
-body { margin: 0; color: #111; font: 16px/1.5 Georgia, "Noto Naskh Arabic", serif; }
-main { max-width: 40rem; margin: 0 auto; padding: 16mm; }
-section { break-inside: avoid; }
-@media print { body { color: #000; } a { text-decoration: none; } }
-</style></head><body><main>
-<h1>Nazir</h1>
-<p>${escapeHtml(body.scope.en)}</p>
-<ul>${list(body.sentences.en)}</ul>
-${body.findings.map((item) => finding(item, 'en')).join('')}
-<section lang="ar" dir="rtl">
-<h2>التقرير</h2>
-<p>${escapeHtml(body.scope.ar)}</p>
-<ul>${list(body.sentences.ar)}</ul>
-${body.findings.map((item) => finding(item, 'ar')).join('')}
-</section>
-</main></body></html>`;
 }
 
 export const reportId = z.uuid();

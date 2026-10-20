@@ -5,12 +5,12 @@ import ar from '../../messages/ar.json';
 export const dynamic = 'force-static';
 
 export default function HomePage() {
-  return <main>
+  return <main className="nz-legal">
     <h1>{en.name}</h1>
     <p lang="ar" dir="rtl">{ar.name}</p>
     <p>{en.description}</p>
     <p>{en.banner}</p>
     <p lang="ar" dir="rtl">{ar.banner}</p>
-    <nav aria-label="Legal"><Link href="/privacy">{en.privacy}</Link><Link href="/terms">{en.terms}</Link></nav>
+    <nav aria-label="Legal"><Link href="/api/auth/signin">{en.signIn}</Link><Link href="/privacy">{en.privacy}</Link><Link href="/terms">{en.terms}</Link></nav>
   </main>;
 }
