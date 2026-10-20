@@ -76,7 +76,7 @@ export async function mcpChat(driver: TransactionDriver, memberId: string, messa
     const id = await withMember(driver, memberId, async (sql) => {
       try { return (await sql.query<{ id: string }>("SELECT nazir.mcp_call_record($1,$2,$3::jsonb,'proposed',NULL) AS id", [server.name, tool.name, JSON.stringify(parsed)])).rows[0]!.id; } catch (e) { return refuse(e); }
     });
-    return out(threadId, reply(`${tool.name} can change data, so it did not run. Another owner or reviewer must send: I approve MCP call ${id}`, `يمكن أن تغير ${tool.name} البيانات، لذلك لم تعمل. يجب أن يرسل مالك أو مراجع آخر: أوافق على استدعاء MCP ${id}`), { id, status: 'proposed', server: server.name, tool: tool.name, arguments: parsed }, false);
+    return out(threadId, reply(`${tool.name} is not marked read only by the server, so it did not run. Another owner or reviewer must send: I approve MCP call ${id}`, `لم يحدد الخادم ${tool.name} كأداة قراءة فقط، لذلك لم تعمل. يجب أن يرسل مالك أو مراجع آخر: أوافق على استدعاء MCP ${id}`), { id, status: 'proposed', server: server.name, tool: tool.name, arguments: parsed }, false);
   }
   let ok = false; let excerpt = '';
   try { const r = await callServerTool(server.url, tool.name, parsed, options); ok = r.ok; excerpt = r.text; } catch (e) { excerpt = String((e as Error).message).slice(0, 80); }
