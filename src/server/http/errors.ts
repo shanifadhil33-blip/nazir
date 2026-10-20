@@ -11,11 +11,16 @@ export class TooMany extends Error {
 export class NotFound extends Error {
   constructor() { super('The record was not found.'); this.name = 'NotFound'; }
 }
+/** A refusal with a stable code and one plain sentence. */
+export class Coded extends Error {
+  constructor(public status: number, public code: string, message: string) { super(message); this.name = 'Coded'; }
+}
 export function mapError(error: unknown) {
   if (error instanceof Unauthorized) return { status: 401, body: { error: { code: 'unauthorized', message: error.message } } };
   if (error instanceof Forbidden) return { status: 403, body: { error: { code: 'forbidden', message: error.message } } };
   if (error instanceof TooMany) return { status: 429, body: { error: { code: 'too_many', message: error.message } } };
   if (error instanceof NotFound) return { status: 404, body: { error: { code: 'not_found', message: error.message } } };
+  if (error instanceof Coded) return { status: error.status, body: { error: { code: error.code, message: error.message } } };
   if (error instanceof ZodError) return { status: 400, body: { error: { code: 'validation', message: 'Check the details and try again.' } } };
   return { status: 500, body: { error: { code: 'internal_error', message: 'Something went wrong.' } } };
 }

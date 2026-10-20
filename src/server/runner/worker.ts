@@ -16,6 +16,7 @@ import type { Family } from '../ai/providers';
 import { combineVerdicts } from '../judge/evaluate';
 import { networkJudge } from './network-judge';
 import { buildFindings } from '../findings/build';
+import { applyBoundedStop } from '../planner/stop';
 import type { RecordCheck } from '../checks/record-checks';
 import { runRecordChecks, recordChecksEvaluator } from '../checks/record-checks';
 type ToolEvents = Awaited<ReturnType<typeof runServiceAgent>>['toolCalls'];
@@ -173,6 +174,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       }
     }
     await db.query('SELECT nazir.append_audit($1,\'conversation\',$2,$3)',[retry?'conversation_retried':'conversation_finished',cid,JSON.stringify({ run_id:rid,attempt,status,reason:resultReason,provider:meta?.provider ?? null,model:meta?.model ?? null,failover:metas.some((m) => m.failover) })]);
+    await applyBoundedStop(db, rid);
     await db.query('SELECT nazir.runner_aggregate($1)',[rid]);
     return { ...claim,status:retry?'queued':status,reason:resultReason,tenant };
   });

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { migrate } from '../../src/server/db/migrate';
 import { withMember, withWorker } from '../../src/server/db/context';
@@ -73,5 +74,12 @@ export async function seed(db: TestDatabase, label: string) {
   const finished = async () => (await db.owner.query<{ id: string }>("INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,frozen_manifest,runner_version,status,finished_at) VALUES($1,$2,$3,$4,'{}','1','passed',now()) RETURNING id", [w, ids.plans, ids.agent_versions, ids.rule_pack_versions])).rows[0]!.id;
   const [runA, runB] = [await finished(), await finished()];
   ids.comparisons = (await db.owner.query<{ id: string }>("INSERT INTO nazir.comparisons(workspace_id,run_a_id,run_b_id,created_by,comparer_version,summary,pairs) VALUES($1,$2,$3,$4,'n17','{}','[]') RETURNING id", [w, runA, runB, m])).rows[0]!.id;
+  const scopeBody = { scope: { en: 'These results are within tested scope, not a certificate.', ar: 'هذه النتائج ضمن النطاق المختبر، وليست شهادة.' }, run: { id: ids.runs, status: 'planned', calls_used: 0, calls_budget: 10 }, counts: { conversations: 0, passed: 0, failed: 0, inconclusive: 0, findings: 0 }, conversations: [], findings: [], messages: [], hidden_findings: 0, sentences: { en: ['These results are within tested scope, not a certificate.'], ar: ['هذه النتائج ضمن النطاق المختبر، وليست شهادة.'] } };
+  await insert('reports', { run_id: ids.runs, created_by: m, body: scopeBody, supplier_body: scopeBody, viewer_body: scopeBody });
+  await insert('agent_threads', { member_id: m });
+  await insert('agent_messages', { thread_id: ids.agent_threads, seq: 1, role: 'member', body: 'List the runs.' });
+  await insert('mcp_tokens', { member_id: m, token_hash: createHash('sha256').update(w).digest('hex'), label: 'Seed token' });
+  await insert('demo_store', { payload: { note: 'demo' } });
+  await insert('demo_reset_log', { reason: 'schedule', removed: 0, cap_bytes: 100 });
   return { ...identity, ids, insert };
 }

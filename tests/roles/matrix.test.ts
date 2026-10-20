@@ -27,6 +27,13 @@ const expected: Record<Action, boolean[]> = {
   'audit.read': [true, true, true, false],
   'comparison.create': [true, false, true, false],
   'comparison.read': [true, true, true, true],
+  'run.read': [true, true, true, true],
+  'report.create': [true, true, true, false],
+  'report.read': [true, true, true, false],
+  'report.viewer': [true, true, true, true],
+  'agent.chat': [true, true, true, true],
+  'mcp.issue': [true, true, true, true],
+  'demo.reset': [true, false, false, false],
 };
 it.each(actions.flatMap((action) => roles.map((role, index) => ({ action, role, allowed: expected[action][index] }))))('$role $action = $allowed', ({ action, role, allowed }) => {
   expect(can([role], action)).toBe(allowed);
