@@ -18,7 +18,7 @@ N20 scope wording, in both stored copies: "These results are within tested scope
 
 N21 chat and `POST /api/mcp` share `runPlannerTool`. The tools are list runs, list findings and propose a plan. An unknown tool is refused. The free AI chain is optional. A scripted or missing chain falls back to the message text. Chat uses the existing provider chain and task `live_demo`. No new provider was added.
 
-N24 cron is `GET /api/cron/demo-reset` on `0 */6 * * *`. On demand is `POST /api/workspaces/:id/demo-reset` for a service owner.
+N24 cron is `GET /api/cron/demo-reset` on `0 3 * * *` (Vercel Hobby allows daily crons only; the 6 hour guard still applies). On demand is `POST /api/workspaces/:id/demo-reset` for a service owner.
 
 ## Environment
 `CRON_SECRET` is required for the cron route. `DEMO_STORAGE_CAP_BYTES` is optional and defaults to 262144. No new AI keys.
