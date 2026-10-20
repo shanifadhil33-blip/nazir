@@ -1,0 +1,27 @@
+import { expect, it } from 'vitest';
+import { actionErrors, claimsDone, exactPlan, exactRepair, failureReply, replyFor, successReply } from '../../src/server/agent/intent';
+
+const id = '11111111-1111-4111-8111-111111111111';
+
+it('reads an exact approval in English or Arabic and ignores a loose request', () => {
+  const plan = exactPlan(`I approve plan ${id} and start the run because The bounded plan matches the failure history. I opened the evidence.`);
+  expect(plan).toMatchObject({ id, evidence_opened: true });
+  expect(plan?.reason.length).toBeGreaterThanOrEqual(10);
+  expect(exactPlan(`أوافق على الخطة ${id} وأبدأ التشغيل لأن الخطة ضمن الميزانية وتغطي الأسرة الأفشل. اطلعت على الدليل.`)).toMatchObject({ id });
+  expect(exactRepair(`I approve repair ${id} because Read the receipts and the queue before applying. I opened the evidence.`)).toMatchObject({ decision: 'approve', id });
+  expect(exactRepair(`أرفض الإصلاح ${id} لأن الدليل لا يكفي لهذا التغيير الآن. اطلعت على الدليل.`)).toMatchObject({ decision: 'reject', id });
+  expect(exactRepair('please apply the repair now')).toBeNull();
+  expect(exactRepair(`I approve repair ${id} because short. I opened the evidence.`)).toBeNull();
+  expect(exactPlan('start the run')).toBeNull();
+});
+it('never lets a refusal reuse a success sentence', () => {
+  for (const kind of Object.keys(failureReply)) {
+    const reply = replyFor(kind, false, actionErrors.approval_required);
+    expect(claimsDone(reply.en)).toBe(false);
+    expect(claimsDone(reply.ar)).toBe(false);
+    expect(reply.ar).toMatch(/[\u0600-\u06ff]/);
+  }
+  expect(() => replyFor('start_run', false, { ...actionErrors.failed, message: successReply.start_run.en })).toThrow(/Unconfirmed success claim/);
+  expect(claimsDone(successReply.none.en)).toBe(false);
+  expect(claimsDone(successReply.missing.en)).toBe(false);
+});
