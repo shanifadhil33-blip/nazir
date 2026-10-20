@@ -53,7 +53,7 @@
     "share": "Share link",
     "linkCopied": "Link copied.",
     "linkFailed": "The link was not copied.",
-    "viewerNote": "You have view access. Ask an owner to run tests or approve fixes.",
+    "viewerNote": "You have view access. Ask an owner to run tests, or a service quality reviewer to approve fixes.",
     "viewer": "Viewer",
     "chat": "Chat",
     "score": "Score",
@@ -85,7 +85,13 @@
     "roleSupplier": "Supplier maintainer",
     "editPrompt": "propose a repair",
     "english": "English",
-    "arabic": "Arabic"
+    "arabic": "Arabic",
+    "recordDetail": "Record detail",
+    "reviewerDecides": "Only a service quality reviewer can approve this fix.",
+    "recheckPending": "Recheck not run yet.",
+    "runRecheck": "Run recheck",
+    "recheckNeedsRole": "A service owner or a service quality reviewer runs the recheck.",
+    "sections": "Sections"
   },
   "sample": {
     "agent": "Harbor permits desk",

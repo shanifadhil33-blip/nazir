@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { messagesFor, type Lang, type Messages } from './copy';
-import { emptyModel, modelFromReports, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
+import { canApprove, canRunRecheck, emptyModel, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
 
@@ -33,6 +33,7 @@ export function WorkspaceApp({
   const [phase, setPhase] = useState<'loading' | 'ready' | 'signedout' | 'denied'>(preview ? 'ready' : 'loading');
   const [demo, setDemo] = useState(preview);
   const [seat, setSeat] = useState<Seat>(preview ? initialRole : 'viewer');
+  const [roles, setRoles] = useState<string[]>(preview ? rolesForSeat(initialRole) : []);
   const [userName, setUserName] = useState(preview ? messagesFor(initialLang).sample.user : '');
   const [bundle, setBundle] = useState<Bundle | null>(preview ? 'sample' : null);
   const [extra, setExtra] = useState<LogEvent[]>([]);
@@ -70,6 +71,7 @@ export function WorkspaceApp({
       const nextDemo = membership.kind === 'demo';
       const nextName = meBody.user?.name || meBody.user?.email || membership.workspaceName;
       setSeat(nextSeat);
+      setRoles(membership.roles);
       setDemo(nextDemo);
       setUserName(nextName);
       const headers = { 'accept-language': langRef.current };
@@ -100,7 +102,8 @@ export function WorkspaceApp({
   function go(next: ScreenId) {
     const apply = () => setScreen(next);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduce && typeof document.startViewTransition === 'function') document.startViewTransition(apply);
+    const desktop = window.matchMedia('(min-width: 1280px)').matches;
+    if (!reduce && !desktop && typeof document.startViewTransition === 'function') document.startViewTransition(apply);
     else apply();
   }
 
@@ -151,7 +154,7 @@ export function WorkspaceApp({
   }
 
   function approve(id?: string) {
-    if (!canWrite(seat, shared)) return;
+    if (!canApprove(roles, shared)) return;
     if (!id) { push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.nothingChanged }); return; }
     const message = lang === 'ar'
       ? `أوافق على الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية في عرض الخطأ. اطلعت على الدليل.`
@@ -160,12 +163,21 @@ export function WorkspaceApp({
   }
 
   function skip(id?: string) {
-    if (!canWrite(seat, shared)) return;
+    if (!canApprove(roles, shared)) return;
     if (!id) { push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.nothingChanged }); return; }
     const message = lang === 'ar'
       ? `أرفض الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية ولا أوافق على التغيير الآن. اطلعت على الدليل.`
       : `I reject repair ${id} because I reviewed the expected and actual answers and do not accept this change yet. I opened the evidence.`;
     void send(message, copy.ui.skip);
+  }
+
+  function recheck() {
+    if (!canRunRecheck(roles, shared)) return;
+    const proposalId = model.failures.find((item) => item.proposalId)?.proposalId;
+    const message = lang === 'ar'
+      ? `أعد الاختبارات المتأثرة${proposalId ? ` ${proposalId}` : ''}`
+      : `rerun the affected tests${proposalId ? ` ${proposalId}` : ''}`;
+    void send(message, copy.ui.runRecheck);
   }
 
   async function share() {
@@ -193,10 +205,11 @@ export function WorkspaceApp({
 
   const view: ScreenModel = { ...model, status: status ?? model.status, events: [...model.events, ...extra] };
   return <WorkspaceScreen
-    lang={lang} copy={copy} demo={demo} seat={seat} shared={shared} userName={userName} model={view} screen={screen}
+    lang={lang} copy={copy} demo={demo} seat={seat} roles={roles} shared={shared} userName={userName} model={view} screen={screen}
     pending={pending} copied={copied} copyError={copyError} onScreen={go} onLang={setLang} onApprove={approve} onSkip={skip}
     onReplay={() => void send(lang === 'ar' ? 'اقترح خطة' : 'propose a plan', copy.ui.replay)}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
+    onRecheck={recheck}
   />;
 }
 
@@ -214,10 +227,6 @@ function emptyBody(): ReportBody {
     counts: { conversations: 0, passed: 0, failed: 0, inconclusive: 0, findings: 0 },
     conversations: [], findings: [], messages: [], hidden_findings: 0, sentences: { en: [], ar: [] },
   };
-}
-
-function canWrite(seat: Seat, shared: boolean) {
-  return !shared && (seat === 'owner' || seat === 'editor');
 }
 
 function readError(payload: unknown, copy: Messages) {

@@ -185,7 +185,9 @@ a { color: var(--teal); }
   flex: none;
 }
 .nz-icon-btn svg, .nz-send svg, .nz-bar-name svg, .nz-nav-btn svg { width: 18px; height: 18px; }
-.nz-send { background: var(--teal); color: #fff; }
+.nz-send { background: var(--teal); color: #fff; transition: transform 150ms var(--ease), background 150ms var(--ease); }
+.nz-send:hover { background: #0C6C75; transform: translateY(-1px); }
+.nz-send:active { transform: scale(.96); }
 .nz-note, .nz-empty, .nz-footer, .nz-coverage { color: var(--ink-muted); }
 .nz-note { margin: 0; background: var(--card); border-radius: 12px; padding: 12px 16px; }
 
@@ -217,7 +219,7 @@ a { color: var(--teal); }
   width: 100%;
   background: var(--teal);
   transform: scaleX(var(--p));
-  transform-origin: left;
+  transform-origin: left center;
   animation: nz-fill 800ms var(--ease) 150ms both;
 }
 .nz-bar-fill.is-weak { background: var(--coral); }
@@ -264,19 +266,26 @@ a { color: var(--teal); }
   background: transparent;
   min-height: 36px;
   padding: 8px 16px;
-  transition: transform 150ms var(--ease), box-shadow 150ms var(--ease);
+  transition: transform 150ms var(--ease), box-shadow 150ms var(--ease), background 150ms var(--ease);
 }
 .nz-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px rgba(4, 40, 48, .4); }
 .nz-btn:active { transform: scale(.97); transition-duration: 100ms; }
-.nz-btn:focus-visible, .nz-lang button:focus-visible, .nz-seg-btn:focus-visible, .nz-nav-btn:focus-visible, .nz-icon-btn:focus-visible, .nz-send:focus-visible {
+.nz-btn:focus-visible, .nz-lang button:focus-visible, .nz-seg-btn:focus-visible, .nz-nav-btn:focus-visible, .nz-desk-nav button:focus-visible, .nz-icon-btn:focus-visible, .nz-send:focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 2px;
 }
 .nz-btn:disabled { opacity: .72; transform: none; box-shadow: none; }
 .nz-btn-rust { background: var(--rust); color: #fff; flex: 1 0 100%; }
+.nz-btn-rust:hover { background: #8A2E27; }
+.nz-btn-rust:active { background: #7A2822; }
 .nz-btn-teal { background: var(--teal); color: #fff; }
+.nz-btn-teal:hover { background: #0C6C75; }
+.nz-btn-teal:active { background: #0A5C64; }
 .nz-btn-ghost { color: var(--ink); }
-.nz-cross { animation: nz-fade 180ms ease; }
+.nz-btn-ghost:hover { background: rgba(255, 255, 255, .7); }
+.nz-btn-ghost:active { background: rgba(255, 255, 255, .92); }
+.nz-failure { opacity: 1; }
+.nz-cross { opacity: 1; animation: nz-fade 180ms ease forwards; }
 
 .nz-report { max-width: 880px; }
 .nz-report-scores { display: flex; align-items: center; justify-content: center; gap: 24px; margin: 16px 0; }
@@ -290,6 +299,12 @@ a { color: var(--teal); }
 .nz-fixes { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
 .nz-fixes li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 4px; }
 .nz-fixes span { color: var(--ink-muted); font-size: 12px; }
+.nz-raw { margin-top: 8px; }
+.nz-raw summary { cursor: pointer; width: fit-content; color: var(--teal); font-size: 12px; font-weight: 600; }
+.nz-raw p { margin: 8px 0 0; color: var(--ink-muted); font-size: 12px; }
+.nz-recheck { display: grid; gap: 12px; justify-items: start; margin: 16px 0 20px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.nz-recheck p { margin: 0; }
+.nz-desk-nav { display: none; }
 
 .nz-tabs-bar, .nz-backdrop, .nz-sheet-handle, .nz-only-phone { display: none; }
 .nz-compact { display: none; }
@@ -314,15 +329,15 @@ a { color: var(--teal); }
 .nz-legal nav { display: flex; gap: 16px; flex-wrap: wrap; }
 
 @keyframes nz-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes nz-fill { from { transform: scaleX(0); } }
+@keyframes nz-fill { from { transform: scaleX(0); } to { transform: scaleX(var(--p)); } }
 @keyframes nz-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes nz-fade-out { to { opacity: 0; } }
+@keyframes nz-fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes nz-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-@keyframes nz-sheet { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes nz-sheet { from { opacity: 1; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes nz-spin { to { transform: rotate(360deg); } }
 
-::view-transition-old(root) { animation: nz-fade-out 150ms ease both; }
-::view-transition-new(root) { animation: nz-rise 250ms var(--ease) both; }
+::view-transition-old(root) { animation: nz-fade-out 150ms ease forwards; }
+::view-transition-new(root) { opacity: 1; animation: nz-rise 280ms var(--ease) forwards; }
 .nz-score-named { view-transition-name: score; }
 
 @media (max-width: 1279px) {
@@ -377,6 +392,9 @@ a { color: var(--teal); }
     border-radius: 12px;
     font-size: 12px;
   }
+  .nz-nav-btn { transition: color 150ms var(--ease), background 150ms var(--ease), transform 150ms var(--ease); }
+  .nz-nav-btn:hover { background: rgba(255, 255, 255, .45); }
+  .nz-nav-btn:active { transform: scale(.97); }
   .nz-nav-btn[aria-current="page"] { color: var(--teal); font-weight: 600; }
   .nz-failure {
     position: fixed;
@@ -390,7 +408,7 @@ a { color: var(--teal); }
     transform: translateY(110%);
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
-  .nz-columns[data-screen="failures"] .nz-failure { transform: translateY(0); animation: nz-sheet 280ms cubic-bezier(.22, 1.15, .36, 1); }
+  .nz-columns[data-screen="failures"] .nz-failure { opacity: 1; transform: translateY(0); animation: nz-sheet 280ms cubic-bezier(.22, 1.15, .36, 1) forwards; }
   .nz-columns[data-screen="failures"] .nz-backdrop { display: block; position: fixed; inset: 0; z-index: 25; border: 0; background: rgba(4, 40, 48, .35); }
   .nz-sheet-handle {
     display: block;
@@ -413,10 +431,61 @@ a { color: var(--teal); }
   .nz-title { font-size: 24px; }
 }
 
+@media (min-width: 1280px) {
+  .nz-header, .nz-columns { width: min(1440px, calc(100% - 48px)); }
+  .nz-header { flex-wrap: wrap; row-gap: 12px; }
+  .nz-columns { grid-template-columns: minmax(0, 1.2fr) minmax(360px, .8fr); }
+  .nz-report { grid-column: 1 / -1; max-width: none; }
+  .nz-log, .nz-score-panel, .nz-failure, .nz-report { scroll-margin-top: 16px; transition: opacity 220ms var(--ease), transform 220ms var(--ease); }
+  .nz-failure { background: rgba(245, 251, 250, .97); }
+  .nz-desk-nav {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--mint);
+    border-radius: 999px;
+  }
+  .nz-desk-nav button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    min-height: 36px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--ink);
+    transition: background 150ms var(--ease), color 150ms var(--ease), transform 150ms var(--ease);
+  }
+  .nz-desk-nav button svg { width: 18px; height: 18px; }
+  .nz-desk-nav button:hover { background: rgba(255, 255, 255, .72); }
+  .nz-desk-nav button:active { transform: scale(.97); }
+  .nz-desk-nav button[aria-current="page"] { background: #fff; color: var(--teal); }
+  .nz-columns[data-screen="chat"] .nz-log,
+  .nz-columns[data-screen="score"] .nz-score-panel,
+  .nz-columns[data-screen="failures"] .nz-failure,
+  .nz-columns[data-screen="report"] .nz-report { animation: nz-rise 280ms var(--ease) forwards; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .nz-enter, .nz-cross, ::view-transition-old(root), ::view-transition-new(root) { animation: nz-fade 120ms ease both; }
-  .nz-bar-fill, .nz-spin, .nz-columns[data-screen="failures"] .nz-failure { animation: none; }
-  .nz-seg-pill, .nz-btn, .nz-send { transition: none; }
+  .nz-enter,
+  .nz-cross,
+  .nz-failure,
+  .nz-log,
+  .nz-score-panel,
+  .nz-report,
+  .nz-columns[data-screen="chat"] .nz-log,
+  .nz-columns[data-screen="score"] .nz-score-panel,
+  .nz-columns[data-screen="failures"] .nz-failure,
+  .nz-columns[data-screen="report"] .nz-report,
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    opacity: 1;
+  }
+  .nz-bar-fill, .nz-spin { animation: none; }
+  .nz-seg-pill, .nz-btn, .nz-send, .nz-ring-value, .nz-desk-nav button, .nz-nav-btn { transition: none; }
   .nz-columns[data-screen="failures"] .nz-failure { transform: none; }
 }
 

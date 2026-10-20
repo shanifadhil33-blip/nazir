@@ -1,17 +1,22 @@
+import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import { messagesFor } from '../../src/components/ocean/copy';
-import { metricsFromReport, sampleModel } from '../../src/components/ocean/model';
+import { canApprove, canRunRecheck, metricsFromReport, modelFromReports, rolesForSeat, sampleModel, type ScreenId, type ScreenModel, type Seat } from '../../src/components/ocean/model';
+import { presentQuote, presentRecord } from '../../src/components/ocean/plain';
 import { countAt, ScoreFigure } from '../../src/components/ocean/score-figure';
 import { WorkspaceScreen } from '../../src/components/ocean/screen';
 import { assembleReport, type ReportBody } from '../../src/server/reports/build';
 
 const noop = () => {};
-const handlers = { onScreen: noop, onLang: noop, onApprove: noop, onSkip: noop, onReplay: noop, onShare: noop, onSend: noop, onStop: noop };
+const handlers = { onScreen: noop, onLang: noop, onApprove: noop, onSkip: noop, onReplay: noop, onShare: noop, onSend: noop, onStop: noop, onRecheck: noop };
+const receipt = '11111111-1111-4111-8111-111111111111';
+const rawEn = `Case NZ-000001, requester Saeed (saeed), queue complaint review (complaint_review), status in review (in_review), review complaint review (complaint_review), waiting for review (pending_review). Receipt ${receipt}: create_case, succeeded (ok). Receipt 22222222-2222-4222-8222-222222222222: request_human_review, failed (error), the tool did not finish (tool_failed).`;
+const rawAr = `الحالة NZ-000001، مقدم الطلب سعيد (saeed)، القائمة مراجعة الشكاوى (complaint_review)، الحالة قيد المراجعة (in_review)، المراجعة مراجعة الشكاوى (complaint_review)، بانتظار المراجعة (pending_review). الإيصال ${receipt}: create_case، نجحت (ok). الإيصال 22222222-2222-4222-8222-222222222222: request_human_review، فشلت (error)، لم تكمل الأداة العمل (tool_failed).`;
 
-function screen(lang: 'en' | 'ar', seat: 'owner' | 'editor' | 'supplier' | 'viewer', demo: boolean) {
+function screen(lang: 'en' | 'ar', seat: Seat, demo: boolean, options?: { roles?: string[]; shared?: boolean; screen?: ScreenId; model?: ScreenModel }) {
   const copy = messagesFor(lang);
-  return renderToStaticMarkup(<WorkspaceScreen lang={lang} copy={copy} demo={demo} seat={seat} userName={copy.sample.user} model={sampleModel(copy)} screen="chat" {...handlers} />);
+  return renderToStaticMarkup(<WorkspaceScreen lang={lang} copy={copy} demo={demo} seat={seat} roles={options?.roles ?? rolesForSeat(seat)} shared={options?.shared} userName={copy.sample.user} model={options?.model ?? sampleModel(copy)} screen={options?.screen ?? 'chat'} {...handlers} />);
 }
 
 it('shows the score count up final value', () => {
@@ -30,13 +35,17 @@ it('hides write controls for a viewer and shows the read only note', () => {
   expect(html).not.toContain('data-action="skip"');
   expect(html).not.toContain('data-action="replay"');
   expect(html).not.toContain('data-action="attach"');
-  expect(html).toContain('You have view access. Ask an owner to run tests or approve fixes.');
+  expect(html).toContain('You have view access. Ask an owner to run tests, or a service quality reviewer to approve fixes.');
   expect(html).toContain('>Viewer<');
   const owner = screen('en', 'owner', true);
-  expect(owner).toContain('data-action="approve"');
+  expect(owner).not.toContain('data-action="approve"');
+  expect(owner).toContain('Only a service quality reviewer can approve this fix.');
   expect(owner).toContain('data-action="replay"');
   expect(owner).toContain('data-action="attach"');
-  expect(owner).not.toContain('You have view access. Ask an owner to run tests or approve fixes.');
+  expect(owner).not.toContain('You have view access. Ask an owner to run tests, or a service quality reviewer to approve fixes.');
+  const editor = screen('en', 'editor', true);
+  expect(editor).toContain('data-action="approve"');
+  expect(editor).not.toContain('Only a service quality reviewer can approve this fix.');
 });
 
 it('mirrors the shell when dir is rtl', () => {
@@ -75,10 +84,117 @@ it('derives the score from the saved report counts', () => {
   expect(metricsFromReport(body).critical).toBe(1);
 });
 
-it('keeps phone widths from overflowing (box sizing, shrinkable columns, wrapping report scores)', async () => {
-  const { readFileSync } = await import('node:fs');
+it('keeps phone widths from overflowing (box sizing, shrinkable columns, wrapping report scores)', () => {
   const css = readFileSync('src/app/globals.css', 'utf8');
   expect(css).toMatch(/\*, \*::before, \*::after \{ box-sizing: border-box; \}/);
   expect(css).toMatch(/\.nz-columns > \* \{ min-width: 0; \}/);
   expect(css).toMatch(/\.nz-report-scores \{ flex-wrap: wrap; \}/);
+});
+
+it('shows Approve only to a quality reviewer', () => {
+  expect(canApprove(['service_owner'])).toBe(false);
+  expect(canApprove(['supplier_maintainer'])).toBe(false);
+  expect(canApprove(['viewer'])).toBe(false);
+  expect(canApprove(['quality_reviewer'])).toBe(true);
+  expect(canApprove(['service_owner', 'quality_reviewer'])).toBe(true);
+  expect(canApprove(['quality_reviewer'], true)).toBe(false);
+  expect(screen('en', 'owner', true, { roles: ['service_owner', 'quality_reviewer'] })).toContain('data-action="approve"');
+  expect(screen('ar', 'supplier', true)).toContain('اعتماد هذا الإصلاح لمراجع جودة الخدمة فقط.');
+  expect(screen('en', 'editor', true, { shared: true })).not.toContain('data-action="approve"');
+  expect(screen('en', 'editor', true, { shared: true })).toContain('Only a service quality reviewer can approve this fix.');
+});
+
+it('renders record cards as sentences and keeps the raw lines behind an expand', () => {
+  const spoken = presentRecord(rawEn, rawAr);
+  expect(spoken.en).toContain('Case NZ-000001 for Saeed is in review in the complaint review queue');
+  expect(spoken.en).toContain('The case tool succeeded.');
+  expect(spoken.en).toContain('The review tool failed because the tool did not finish.');
+  expect(spoken.ar).toContain('الحالة NZ-000001 تخص سعيد');
+  expect(spoken.ar).toContain('نجحت أداة الحالة.');
+  expect(spoken.ar).toContain('فشلت أداة المراجعة.');
+  for (const sentence of [spoken.en, spoken.ar]) {
+    expect(sentence).not.toContain(receipt);
+    expect(sentence).not.toContain('create_case');
+    expect(sentence).not.toContain('saeed)');
+    expect(sentence).not.toContain('complaint_review');
+    expect(sentence).not.toContain('tool_failed');
+  }
+  expect(spoken.rawEn).toContain(receipt);
+  expect(spoken.rawAr).toContain('create_case');
+  const plain = presentRecord('The case is in the wrong queue.', 'القضية في الطابور غير الصحيح.');
+  expect(plain).toMatchObject({ en: 'The case is in the wrong queue.', ar: 'القضية في الطابور غير الصحيح.', rawEn: null, rawAr: null });
+  const quiet = presentRecord('No case recorded. No tool was called.', 'لم تسجل أي حالة. لم تستدع أي أداة.');
+  expect(quiet.rawEn).toBeNull();
+  const hidden = presentRecord('Case NZ-9, requester other_user, queue secret_queue, status open (open), review none. Receipt 11111111-1111-4111-8111-111111111111: custom_tool, failed (error).', null);
+  expect(hidden.en).toContain('the requester');
+  expect(hidden.en).toContain('listed');
+  expect(hidden.en).not.toContain('other_user');
+  expect(hidden.en).not.toContain('secret_queue');
+  expect(hidden.en).not.toContain('custom_tool');
+  expect(hidden.en).not.toContain('11111111-1111-4111-8111-111111111111');
+  expect(presentQuote('SAEED-SAID-DEV', { en: 'No reply was stored.', ar: 'لم يُحفظ رد.' })).toMatchObject({ en: 'The saved reply is a system code.', ar: 'الرد المحفوظ رمز من النظام.', raw: 'SAEED-SAID-DEV' });
+  expect(presentQuote('Your refund will reach you today.', { en: 'No reply was stored.', ar: 'لم يُحفظ رد.' }).raw).toBeNull();
+
+  const body: ReportBody = assembleReport({
+    run: { id: 'run', status: 'failed', calls_used: 1, calls_budget: 4 },
+    conversations: [{ id: 'c1', status: 'failed', split: 'development', language: 'en' }],
+    findings: [{ id: 'f1', check_id: 'case_exists', severity: 'critical', title: 'Case recorded', title_ar: 'الحالة مسجلة', really_happened: rawEn, really_happened_ar: rawAr, split: 'development', family: 'complaint', language: 'en', agent_said: 'SAEED-SAID-DEV' }],
+    messages: [],
+  });
+  const copy = messagesFor('en');
+  const model = modelFromReports(body, null, copy, 'en', 'Harbor permits desk', true);
+  expect(model.events.find((event) => event.id === 'f1')?.body).toBe(spoken.en);
+  expect(model.events.find((event) => event.id === 'f1')?.detail).toBe(rawEn);
+  expect(model.failures[0]?.actualEn).toBe('The saved reply is a system code.');
+  expect(model.failures[0]?.rawQuote).toBe('SAEED-SAID-DEV');
+  const html = screen('en', 'editor', true, { model, screen: 'failures' });
+  expect(html).toContain(spoken.en);
+  expect(html).toContain('>Record detail<');
+  expect(html).toContain(receipt);
+  expect(html).toContain('The saved reply is a system code.');
+  const arabic = modelFromReports(body, null, messagesFor('ar'), 'ar', 'مكتب', true);
+  expect(arabic.events.find((event) => event.id === 'f1')?.body).toBe(spoken.ar);
+  expect(screen('ar', 'editor', true, { model: arabic })).toContain('تفاصيل السجل');
+});
+
+it('shows a recheck state instead of duplicate before and after scores', () => {
+  expect(canRunRecheck(['service_owner'])).toBe(true);
+  expect(canRunRecheck(['quality_reviewer'])).toBe(true);
+  expect(canRunRecheck(['supplier_maintainer'])).toBe(false);
+  expect(canRunRecheck(['viewer'])).toBe(false);
+  expect(canRunRecheck(['service_owner'], true)).toBe(false);
+  const copy = messagesFor('en');
+  const pending = { ...sampleModel(copy), before: null };
+  const owner = screen('en', 'owner', true, { screen: 'report', model: pending });
+  expect(owner).toContain('data-state="recheck-pending"');
+  expect(owner).toContain('Recheck not run yet.');
+  expect(owner).toContain('data-action="recheck"');
+  expect(owner).not.toContain('<th>Before</th>');
+  expect(owner).not.toContain('<th>After</th>');
+  const viewer = screen('en', 'viewer', false, { screen: 'report', model: pending });
+  expect(viewer).not.toContain('data-action="recheck"');
+  expect(viewer).toContain('A service owner or a service quality reviewer runs the recheck.');
+  expect(screen('ar', 'supplier', true, { screen: 'report', model: { ...sampleModel(messagesFor('ar')), before: null } })).toContain('لم تُشغل إعادة الفحص بعد.');
+  const compared = screen('en', 'owner', true, { screen: 'report' });
+  expect(compared).toContain('>Before<');
+  expect(compared).toContain('>74<');
+  expect(compared).toContain('>82<');
+  expect(compared).not.toContain('data-state="recheck-pending"');
+});
+
+it('ends the failure entrance fully opaque and keeps a reduced motion fallback', () => {
+  const css = readFileSync('src/app/globals.css', 'utf8');
+  expect(css).toMatch(/@keyframes nz-fade \{ from \{ opacity: 0; \} to \{ opacity: 1; \} \}/);
+  expect(css).toMatch(/@keyframes nz-rise \{ from \{ opacity: 0; transform: translateY\(12px\); \} to \{ opacity: 1; transform: none; \} \}/);
+  expect(css).toMatch(/\.nz-cross \{ opacity: 1; animation: nz-fade 180ms ease forwards; \}/);
+  expect(css).toMatch(/@keyframes nz-fill \{ from \{ transform: scaleX\(0\); \} to \{ transform: scaleX\(var\(--p\)\); \} \}/);
+  const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+  expect(reduced).toContain('animation: none;');
+  expect(reduced).toContain('opacity: 1;');
+  expect(reduced).toContain('.nz-cross');
+  expect(reduced).toContain('.nz-failure');
+  expect(countAt(82, 0)).toBe(0);
+  expect(countAt(82, 0.5)).toBeGreaterThan(0);
+  expect(countAt(82, 0.5)).toBeLessThan(82);
+  expect(countAt(82, 1)).toBe(82);
 });

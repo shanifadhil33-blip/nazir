@@ -1,5 +1,6 @@
 import type { ReportBody } from '@/server/reports/build';
-import { fill, type Lang, type Messages } from './copy';
+import { fill, messagesFor, type Lang, type Messages } from './copy';
+import { presentQuote, presentRecord } from './plain';
 
 export type Seat = 'owner' | 'editor' | 'supplier' | 'viewer';
 export type ScreenId = 'chat' | 'score' | 'failures' | 'report';
@@ -21,6 +22,7 @@ export type LogEvent = {
   kind: 'suite' | 'score' | 'critical' | 'finding' | 'diagnosis' | 'fix' | 'applied' | 'recheck' | 'error' | 'user' | 'note';
   title: string;
   body: string;
+  detail?: string;
   proposalId?: string;
 };
 
@@ -36,6 +38,9 @@ export type FailureCase = {
   diagnosis: string;
   proposed: string;
   proposalId?: string;
+  rawEn?: string;
+  rawAr?: string;
+  rawQuote?: string;
 };
 
 export type FixRow = { id: string; title: string; name: string; role: string; at: Date };
@@ -59,8 +64,21 @@ export function seatFromRoles(roles: readonly string[]): Seat {
   return 'viewer';
 }
 
-export function canApprove(seat: Seat, shared = false) {
-  return !shared && (seat === 'owner' || seat === 'editor');
+export function rolesForSeat(seat: Seat): string[] {
+  if (seat === 'owner') return ['service_owner'];
+  if (seat === 'editor') return ['quality_reviewer'];
+  if (seat === 'supplier') return ['supplier_maintainer'];
+  return ['viewer'];
+}
+
+/** Matches proposal.decide: only a quality reviewer may approve or skip a fix. */
+export function canApprove(roles: readonly string[], shared = false) {
+  return !shared && roles.includes('quality_reviewer');
+}
+
+/** Matches plan.approve: an owner or a quality reviewer may run a recheck. */
+export function canRunRecheck(roles: readonly string[], shared = false) {
+  return !shared && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
 }
 
 export function canCompose(seat: Seat, shared = false) {
@@ -161,14 +179,17 @@ export function modelFromReports(latest: ReportBody, previous: ReportBody | null
     { id: 'suite', kind: 'suite', title: copy.ui.suiteOpened, body: lines[0] ?? '' },
     { id: 'score', kind: 'score', title: copy.ui.scorePosted, body: lines.slice(1).join(' ') },
   ];
+  const emptyQuote = { en: messagesFor('en').ui.noQuote, ar: messagesFor('ar').ui.noQuote };
   findings.forEach((finding, index) => {
     const title = lang === 'ar' ? (finding.title_ar || finding.title) : finding.title;
-    const body = lang === 'ar' ? (finding.really_happened_ar || finding.really_happened) : finding.really_happened;
+    const record = presentRecord(finding.really_happened, finding.really_happened_ar);
+    const detail = lang === 'ar' ? record.rawAr : record.rawEn;
     events.push({
       id: finding.id,
       kind: finding.severity === 'critical' ? 'critical' : 'finding',
       title: index === 0 && finding.severity === 'critical' ? copy.ui.criticalFinding : title,
-      body,
+      body: lang === 'ar' ? record.ar : record.en,
+      ...(detail ? { detail } : {}),
     });
   });
   const languages = new Set(latest.conversations.map((row) => row.language));
@@ -184,18 +205,25 @@ export function modelFromReports(latest: ReportBody, previous: ReportBody | null
     coverage,
     fixes: [],
     events,
-    failures: findings.filter((finding) => finding.severity === 'critical' || findings.every((row) => row.severity !== 'critical')).map((finding, index) => ({
-      id: finding.id,
-      tab: finding.title,
-      tabAr: finding.title_ar || finding.title,
-      caseLabel: `${copy.ui.caseWord} ${index + 1}`,
-      expectedEn: finding.really_happened,
-      expectedAr: finding.really_happened_ar || finding.really_happened,
-      actualEn: finding.agent_said || copy.ui.noQuote,
-      actualAr: finding.agent_said || copy.ui.noQuote,
-      diagnosis: lang === 'ar' ? (finding.really_happened_ar || finding.really_happened) : finding.really_happened,
-      proposed: '',
-    })),
+    failures: findings.filter((finding) => finding.severity === 'critical' || findings.every((row) => row.severity !== 'critical')).map((finding, index) => {
+      const record = presentRecord(finding.really_happened, finding.really_happened_ar);
+      const spoken = presentQuote(finding.agent_said, emptyQuote);
+      return {
+        id: finding.id,
+        tab: finding.title,
+        tabAr: finding.title_ar || finding.title,
+        caseLabel: `${copy.ui.caseWord} ${index + 1}`,
+        expectedEn: record.en,
+        expectedAr: record.ar,
+        actualEn: spoken.en,
+        actualAr: spoken.ar,
+        diagnosis: lang === 'ar' ? record.ar : record.en,
+        proposed: '',
+        ...(record.rawEn ? { rawEn: record.rawEn } : {}),
+        ...(record.rawAr ? { rawAr: record.rawAr } : {}),
+        ...(spoken.raw ? { rawQuote: spoken.raw } : {}),
+      };
+    }),
   };
 }
 
