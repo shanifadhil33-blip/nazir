@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { fill, type Lang, type Messages } from './copy';
+import { AgentAvatar } from './agent-settings';
 import { canApprove, canCompose, canRunRecheck, dubaiStamp, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
 import { ScoreFigure } from './score-figure';
 
@@ -92,12 +93,13 @@ const sections = [['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['
 
 export function WorkspaceScreen({
   lang, copy, demo, seat, roles, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
-  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck,
+  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings,
 }: {
   lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
   onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
+  avatar?: string; onSettings?: () => void;
 }) {
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -127,10 +129,10 @@ export function WorkspaceScreen({
 
   return <div className="nz-app" lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'} data-demo={demo ? 'true' : 'false'} data-seat={seat}>
     <header className="nz-header">
-      <div className="nz-brand">
-        <span className="nz-logo" aria-hidden="true">N<span className="nz-logo-dot" /></span>
+      <button type="button" className="nz-brand" data-action="agent-settings" aria-label={copy.settings.open} onClick={onSettings}>
+        <AgentAvatar value={avatar} size={40} />
         <div><p className="nz-title">{copy.name}</p><p className="nz-sub">{copy.ui.subtitle}</p></div>
-      </div>
+      </button>
       <nav className="nz-desk-nav" aria-label={copy.ui.sections}>
         {sections.map(([id, icon]) => <button type="button" key={id} aria-current={screen === id ? 'page' : undefined} onClick={() => open(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
       </nav>
@@ -193,7 +195,7 @@ export function WorkspaceScreen({
         <section className="nz-panel nz-score-panel" id="nz-score" aria-label={copy.ui.score}>
           <div className="nz-score-top">
             <div>
-              <p className="nz-agent">{model.agentName}</p>
+              <button type="button" className="nz-agent nz-agent-btn" data-action="agent-card" aria-label={copy.settings.open} onClick={onSettings}><AgentAvatar value={avatar} size={28} />{model.agentName}</button>
               <ScoreFigure value={model.metrics.score} named={screen !== 'report'} caption={copy.ui.outOf} />
             </div>
           </div>
