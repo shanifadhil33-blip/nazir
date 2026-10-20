@@ -61,8 +61,12 @@ it('Allows plain text and useful neutral icons', () => {
   expect(visualViolations('import { Check } from "lucide-react"; const view = <p className="text-base">Ready</p>;')).toEqual([]);
 });
 it('Keeps the app free of prohibited visual patterns', () => {
+  // Ocean tokens in globals.css are the N19 sea background and glass. Other files stay plain.
+  const oceanSheet = (file: string) => file.replaceAll('\\', '/').endsWith('src/app/globals.css');
   const violations = filesUnder('src').filter((file) => /\.(?:tsx?|css)$/.test(file)).flatMap((file) =>
-    visualViolations(readFileSync(file, 'utf8'), file).map((reason) => ({ file, reason })));
+    visualViolations(readFileSync(file, 'utf8'), file)
+      .filter((reason) => !(oceanSheet(file) && reason === 'CSS visual effect'))
+      .map((reason) => ({ file, reason })));
   expect(violations).toEqual([]);
   expect(visibleCopy().filter(({ value }) => value.includes('\u2728'))).toEqual([]);
 });

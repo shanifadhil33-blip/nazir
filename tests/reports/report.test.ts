@@ -1,8 +1,11 @@
+import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { seed, testDatabase, type TestDatabase } from '../helpers/pglite';
-import { Forbidden } from '../../src/server/http/errors';
-import { assembleReport, projectReport, reportHtml, scopeLine, type ReportBody } from '../../src/server/reports/build';
-import { createReport, readFullReport, readReportHtml, readViewerReport } from '../../src/server/reports/read';
+import { Forbidden, NotFound, mapError } from '../../src/server/http/errors';
+import * as build from '../../src/server/reports/build';
+import { assembleReport, projectReport, scopeLine, type ReportBody } from '../../src/server/reports/build';
+import * as reports from '../../src/server/reports/read';
+import { createReport, listReports, readFullReport } from '../../src/server/reports/read';
 
 const sample = (): ReportBody => assembleReport({
   run: { id: 'run', status: 'failed', calls_used: 2, calls_budget: 8 },
@@ -14,34 +17,32 @@ const sample = (): ReportBody => assembleReport({
   messages: [{ conversation_id: 'c1', seq: 1, speaker: 'agent', body: 'SAEED-SAID-DEV', split: 'development' }, { conversation_id: 'c2', seq: 1, speaker: 'agent', body: 'IMRAN-SAID-HIDDEN', split: 'hidden' }],
 });
 
-it('builds both languages from the same counts and redacts the viewer copy', () => {
+it('builds both languages from the same counts and keeps quotes on the development copy', () => {
   const full = sample();
-  const viewer = projectReport(full, 'viewer');
   const supplier = projectReport(full, 'development');
   expect(full.scope).toEqual(scopeLine);
   expect(full.sentences.en[0]).toContain('within tested scope, not a certificate');
   expect(full.sentences.ar[0]).toContain('ضمن النطاق المختبر');
   expect(full.sentences.en.join(' ')).toContain('1 of 2');
   expect(full.sentences.ar.join(' ')).toContain('1 من 2');
-  expect(viewer.counts.conversations).toBe(1);
-  expect(viewer.findings.map((finding) => finding.id)).toEqual(['f1']);
-  expect(viewer.hidden_findings).toBe(full.hidden_findings);
-  expect(JSON.stringify(viewer)).not.toContain('SAEED-SAID-DEV');
-  expect(JSON.stringify(viewer)).not.toContain('IMRAN-SAID-HIDDEN');
+  expect(projectReport(full, 'full').findings).toHaveLength(2);
   expect(supplier.findings.map((finding) => finding.id)).toEqual(['f1']);
   expect(supplier.findings[0]?.agent_said).toBe('SAEED-SAID-DEV');
+  expect(supplier.hidden_findings).toBe(full.hidden_findings);
   expect(JSON.stringify(supplier)).not.toContain('IMRAN-SAID-HIDDEN');
-  const html = reportHtml(full);
-  const quiet = reportHtml(viewer);
-  expect(html).toContain('within tested scope, not a certificate');
-  expect(html).toContain('هذه النتائج ضمن النطاق المختبر، وليست شهادة.');
-  expect(html).toContain('@page');
-  expect(html).toContain('lang="ar"');
-  expect(html).toContain('dir="rtl"');
-  expect(html).toContain('SAEED-SAID-DEV');
-  expect(quiet).not.toContain('SAEED-SAID-DEV');
-  expect(quiet).not.toContain('IMRAN-SAID-HIDDEN');
-  expect(quiet).toContain('within tested scope, not a certificate');
+  expect('reportHtml' in build).toBe(false);
+  expect('escapeHtml' in build).toBe(false);
+  expect('readViewerReport' in reports).toBe(false);
+  expect('readReportHtml' in reports).toBe(false);
+});
+
+it('answers 404 for the removed print and redacted viewer routes', () => {
+  const statusFor = (file: string) => existsSync(file) ? 200 : 404;
+  const root = 'src/app/api/workspaces/[workspaceId]/reports/[reportId]';
+  expect(statusFor(`${root}/route.ts`)).toBe(200);
+  expect(statusFor(`${root}/print/route.ts`)).toBe(404);
+  expect(statusFor(`${root}/viewer/route.ts`)).toBe(404);
+  expect(statusFor(`${root}/viewer/print/route.ts`)).toBe(404);
 });
 
 let db: TestDatabase;
@@ -70,30 +71,38 @@ beforeAll(async () => {
 }, 60000);
 afterAll(async () => { await db?.close(); });
 
-it('refuses the full report to a viewer and keeps one evidence snapshot', async () => {
+it('gives a viewer the normal report and still refuses a viewer write', async () => {
   const created = await createReport(db.driver, owner, { run_id: runId });
   expect(created.scope.en).toContain('within tested scope, not a certificate');
   const full = await readFullReport(db.driver, reviewer, created.id);
   const safe = await readFullReport(db.driver, supplier, created.id);
-  const redacted = await readViewerReport(db.driver, viewer, created.id);
-  expect(full.scope).toEqual(redacted.scope);
-  expect(full.run.id).toBe(redacted.run.id);
+  const asViewer = await readFullReport(db.driver, viewer, created.id);
+  expect(asViewer.scope).toEqual(full.scope);
+  expect(asViewer.run.id).toBe(full.run.id);
   expect(JSON.stringify(full)).toContain('SAEED-SAID-DEV');
   expect(JSON.stringify(full)).toContain('IMRAN-SAID-HIDDEN');
+  expect(JSON.stringify(asViewer)).toContain('SAEED-SAID-DEV');
+  expect(JSON.stringify(asViewer)).not.toContain('IMRAN-SAID-HIDDEN');
+  expect(asViewer.findings.map((finding) => finding.id).sort()).toEqual(safe.findings.map((finding) => finding.id).sort());
+  expect(asViewer.messages.length).toBeGreaterThan(0);
   expect(JSON.stringify(safe)).toContain('SAEED-SAID-DEV');
   expect(JSON.stringify(safe)).not.toContain('IMRAN-SAID-HIDDEN');
-  expect(JSON.stringify(redacted)).not.toContain('SAEED-SAID-DEV');
-  expect(JSON.stringify(redacted)).not.toContain('IMRAN-SAID-HIDDEN');
-  expect(redacted.hidden_findings).toBeGreaterThan(0);
-  await expect(readFullReport(db.driver, viewer, created.id)).rejects.toBeInstanceOf(Forbidden);
-  await expect(readReportHtml(db.driver, viewer, created.id, 'full')).rejects.toBeInstanceOf(Forbidden);
-  const printed = await readReportHtml(db.driver, owner, created.id, 'full');
-  const viewerPrint = await readReportHtml(db.driver, viewer, created.id, 'viewer');
-  expect(printed).toContain('within tested scope, not a certificate');
-  expect(printed).toContain('@page');
-  expect(printed).toContain('SAEED-SAID-DEV');
-  expect(viewerPrint).not.toContain('IMRAN-SAID-HIDDEN');
-  expect(viewerPrint).toContain('dir="rtl"');
+  expect((await listReports(db.driver, owner)).reports.some((row) => row.id === created.id)).toBe(true);
+  const viewerList = await listReports(db.driver, viewer);
+  expect(viewerList.reports.some((row) => row.id === created.id)).toBe(true);
+  expect(JSON.stringify(viewerList)).not.toContain('IMRAN-SAID-HIDDEN');
+  expect(JSON.stringify(await listReports(db.driver, supplier))).not.toContain('IMRAN-SAID-HIDDEN');
+  let refusal: unknown;
+  try {
+    await createReport(db.driver, viewer, { run_id: runId });
+  } catch (error) {
+    refusal = error;
+  }
+  expect(refusal).toBeInstanceOf(Forbidden);
+  expect(mapError(refusal).status).toBe(403);
+  expect(mapError(refusal, 'ar').body.error.message).toBe('دورك لا يسمح بهذا.');
+  const other = await db.bootstrap('OtherReport');
+  await expect(readFullReport(db.driver, other.member_id, created.id)).rejects.toBeInstanceOf(NotFound);
   expect((await db.member(viewer, (sql) => sql.query('SELECT id FROM nazir.reports'))).rows).toHaveLength(0);
   await expect(db.member(viewer, (sql) => sql.query('SELECT nazir.read_report($1)', [created.id]))).rejects.toThrow(/cannot do this/);
   expect((await db.owner.query("SELECT action FROM nazir.audit_events WHERE action='report.created' AND target_id=$1", [created.id])).rows).toHaveLength(1);
