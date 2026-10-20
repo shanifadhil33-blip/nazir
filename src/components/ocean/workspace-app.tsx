@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { messagesFor, type Lang, type Messages } from './copy';
+import { fill, messagesFor, type Lang, type Messages } from './copy';
 import { canApprove, canRunRecheck, emptyModel, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
@@ -158,6 +158,7 @@ export function WorkspaceApp({
       if (done && payload?.tool === 'decide_repair') push({ id: crypto.randomUUID(), kind: 'applied', title: copy.ui.fixApplied, body: text });
       else if (done && payload?.tool === 'rerun_tests') push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: text });
       else push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.reply, body: text });
+      if (done && (payload?.tool === 'start_run' || payload?.tool === 'rerun_tests')) void drive(runIdsIn(payload?.data));
     } catch {
       setExtra((items) => items.filter((item) => item.id !== 'applying'));
       if (controller.signal.aborted) push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.stopped });
@@ -165,6 +166,21 @@ export function WorkspaceApp({
     } finally {
       setPending(false);
       setStatus(null);
+    }
+  }
+
+  // Runs queued from chat are driven one conversation per request, only while this page is open.
+  async function drive(runIds: string[]) {
+    for (const runId of runIds.slice(0, 4)) {
+      for (let n = 0; n < 60; n++) {
+        const response = await fetch(`/api/workspaces/${workspaceId}/runs/${runId}/step`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
+        if (!response?.ok) { setExtra((items) => items.filter((item) => item.id !== 'drive-progress')); push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: response?.status === 503 ? copy.ui.runWaiting : copy.ui.nothingChanged }); return; }
+        const p = await response.json().catch(() => null) as { done: boolean; passed: number; failed: number; inconclusive: number; waiting: number } | null;
+        if (!p) return;
+        const finished = p.passed + p.failed + p.inconclusive;
+        if (p.done || p.waiting === 0) { setStatus(null); setExtra((items) => items.filter((item) => item.id !== 'drive-progress')); push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: fill(copy.ui.runDone, { passed: String(p.passed), failed: String(p.failed), inconclusive: String(p.inconclusive) }) }); break; }
+        setStatus('running'); const body = fill(copy.ui.runProgress, { done: String(finished), total: String(finished + p.waiting) }); setExtra((items) => [...items.filter((item) => item.id !== 'drive-progress'), { id: 'drive-progress', kind: 'note', title: copy.ui.note, body }]);
+      }
     }
   }
 
@@ -261,4 +277,15 @@ function readError(payload: unknown, copy: Messages) {
     if (typeof message === 'string' && message.trim()) return message;
   }
   return copy.ui.nothingChanged;
+}
+
+function runIdsIn(data: unknown): string[] {
+  const found = new Set<string>();
+  const walk = (value: unknown, key = '') => {
+    if (typeof value === 'string' && key === 'run_id' && /^[0-9a-f-]{36}$/i.test(value)) found.add(value);
+    else if (Array.isArray(value)) value.forEach((v) => walk(v, key === 'runs' ? 'run' : key));
+    else if (value && typeof value === 'object') for (const [k, v] of Object.entries(value)) walk(v, k === 'id' && key === 'run' ? 'run_id' : k);
+  };
+  walk(data);
+  return [...found];
 }
