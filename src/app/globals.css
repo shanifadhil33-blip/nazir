@@ -537,3 +537,6 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: rgba(255, 255
 @keyframes nz-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .nz-settings-back { animation: none; } }
 @media (max-width: 860px) { .nz-settings-grid { grid-template-columns: 1fr; } .nz-row { grid-template-columns: 1fr; } .nz-settings-back { padding: 8px; } .nz-settings { padding: 16px; border-radius: 20px; } }
+
+.nz-measured { margin-block: 16px; overflow-x: auto; }
+.nz-measured .nz-table td { font-variant-numeric: tabular-nums; }

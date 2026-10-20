@@ -16,7 +16,7 @@ export async function main() {
   // Fault injection for live failure paths: providers listed here fail as forced_down without a network call.
   const forcedDown=new Set((process.env.RUNNER_FORCE_DOWN??'').split(',').map((id) => id.trim()).filter(Boolean));
   if (!process.env.DATABASE_URL || !process.env.INSPECT_DATABASE_URL || !process.env.IDEMPOTENCY_KEY) throw new Error('Runner environment required');
-  const maxConversations=cap('MAX_CONVERSATIONS',2,48),maxCalls=cap('MAX_CALLS',24,200);
+  const maxConversations=cap('MAX_CONVERSATIONS',2,48),maxCalls=cap('MAX_CALLS',24,300);
   const version=process.env.VERSION??'baseline',languages=(process.env.LANGUAGES??'en,ar').split(',');
   if (!languages.length || languages.some((l) => !['en','ar'].includes(l)) || new Set(languages).size!==languages.length) throw new Error('Invalid languages');
   const app=new Pool({ connectionString:process.env.DATABASE_URL }),inspect=new Pool({ connectionString:process.env.INSPECT_DATABASE_URL });
@@ -26,8 +26,9 @@ export async function main() {
     const wid=process.env.WORKSPACE_ID ?? await driver.transaction(async (db) => { await db.query('SET LOCAL ROLE nazir_worker'); return (await db.query(process.env.RUN_WORKSPACE==='library'?'SELECT nazir.runner_library_fixture_workspace() AS id':'SELECT nazir.runner_fixture_workspace() AS id')).rows[0].id; });
     if (!wid) throw new Error('Runner fixture required');
     const input=await withWorker(driver,wid,async (db) => {
-      const plan=(await db.query("SELECT id FROM nazir.plans WHERE status='approved' ORDER BY created_at,id LIMIT 1")).rows[0];
-      const agent=(await db.query("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1",[version])).rows[0];
+      // PLAN_ID picks an approved plan (the frozen suite plan has a 384 call budget); otherwise the oldest approved plan.
+      const plan=(await db.query("SELECT id FROM nazir.plans WHERE status='approved' AND ($1::uuid IS NULL OR id=$1) ORDER BY created_at,id LIMIT 1",[process.env.PLAN_ID??null])).rows[0];
+      const agent=(await db.query("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1 AND ($2::uuid IS NULL OR id=$2) ORDER BY created_at,id LIMIT 1",[version,process.env.AGENT_VERSION_ID??null])).rows[0];
       const keys=process.env.RUN_SCENARIOS?.split(',').map((s)=>s.trim()).filter(Boolean);
       const rows=(await db.query("SELECT id,stable_key,language,(library_hash IS NOT NULL) AS library FROM nazir.scenarios WHERE status='approved' AND language=ANY($1::text[]) AND ($2::text[] IS NULL OR stable_key=ANY($2::text[])) ORDER BY stable_key,language,id",[languages,keys??null])).rows;
       const chosen=chooseScenarios(rows);
