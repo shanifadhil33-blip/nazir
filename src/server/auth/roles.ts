@@ -32,6 +32,13 @@ const matrix = {
   'audit.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer'],
   'comparison.create': ['service_owner', 'quality_reviewer'],
   'comparison.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
+  'run.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
+  'report.create': ['service_owner', 'supplier_maintainer', 'quality_reviewer'],
+  'report.read': ['service_owner', 'supplier_maintainer', 'quality_reviewer'],
+  'report.viewer': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
+  'agent.chat': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
+  'mcp.issue': ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'],
+  'demo.reset': ['service_owner'],
 } satisfies Record<string, Role[]>;
 export type Action = keyof typeof matrix;
 export const actions = Object.keys(matrix) as Action[];
