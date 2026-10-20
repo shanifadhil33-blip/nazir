@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { errorLines, type ErrorCode } from '../http/errors';
 
 /** Tools the in app agent and the MCP connector may run. A caller cannot add to this list. */
 export const agentTools = ['list_runs', 'list_findings', 'propose_plan', 'start_run', 'explain_finding', 'propose_repair', 'decide_repair', 'rerun_tests', 'compare_runs'] as const;
@@ -46,22 +47,26 @@ export const failureReply = {
   partial_start: { en: 'The plan was approved. No test run was queued.', ar: 'اعتُمدت الخطة. لم يوضع تشغيل في قائمة الانتظار.' },
 } satisfies Record<string, Bilingual>;
 
+function actionError(code: ErrorCode): ActionError {
+  return { code, message: errorLines[code].en, ar: errorLines[code].ar };
+}
 export const actionErrors = {
-  approval_required: { code: 'approval_required', message: 'An exact approval from an allowed role is required.', ar: 'تلزم موافقة صريحة من دور مسموح له.' },
-  four_eyes: { code: 'four_eyes', message: 'Another member must decide.', ar: 'يجب أن يقرر عضو آخر.' },
-  not_waiting: { code: 'not_waiting', message: 'The plan is not waiting for a decision.', ar: 'الخطة ليست بانتظار قرار.' },
-  not_approved: { code: 'not_approved', message: 'An approved plan is required.', ar: 'تلزم خطة معتمدة.' },
-  not_found: { code: 'not_found', message: 'The record was not found.', ar: 'لم يعثر على السجل.' },
-  not_finished: { code: 'not_finished', message: 'Both runs must be finished.', ar: 'يجب أن يكون التشغيلان منتهيين.' },
-  same_run: { code: 'same_run', message: 'Two different runs are needed.', ar: 'يلزم تشغيلان مختلفان.' },
-  version: { code: 'version', message: 'The agent version cannot be tested.', ar: 'لا يمكن اختبار نسخة الوكيل هذه.' },
-  impersonation: { code: 'impersonation', message: 'You cannot act as another member.', ar: 'لا يمكنك أن تتصرف بصفة عضو آخر.' },
-  failed: { code: 'failed', message: 'The action was not completed.', ar: 'لم يتم تنفيذ الإجراء.' },
-  repair: { code: 'invalid_patch', message: 'That repair is not allowed.', ar: 'هذا الإصلاح غير مسموح.' },
-  budget_too_small: { code: 'budget_too_small', message: 'The budget is too small for a test.', ar: 'الميزانية أصغر من أن تكفي لاختبار.' },
-  widens_tools: { code: 'widens_tools', message: 'A plan cannot add tools.', ar: 'لا يمكن للخطة أن تضيف أدوات.' },
-  widens_permissions: { code: 'widens_permissions', message: 'A plan cannot add permissions.', ar: 'لا يمكن للخطة أن تضيف صلاحيات.' },
-  validation: { code: 'validation', message: 'Check the details and try again.', ar: 'تحقق من التفاصيل ثم أعد المحاولة.' },
+  approval_required: actionError('approval_required'),
+  four_eyes: actionError('four_eyes'),
+  not_waiting: actionError('not_waiting'),
+  not_approved: actionError('not_approved'),
+  not_found: actionError('not_found'),
+  not_finished: actionError('not_finished'),
+  same_run: actionError('same_run'),
+  version: actionError('version'),
+  impersonation: actionError('impersonation'),
+  failed: actionError('failed'),
+  repair: actionError('invalid_patch'),
+  budget_too_small: actionError('budget_too_small'),
+  widens_tools: actionError('widens_tools'),
+  widens_permissions: actionError('widens_permissions'),
+  validation: actionError('validation'),
+  no_tests: actionError('no_tests'),
 } satisfies Record<string, ActionError>;
 
 export const causeCopy: Record<string, Bilingual> = {
@@ -212,5 +217,8 @@ export function budgetFrom(message: string) {
   if (cost?.[1]) return { kind: 'cost' as const, max: Number(cost[1]), perCall: Number(cost[2] ?? 1) };
   const calls = message.match(/(\d{1,6})\s*(?:calls|مكالمات)/);
   if (calls?.[1]) return { kind: 'calls' as const, max: Number(calls[1]) };
-  return { kind: 'calls' as const, max: 8 };
+  return null;
+}
+export function planCostReply(calls: number): Bilingual {
+  return { en: `This plan uses ${calls} calls.`, ar: `تستخدم هذه الخطة ${calls} مكالمات.` };
 }

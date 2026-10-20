@@ -17,7 +17,7 @@ export function demoCap(env: Record<string, string | undefined> = process.env) {
 }
 
 function refused(error: unknown): never {
-  if (String(error).includes('not a demo')) throw new Coded(403, 'forbidden', 'This workspace is not a demo.');
+  if (String(error).includes('not a demo')) throw new Coded(403, 'not_demo', 'This workspace is not a demo.');
   throw error;
 }
 async function recycle(sql: SqlConnection, workspaceId: string, cap: number, reason: 'schedule' | 'on_demand', at: Date | null) {

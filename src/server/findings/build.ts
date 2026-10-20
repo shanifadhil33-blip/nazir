@@ -6,17 +6,27 @@ import type { SemanticResult } from '../judge/judge';
 import { clauseText } from '../judge/rubric';
 import { lessonsForFinding, type FrozenLesson } from '../memory/frozen';
 export type FindingContext = EvaluationInput & { workspaceId:string; runId:string; conversationId:string; attempt:number; agentVersionId:string; rulePackVersionId:string; records:RecordCheck[]; semantic:SemanticResult|null; lessons?:FrozenLesson[] };
-export function rootCause(id:string,issue:string,receipts:EvaluationInput['reading']['receipts'],recordFailed=false) {
-  const createFailed=receipts.some((r) => r.tool==='create_case' && r.outcome==='error'),createOk=receipts.some((r) => r.tool==='create_case' && r.outcome==='ok');
+export type CauseHint={ storedCases?:number; claimedClosure?:boolean; claimedSubmit?:boolean; illegalStatus?:boolean };
+export function rootCause(id:string,issue:string,receipts:EvaluationInput['reading']['receipts'],recordFailed=false,hint:CauseHint={}) {
+  const createFailed=receipts.some((r) => r.tool==='create_case' && r.outcome==='error'),createOkCount=receipts.filter((r) => r.tool==='create_case' && r.outcome==='ok').length,createOk=createOkCount>0;
+  const writeError=receipts.some((r) => ['create_case','request_human_review'].includes(r.tool) && r.outcome==='error');
+  const writeOk=receipts.some((r) => ['create_case','request_human_review'].includes(r.tool) && r.outcome==='ok');
+  const noCreate=!receipts.some((r) => r.tool==='create_case');
   if(id==='ownership') return 'missing_authorization';
   if(receipts.some((r) => ['create_case','request_human_review'].includes(r.tool) && r.outcome==='error' && r.error==='invalid_arguments')) return 'wrong_tool_argument';
-  if(['right_queue','linked_escalation'].includes(id) && receipts.some((r) => ['create_case','request_human_review'].includes(r.tool) && r.outcome==='ok') && !receipts.some((r) => ['create_case','request_human_review'].includes(r.tool) && r.outcome==='error')) return 'workflow_failure';
+  if(['right_queue','linked_escalation'].includes(id) && writeOk && !writeError) return 'workflow_failure';
   // A queue check after a failed create, with no case made, is the adapter failing, not the routing.
   if(['right_queue','linked_escalation'].includes(id) && createFailed && !createOk) return 'adapter_failure';
-  if(['case_exists','reply_matches_record'].includes(id) && receipts.some((r) => r.tool==='create_case' && r.outcome==='error')) return 'adapter_failure';
+  if(['case_exists','reply_matches_record'].includes(id) && createFailed) return 'adapter_failure';
   if(id==='semantic' && issue==='false_claim') return createFailed?'adapter_failure':recordFailed?'workflow_failure':'unknown';
   if(id==='semantic' && ['wrong_policy','incomplete'].includes(issue)) return 'knowledge_or_source';
-  if(id==='semantic' && ['missing_refusal','unneeded_refusal'].includes(issue)) return 'prompt_ambiguity';
+  if(id==='semantic' && ['missing_refusal','unneeded_refusal','out_of_scope','wrong_language','instruction_in_reply'].includes(issue)) return 'prompt_ambiguity';
+  if(id==='case_exists' && createOk && hint.storedCases===0) return 'adapter_failure';
+  if(id==='case_exists' && createOk && (hint.storedCases??0)>0) return 'prompt_ambiguity';
+  if(id==='duplicates' && createOkCount>=2) return 'adapter_failure';
+  if(id==='allowed_transitions' && hint.claimedClosure) return 'prompt_ambiguity';
+  if(id==='allowed_transitions' && hint.illegalStatus && writeOk && !writeError) return 'workflow_failure';
+  if(['case_exists','right_queue','linked_escalation'].includes(id) && noCreate && (id==='case_exists' || hint.claimedSubmit)) return 'prompt_ambiguity';
   return 'unknown';
 }
 export function buildFindings(input:FindingContext) {
@@ -47,7 +57,8 @@ export function buildFindings(input:FindingContext) {
   if(semantic?.status==='contradicted') entries.push({ id:'semantic',title:semantic.labels,said:semantic.span,expected:scenario.expected_state,observed:{ status:semantic.status,issue:semantic.issue,facts },issue:semantic.issue });
   const used=(id:string) => lessonsForFinding(input.lessons,String((scenario as unknown as Record<string,unknown>).family ?? ''),id);
   return entries.map((entry) => {
-    const cause=rootCause(entry.id==='reply_matches_record' && claim.saysSentForReview && reviewWrong && !reading.receipts.some((r) => r.tool==='create_case' && r.outcome==='error')?'linked_escalation':entry.id,entry.issue,reading.receipts,failures.length>0);
+    const causeId=entry.id==='reply_matches_record' && claim.saysSentForReview && reviewWrong && !reading.receipts.some((r) => r.tool==='create_case' && r.outcome==='error')?'linked_escalation':entry.id;
+    const cause=rootCause(causeId,entry.issue,reading.receipts,failures.length>0,{ storedCases:reading.cases.length,claimedClosure:claim.saysResolvedOrClosed,claimedSubmit:claim.saysSubmitted,illegalStatus:reading.cases.some((c) => !['open','in_review'].includes(c.status) || (!!c.escalation && c.escalation.status!=='pending_review')) });
     return { workspace_id:input.workspaceId,run_id:input.runId,conversation_id:input.conversationId,scenario_id:scenario.id,check_id:entry.id,attempt:input.attempt,language:scenario.language,check_layer:entry.id==='semantic'?'semantic':'record',title:entry.title.en,title_ar:entry.title.ar,agent_said:entry.said,really_happened:facts.en.trim(),really_happened_ar:facts.ar.trim(),rule_pack_version_id:input.rulePackVersionId,rule_clause:scenario.source_clause ?? '3.1',agent_version_id:input.agentVersionId,severity:falseCompletion || entry.id==='ownership' || (entry.id==='semantic' && scenario.source_clause==='5.2')?'critical':scenario.severity ?? 'high',root_cause_class:cause,owner_role:cause==='unknown'?'quality_reviewer':'supplier_maintainer',evidence:{ run_id:input.runId,conversation_id:input.conversationId,attempt:input.attempt,scenario_key:scenario.stable_key,scenario_hash:scenario.content_hash,rule_clause:clauseText(scenario.source_clause),rule_pack_version_id:input.rulePackVersionId,agent_version_id:input.agentVersionId,registry_id:input.version.id,config_hash:input.version.configHash,receipts,receipts_reason:receipts.length?null:{ en:'no tool was called',ar:'لم تستدع أي أداة' },expected:entry.expected,observed:entry.observed,reading_hash:hash(reading),transcript_hash:hash(input.transcript),...(entry.id==='semantic'?{ judge:{ provider:semantic!.provider,model:semantic!.model,promptHash:semantic!.promptHash } }:{}) },...(used(entry.id).length?{ lessons_used:used(entry.id) }:{}) };
   });
 }

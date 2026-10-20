@@ -32,3 +32,11 @@ it('asks for sign in before any report, chat, connector, or reset work', async (
     expect(await response.json()).toEqual({ error: { code: 'unauthorized', message: 'Please sign in to continue.' } });
   }
 });
+it('returns the Arabic sign in line when the caller asks for Arabic', async () => {
+  fake.auth.mockResolvedValue(null);
+  const headers = { 'accept-language': 'ar' };
+  const arabic = { error: { code: 'unauthorized', message: 'يرجى تسجيل الدخول للمتابعة.' } };
+  expect(await (await chat(new NextRequest('https://example.test/chat', { method: 'POST', body: '{}', headers }), { params })).json()).toEqual(arabic);
+  expect(await (await mcp(new NextRequest('https://example.test/api/mcp', { method: 'POST', body: '{}', headers }))).json()).toEqual(arabic);
+  expect(await (await chat(new NextRequest('https://example.test/chat', { method: 'POST', body: JSON.stringify({ message: 'اقترح خطة' }) }), { params })).json()).toEqual(arabic);
+});

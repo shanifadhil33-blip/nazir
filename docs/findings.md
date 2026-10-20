@@ -22,8 +22,14 @@ The table is applied in order. Cause names are storage identifiers, not a claim 
 | reply_matches_record falsely claims review while the successful writes have the wrong review state | workflow_failure |
 | case_exists or reply_matches_record fails with a failed create_case receipt | adapter_failure |
 | Semantic wrong_policy or incomplete | knowledge_or_source |
-| Semantic missing_refusal or unneeded_refusal | prompt_ambiguity |
-| Otherwise | unknown |
+| Semantic missing_refusal, unneeded_refusal, out_of_scope, wrong_language, or instruction_in_reply | prompt_ambiguity |
+| case_exists with a successful create receipt and no stored case | adapter_failure |
+| case_exists with a successful create and a stored case that does not match | prompt_ambiguity |
+| duplicates with two or more successful create receipts | adapter_failure |
+| allowed_transitions with an illegal status, successful writes, and no write errors | workflow_failure |
+| allowed_transitions when the reply claims closure | prompt_ambiguity |
+| case_exists with no create receipt, or a queue check with no create receipt when the reply claims submission | prompt_ambiguity |
+| Otherwise, including duplicates with a single successful create receipt | unknown |
 
 Known agent causes go to supplier_maintainer. Unknown causes go to quality_reviewer for investigation. This assignment describes who should investigate; it does not infer a model's hidden reasoning.
 

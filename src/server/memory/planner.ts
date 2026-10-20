@@ -32,7 +32,7 @@ export function planOrder(scenarios: PlanScenario[], failures: Record<string, nu
   const repeatsFor = Object.fromEntries(ordered.filter((s) => repeats[s.family]).map((s) => [s.id, repeats[s.family]!]));
   return { order, scenarioIds: ordered.map((s) => s.id), familyRepeats: repeats, repeatsFor, lessonsUsed: used };
 }
-async function inputs(sql: SqlConnection, families?: string[], languages?: string[]) {
+export async function planInputs(sql: SqlConnection, families?: string[], languages?: string[]) {
   const scenarios = (await sql.query<PlanScenario>(`SELECT s.id,s.meaning_id,m.canonical->>'meaning_key' AS meaning_key,m.canonical->>'kind' AS meaning_kind,s.family,s.split,s.stable_key,s.language,(s.library_hash IS NOT NULL) AS library,s.checks,s.expected_state->>'category' AS category
     FROM nazir.scenarios s JOIN nazir.scenario_meanings m ON m.id=s.meaning_id WHERE s.status='approved' AND ($1::text[] IS NULL OR s.family=ANY($1)) AND ($2::text[] IS NULL OR s.language=ANY($2))`, [families ?? null, languages ?? null])).rows;
   const failures = Object.fromEntries((await sql.query<{ family: string; n: number }>(`SELECT s.family,count(*)::int AS n FROM nazir.findings f JOIN nazir.scenarios s ON s.id=f.scenario_id WHERE f.created_at>now()-interval '30 days' GROUP BY s.family`)).rows.map((r) => [r.family, r.n]));
@@ -46,7 +46,7 @@ const proposeInput = z.object({ agent_version_id: z.uuid(), rule_pack_version_id
 export async function proposeNextPlan(driver: TransactionDriver, workspaceId: string, value: unknown) {
   const input = proposeInput.parse(value);
   return withWorker(driver, workspaceId, async (sql) => {
-    const { scenarios, failures, lessons } = await inputs(sql, input.families, input.languages);
+    const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages);
     const plan = planOrder(scenarios, failures, lessons);
     if (!plan.scenarioIds.length) throw new Error('No approved scenarios');
     const calls = plan.scenarioIds.reduce((n, id) => n + (plan.repeatsFor[id] ?? 1), 0);

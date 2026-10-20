@@ -4,7 +4,7 @@ import { createRunnerFixture } from './fixture';
 import { loadLibrary } from '../library/load';
 import { importLibrary, approveScenario } from '../library/import';
 async function prepare(db:SqlConnection) {
-  const fixture=await createRunnerFixture(db,'Nazir library fixture');
+  const fixture=await createRunnerFixture(db,'Nazir library fixture',{ includeComplaintScenarios:false });
   const wid=fixture.workspaceId;
   const member=async (email:string,name:string,role:string) => {
     let id=(await db.query<{ id:string }>('SELECT m.id FROM nazir.members m JOIN nazir.users u ON u.id=m.user_id WHERE m.workspace_id=$1 AND u.email=$2',[wid,email])).rows[0]?.id;

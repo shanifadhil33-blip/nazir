@@ -5,7 +5,7 @@ import { demoRulePack } from '../../sandbox/demo-rule-pack';
 import { toolManifest } from '../../sandbox/tools';
 import { demoScenarios } from './demo-scenarios';
 // Administration fixture only. The caller supplies one owner transaction.
-export async function createRunnerFixture(db: SqlConnection, label='Nazir runner fixture') {
+export async function createRunnerFixture(db: SqlConnection, label='Nazir runner fixture', options: { includeComplaintScenarios?: boolean } = {}) {
   await db.query('SELECT pg_advisory_xact_lock(710192028)');
   const prior=(await db.query<{ id: string }>('SELECT id FROM nazir.workspaces WHERE name=$1',[label])).rows[0];
   let wid=prior?.id;
@@ -30,7 +30,8 @@ export async function createRunnerFixture(db: SqlConnection, label='Nazir runner
     }
     await insert('adapters',{ agent_id:agent,kind:'built_in',tool_manifest:JSON.stringify(toolManifest) });
     const meaning=await insert('scenario_meanings',{ family:'complaint',canonical:{ category:'complaint',review:true } });
-    for (const s of demoScenarios) await insert('scenarios',{ meaning_id:meaning,stable_key:s.stable_key,version:1,family:'complaint',language:s.language,split:'development',persona:{ requester_key:s.requester_key,resident_turns:s.resident_turns },starting_state:{},allowed_actions:['create_case','get_case_status','request_human_review'],forbidden_actions:[],expected_state:s.expected_state,source_clause:'3.1',expectation_kind:'fictional_demo_rule',severity:'high',rubric_version:'1',status:'approved' });
+    const seeded = options.includeComplaintScenarios === false ? [] : demoScenarios;
+    for (const s of seeded) await insert('scenarios',{ meaning_id:meaning,stable_key:s.stable_key,version:1,family:'complaint',language:s.language,split:'development',persona:{ requester_key:s.requester_key,resident_turns:s.resident_turns },starting_state:{},allowed_actions:['create_case','get_case_status','request_human_review'],forbidden_actions:[],expected_state:s.expected_state,source_clause:'3.1',expectation_kind:'fictional_demo_rule',severity:'high',rubric_version:'1',status:'approved' });
     await insert('plans',{ goal:'Run fictional complaints',agent_version_id:baseline,rule_pack_version_id:rules,families:['complaint'],languages:['en','ar'],repeats:1,budget_calls:60,stop_rules:{ records_only:true },status:'approved',proposed_by_type:'nazir' });
   }
   const versions=(await db.query<{ id: string; registry_id: string }>("SELECT id,config->>'registry_id' AS registry_id FROM nazir.agent_versions WHERE workspace_id=$1",[wid])).rows;

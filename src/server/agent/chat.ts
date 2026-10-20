@@ -4,8 +4,11 @@ import { requireRole } from '../auth/guard';
 import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import type { ChatRequest, ChatResponse, CallMeta } from '../ai/chain';
-import { Coded } from '../http/errors';
-import { agentTools, budgetFrom, claimsDone, pickTool, successReply, type AgentToolName } from './intent';
+import { Coded, Forbidden, errorLines, type ErrorCode } from '../http/errors';
+import { LessonRefused } from '../memory/effects';
+import { rememberLesson } from '../memory/lessons';
+import { correctionFrom } from '../memory/phrases';
+import { agentTools, asksImpersonation, budgetFrom, claimsDone, pickTool, replyFor, successReply, type ActionError, type AgentToolName } from './intent';
 import { runAgentTool } from './loop';
 
 export type ChatChain = { chat(request: ChatRequest): Promise<ChatResponse & { meta: CallMeta }> };
@@ -38,6 +41,12 @@ async function remember(driver: TransactionDriver, memberId: string, threadId: s
 
 const chatInput = z.object({ message: z.string().trim().min(2).max(1000), thread_id: z.uuid().optional() }).strict();
 
+function lessonRefusal(error: LessonRefused): ActionError {
+  const code: ErrorCode = error.code === 'role' ? 'lesson_role' : error.code === 'not_found' ? 'lesson_not_found' : error.code === 'state' ? 'lesson_state' : error.code;
+  const line = errorLines[code];
+  return { code, message: line.en, ar: line.ar };
+}
+
 /** Answers in the workspace. The reply is the server result, never the model wording. */
 export async function agentChat(driver: TransactionDriver, memberId: string, value: unknown, chain: ChatChain | null) {
   const input = chatInput.parse(value);
@@ -67,11 +76,29 @@ export async function agentChat(driver: TransactionDriver, memberId: string, val
   }
   const tool = pickTool(input.message, modelTool);
   if (source === 'model' && tool !== modelTool) source = 'fallback';
+  // Refuse acting as someone else before anything is saved.
+  if (asksImpersonation(input.message)) throw new Coded(403, 'impersonation', errorLines.impersonation.en);
+  const correction = correctionFrom(input.message);
+  if (correction) {
+    try {
+      await rememberLesson(driver, memberId, { text: correction.text, ...(correction.language === 'ar' ? { text_ar: correction.text } : {}), language: correction.language, effect: correction.effect });
+    } catch (error) {
+      if (error instanceof Forbidden) throw error;
+      if (error instanceof LessonRefused && tool === 'none') {
+        const refusal = lessonRefusal(error);
+        const reply = replyFor('none', false, refusal);
+        const threadId = await remember(driver, memberId, input.thread_id ?? null, input.message, reply.en, 'none', { ok: false, error: { code: refusal.code, message: refusal.message } });
+        return { thread_id: threadId, tool, source, reply, data: { ok: false, error: { code: refusal.code, message: refusal.message, ar: refusal.ar } }, done: false };
+      }
+      if (!(error instanceof LessonRefused)) throw error;
+    }
+  }
   if (tool === 'none') {
     const threadId = await remember(driver, memberId, input.thread_id ?? null, input.message, successReply.none.en, 'none', null);
     return { thread_id: threadId, tool, source, reply: successReply.none, data: null, done: false };
   }
-  const args = tool === 'propose_plan' ? { budget: budgetFrom(input.message) } : {};
+  const stated = budgetFrom(input.message);
+  const args = tool === 'propose_plan' && stated ? { budget: stated } : {};
   const result = await runAgentTool(driver, memberId, tool, args, { message: input.message });
   if (!result.done && (claimsDone(result.reply.en) || claimsDone(result.reply.ar))) throw new Error('Unconfirmed success claim');
   const threadId = await remember(driver, memberId, input.thread_id ?? null, input.message, result.reply.en, tool, result.done ? result.data : result.data);

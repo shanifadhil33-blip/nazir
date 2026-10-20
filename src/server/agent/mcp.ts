@@ -86,7 +86,7 @@ export function secretMatches(header: string | null, secret: string) {
 export async function mcpHandle(driver: TransactionDriver, token: string, value: unknown): Promise<McpSuccess> {
   const body = rpc.parse(value);
   const member = await resolveMcpToken(driver, token);
-  if (!member) throw new Coded(401, 'unauthorized', 'The token is no longer valid.');
+  if (!member) throw new Coded(401, 'token_invalid', 'The token is no longer valid.');
   if (body.method === 'initialize') return { jsonrpc: '2.0' as const, id: body.id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'nazir', version: 'n25' } } };
   if (body.method === 'tools/list') return { jsonrpc: '2.0' as const, id: body.id, result: { tools: mcpTools } };
   if (body.method === 'tools/call') {

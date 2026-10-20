@@ -16,3 +16,20 @@ it.each([
  ['ownership','','missing_authorization'],['right_queue','','workflow_failure'],['linked_escalation','','workflow_failure'],['semantic','wrong_policy','knowledge_or_source'],['semantic','incomplete','knowledge_or_source'],['semantic','missing_refusal','prompt_ambiguity'],['semantic','unneeded_refusal','prompt_ambiguity'],['duplicates','','unknown'],
 ])('maps %s %s to %s',(id,issue,cause)=>{expect(rootCause(id,issue,r.receipts)).toBe(cause);});
 it('maps failed writes and bad arguments',()=>{expect(rootCause('case_exists','',[{...r.receipts[0]!,outcome:'error',error:'tool_failed'}])).toBe('adapter_failure');expect(rootCause('case_exists','',[{...r.receipts[0]!,outcome:'error',error:'invalid_arguments'}])).toBe('wrong_tool_argument');});
+it('uses a real cause when the receipts and the claim support one',()=>{
+  const ok=r.receipts;
+  expect(rootCause('duplicates','',ok)).toBe('unknown');
+  expect(rootCause('duplicates','',[ok[0]!,{...ok[0]!,id:'receipt2'}])).toBe('adapter_failure');
+  expect(rootCause('case_exists','',ok)).toBe('unknown');
+  expect(rootCause('case_exists','',ok,false,{storedCases:0})).toBe('adapter_failure');
+  expect(rootCause('case_exists','',ok,false,{storedCases:2})).toBe('prompt_ambiguity');
+  expect(rootCause('semantic','out_of_scope',ok)).toBe('prompt_ambiguity');
+  expect(rootCause('semantic','wrong_language',[])).toBe('prompt_ambiguity');
+  expect(rootCause('semantic','instruction_in_reply',[])).toBe('prompt_ambiguity');
+  expect(rootCause('semantic','false_claim',ok,false)).toBe('unknown');
+  expect(rootCause('allowed_transitions','',ok,false,{claimedClosure:true,illegalStatus:true})).toBe('prompt_ambiguity');
+  expect(rootCause('allowed_transitions','',ok,false,{illegalStatus:true})).toBe('workflow_failure');
+  expect(rootCause('case_exists','',[],false,{claimedSubmit:false})).toBe('prompt_ambiguity');
+  expect(rootCause('right_queue','',[],false,{claimedSubmit:true})).toBe('prompt_ambiguity');
+  expect(rootCause('linked_escalation','',[],false,{claimedSubmit:false})).toBe('unknown');
+});

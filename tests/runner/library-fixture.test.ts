@@ -31,6 +31,8 @@ it('prepares the entire library once without changing rows or audit on replay',a
  const first=await db.driver.transaction(createLibraryFixture); const before=(await db.owner.query('SELECT count(*) AS n FROM nazir.audit_events')).rows;
  const second=await db.driver.transaction(createLibraryFixture); expect(second).toEqual(first);expect(Object.keys(first.scenarios)).toHaveLength(48);expect((await db.owner.query('SELECT count(*) AS n FROM nazir.audit_events')).rows).toEqual(before);
  expect((await db.owner.query("SELECT DISTINCT status FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL",[first.workspaceId])).rows).toEqual([{status:'approved'}]);
+ const complaint=(await db.owner.query<{stable_key:string;n:number}>("SELECT stable_key,count(*)::int AS n FROM nazir.scenarios WHERE workspace_id=$1 AND stable_key IN ('complaint_en','complaint_ar') GROUP BY stable_key ORDER BY stable_key",[first.workspaceId])).rows;
+ expect(complaint).toEqual([{stable_key:'complaint_ar',n:1},{stable_key:'complaint_en',n:1}]);
 });
 it.each([
  {...state,seed:1},{...state,tool_failure:null},{seed:'sandbox',cases:[]},
