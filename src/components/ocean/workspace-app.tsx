@@ -6,6 +6,7 @@ import { messagesFor, type Lang, type Messages } from './copy';
 import { canApprove, canRunRecheck, emptyModel, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
+import { AgentSettingsPanel, defaultSettings, type SettingsView } from './agent-settings';
 
 type Bundle = { latest: ReportBody; previous: ReportBody | null; agentName: string; sample: boolean } | 'sample';
 
@@ -42,6 +43,8 @@ export function WorkspaceApp({
   const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
+  const [settings, setSettings] = useState<SettingsView | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const thread = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const langRef = useRef(lang);
@@ -75,6 +78,13 @@ export function WorkspaceApp({
       setDemo(nextDemo);
       setUserName(nextName);
       const headers = { 'accept-language': langRef.current };
+      const settingsResponse = await fetch(`/api/workspaces/${workspaceId}/settings`, { headers }).catch(() => null);
+      const settingsBody = settingsResponse?.ok ? await settingsResponse.json().catch(() => null) as SettingsView | null : null;
+      if (cancel) return;
+      if (settingsBody) {
+        setSettings(settingsBody);
+        if (!new URLSearchParams(window.location.search).has('lang') && settingsBody.language !== langRef.current) setLang(settingsBody.language);
+      }
       if (reportId) {
         const reportResponse = await fetch(`/api/workspaces/${workspaceId}/reports/${reportId}`, { headers });
         const reportBody = await reportResponse.json().catch(() => null);
@@ -203,14 +213,25 @@ export function WorkspaceApp({
     </div>;
   }
 
-  const view: ScreenModel = { ...model, status: status ?? model.status, events: [...model.events, ...extra] };
-  return <WorkspaceScreen
+  const view: ScreenModel = { ...model, agentName: settings?.name || model.agentName, status: status ?? model.status, events: [...model.events, ...extra] };
+  const shown: SettingsView = settings ?? { ...defaultSettings(view.agentName), can_edit: preview && seat === 'owner' };
+
+  async function saveSettings(body: unknown): Promise<SettingsView | null> {
+    if (preview) { const next = { ...shown, ...(body as Partial<SettingsView>), llm: shown.llm, can_edit: shown.can_edit }; setSettings(next); return next; }
+    const response = await fetch(`/api/workspaces/${workspaceId}/settings`, { method: 'PUT', headers: { 'content-type': 'application/json', 'accept-language': lang }, body: JSON.stringify(body) }).catch(() => null);
+    if (!response?.ok) return null;
+    const next = await response.json().catch(() => null) as SettingsView | null;
+    if (next) { setSettings(next); if (next.language !== lang) setLang(next.language); }
+    return next;
+  }
+
+  return <><WorkspaceScreen
     lang={lang} copy={copy} demo={demo} seat={seat} roles={roles} shared={shared} userName={userName} model={view} screen={screen}
     pending={pending} copied={copied} copyError={copyError} onScreen={go} onLang={setLang} onApprove={approve} onSkip={skip}
     onReplay={() => void send(lang === 'ar' ? 'اقترح خطة' : 'propose a plan', copy.ui.replay)}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
-    onRecheck={recheck}
-  />;
+    onRecheck={recheck} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
+  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}</>;
 }
 
 function deriveModel(bundle: Bundle | null, copy: Messages, lang: Lang, preview: boolean): ScreenModel {

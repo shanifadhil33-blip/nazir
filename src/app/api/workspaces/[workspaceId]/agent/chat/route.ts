@@ -1,6 +1,8 @@
 import { createAiChain } from '@/server/ai/chain';
 import { postgresAiStore } from '@/server/ai/store';
 import { agentChat } from '@/server/agent/chat';
+import { ownModelFor } from '@/server/settings/agent-settings';
+import { withOwnModel } from '@/server/settings/own-model';
 import { runtimeDriver } from '@/server/db/runtime';
 import { Coded, errorResponse } from '@/server/http/errors';
 import { memberRoute, requestLanguage } from '@/server/http/route';
@@ -17,8 +19,9 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
     response.headers.set('Cache-Control', 'no-store');
     return response;
   }
-  return memberRoute(workspaceId, (memberId) => {
+  return memberRoute(workspaceId, async (memberId) => {
     const driver = runtimeDriver();
-    return agentChat(driver, memberId, body, createAiChain({ store: postgresAiStore(driver) }));
+    const own = await ownModelFor(driver, memberId).catch(() => ({ model: null, instructions: '' }));
+    return agentChat(driver, memberId, body, withOwnModel(own.model, createAiChain({ store: postgresAiStore(driver) })), own.instructions);
   }, 200, requestLanguage(request, message));
 }
