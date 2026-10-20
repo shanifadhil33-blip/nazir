@@ -7,6 +7,7 @@ import { canApprove, canRunRecheck, emptyModel, modelFromReports, rolesForSeat, 
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
 import type { Measured } from './screen';
+import { LiveTestPanel } from './live-test';
 import { AgentSettingsPanel, defaultSettings, type SettingsView } from './agent-settings';
 
 type Bundle = { latest: ReportBody; previous: ReportBody | null; agentName: string; sample: boolean } | 'sample';
@@ -46,6 +47,7 @@ export function WorkspaceApp({
   const [copyError, setCopyError] = useState(false);
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
+  const [liveOpen, setLiveOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const thread = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -233,8 +235,8 @@ export function WorkspaceApp({
     pending={pending} copied={copied} copyError={copyError} onScreen={go} onLang={setLang} onApprove={approve} onSkip={skip}
     onReplay={() => void send(lang === 'ar' ? 'اقترح خطة' : 'propose a plan', copy.ui.replay)}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
-    onRecheck={recheck} measured={preview ? null : measured} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
-  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}</>;
+    onRecheck={recheck} measured={preview ? null : measured} onLiveTest={() => setLiveOpen(true)} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
+  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}{liveOpen ? <LiveTestPanel key={lang} copy={copy} lang={lang} workspaceId={workspaceId} sample={preview} reportHref={`/w/${workspaceId}/report`} onClose={() => setLiveOpen(false)} /> : null}</>;
 }
 
 function deriveModel(bundle: Bundle | null, copy: Messages, lang: Lang, preview: boolean): ScreenModel {

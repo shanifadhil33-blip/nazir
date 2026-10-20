@@ -93,13 +93,13 @@ const sections = [['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['
 
 export function WorkspaceScreen({
   lang, copy, demo, seat, roles, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
-  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null,
+  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null, onLiveTest,
 }: {
   lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
   onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
-  avatar?: string; onSettings?: () => void; measured?: Measured | null;
+  avatar?: string; onSettings?: () => void; measured?: Measured | null; onLiveTest?: () => void;
 }) {
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -138,6 +138,7 @@ export function WorkspaceScreen({
       </nav>
       <div className="nz-header-actions">
         {demo ? <span className="nz-pill">{copy.ui.sampleData}</span> : null}
+        {demo && onLiveTest ? <button type="button" className="nz-btn nz-btn-teal" data-action="open-live" onClick={onLiveTest}>{copy.live.open}</button> : null}
         <div className="nz-lang" role="group" aria-label={copy.ui.english}>
           <button type="button" aria-pressed={lang === 'en'} onClick={() => onLang('en')}>EN</button>
           <span aria-hidden="true">|</span>
