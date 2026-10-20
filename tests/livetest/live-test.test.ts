@@ -68,3 +68,18 @@ it('runs the clean side only when the switch is off, and caps tests per member',
   for (let i = 0; i < 8 && !refused; i++) await startLiveTest(db.driver, f.members.author, { language: 'en', complaint: `Synthetic complaint number ${i} about a late permit.` }, ready).catch((e) => { refused = e; });
   expect(refused).toBeTruthy();
 });
+
+it('drives a queued run one conversation per call for roles that start runs only', async () => {
+  const { enqueueRun } = await import('../../src/server/runner/enqueue');
+  const { stepRun } = await import('../../src/server/livetest/drive');
+  const run = await enqueueRun(db.driver, { workspaceId: f.workspaceId, planId: f.planId, agentVersionId: f.versions.find((v) => v.registry_id === 'planted_wrong_queue')!.id, scenarioIds: [f.scenarios['complaint_vs_suggestion_trap_en']!], repeats: 1, idempotencyKey: crypto.randomUUID() });
+  await expect(stepRun(db.driver, f.members.supplier, run.id, deps, ready)).rejects.toThrow();
+  await expect(stepRun(db.driver, f.members.reviewer, run.id, deps, {})).rejects.toMatchObject({ code: 'live_test_unavailable' });
+  const p = await stepRun(db.driver, f.members.reviewer, run.id, deps, ready);
+  expect(p).toMatchObject({ done: true, failed: 1, waiting: 0 });
+  let called = false;
+  const again = await stepRun(db.driver, f.members.reviewer, run.id, { ...deps, run: async () => { called = true; } }, ready);
+  expect(again.done).toBe(true);
+  expect(called).toBe(false);
+  await expect(stepRun(db.driver, f.members.reviewer, 'not-a-run', deps, ready)).rejects.toMatchObject({ code: 'validation' });
+});
