@@ -40,6 +40,9 @@ afterAll(async () => { await db?.close(); });
 it('flags private addresses, v4, v6 and mapped', () => {
   for (const a of ['10.1.1.1', '127.0.0.1', '169.254.169.254', '172.20.0.1', '192.168.1.1', '100.64.0.1', '::1', 'fd00::1', 'fe80::1', '::ffff:10.0.0.1']) expect(privateAddress(a), a).toBe(true);
   expect(privateAddress('93.184.215.14')).toBe(false);
+  expect(privateAddress('198.18.0.1')).toBe(true);
+  process.env.NAZIR_ALLOW_BENCHMARK_DNS = '1';
+  try { expect(privateAddress('198.18.0.1')).toBe(false); expect(privateAddress('10.0.0.1')).toBe(true); } finally { delete process.env.NAZIR_ALLOW_BENCHMARK_DNS; }
 });
 it('blocks a public looking name that resolves inward', async () => {
   expect(await publicHttpsUrl('https://inward.example.com', resolve)).toBe(false);
