@@ -419,3 +419,10 @@ a { color: var(--teal); }
   .nz-seg-pill, .nz-btn, .nz-send { transition: none; }
   .nz-columns[data-screen="failures"] .nz-failure { transform: none; }
 }
+
+/* Phone sweep fixes (N19 review): padding never widens a box, grid children may shrink, report scores wrap. */
+*, *::before, *::after { box-sizing: border-box; }
+.nz-columns > * { min-width: 0; }
+.nz-panel p, .nz-card p { overflow-wrap: anywhere; }
+.nz-report-scores { flex-wrap: wrap; }
+.nz-report table { width: 100%; table-layout: fixed; }

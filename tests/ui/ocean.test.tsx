@@ -74,3 +74,11 @@ it('derives the score from the saved report counts', () => {
   expect(metricsFromReport(body).fail).toBe(2);
   expect(metricsFromReport(body).critical).toBe(1);
 });
+
+it('keeps phone widths from overflowing (box sizing, shrinkable columns, wrapping report scores)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync('src/app/globals.css', 'utf8');
+  expect(css).toMatch(/\*, \*::before, \*::after \{ box-sizing: border-box; \}/);
+  expect(css).toMatch(/\.nz-columns > \* \{ min-width: 0; \}/);
+  expect(css).toMatch(/\.nz-report-scores \{ flex-wrap: wrap; \}/);
+});
