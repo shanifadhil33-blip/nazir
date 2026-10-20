@@ -9,7 +9,7 @@ export async function main() {
     import('../src/server/db/driver.ts'),import('../src/server/db/context.ts'),import('../src/server/runner/worker.ts'),import('../src/server/runner/network-judge.ts'),
     import('../src/server/runner/network-model.ts'),import('../src/server/runner/cancel.ts'),import('../src/server/repair/proposals.ts'),import('../src/server/repair/evidence-digest.ts')]);
   if (!process.env.DATABASE_URL || !process.env.INSPECT_DATABASE_URL) throw new Error('Runner environment required');
-  const maxCalls=cap('MAX_CALLS',40,80),set=process.env.RUN_SET??'retest';
+  const maxCalls=cap('MAX_CALLS',40,200),set=process.env.RUN_SET??'retest';
   if (!['retest','suite','both'].includes(set)) throw new Error('Invalid set');
   const sets=set==='both'?['retest','suite']:[set],recordsOnly=process.env.RECORDS_ONLY==='true';
   const app=new Pool({ connectionString:process.env.DATABASE_URL }),inspect=new Pool({ connectionString:process.env.INSPECT_DATABASE_URL });

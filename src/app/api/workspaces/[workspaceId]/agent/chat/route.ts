@@ -1,6 +1,7 @@
 import { createAiChain } from '@/server/ai/chain';
 import { postgresAiStore } from '@/server/ai/store';
 import { agentChat } from '@/server/agent/chat';
+import { mcpChat } from '@/server/agent/mcp-chat';
 import { ownModelFor } from '@/server/settings/agent-settings';
 import { withOwnModel } from '@/server/settings/own-model';
 import { runtimeDriver } from '@/server/db/runtime';
@@ -21,6 +22,7 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
   }
   return memberRoute(workspaceId, async (memberId) => {
     const driver = runtimeDriver();
+    if (message) { const viaMcp = await mcpChat(driver, memberId, message, (body as { thread_id?: string }).thread_id ?? null); if (viaMcp) return viaMcp; }
     const own = await ownModelFor(driver, memberId).catch(() => ({ model: null, instructions: '' }));
     return agentChat(driver, memberId, body, withOwnModel(own.model, createAiChain({ store: postgresAiStore(driver) })), own.instructions);
   }, 200, requestLanguage(request, message));
