@@ -30,7 +30,10 @@ export function useScoreCount(value: number) {
       const t = Math.min(1, (now - start) / 900);
       setShown(countAt(value, t, from));
       if (t < 1) frame = requestAnimationFrame(tick);
-      else fromRef.current = value;
+      else {
+        setShown(value);
+        fromRef.current = value;
+      }
     };
     // Start from the previous value before paint so the final number does not flash.
     setShown(from);

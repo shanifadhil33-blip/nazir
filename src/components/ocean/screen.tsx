@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { fill, type Lang, type Messages } from './copy';
-import { canApprove, canCompose, dubaiStamp, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
+import { canApprove, canCompose, canRunRecheck, dubaiStamp, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
 import { ScoreFigure } from './score-figure';
 
 const bars = ['safety', 'accuracy', 'rules', 'recovery'] as const;
@@ -48,11 +48,25 @@ function Bars({ copy, metrics, lang }: { copy: Messages; metrics: Metrics; lang:
   })}</ul>;
 }
 
-function FailureBody({ copy, item, allow, pending, onApprove, onSkip, onEdit }: {
-  copy: Messages; item: FailureCase; allow: boolean; pending: boolean;
+function RecordDetail({ copy, lines }: { copy: Messages; lines: { text: string; lang?: 'en' | 'ar' }[] }) {
+  if (!lines.length) return null;
+  return <details className="nz-raw">
+    <summary>{copy.ui.recordDetail}</summary>
+    {lines.map((line, index) => <p key={`${line.lang ?? 'raw'}-${index}`} lang={line.lang} dir={line.lang === 'ar' ? 'rtl' : undefined}>{line.text}</p>)}
+  </details>;
+}
+
+function FailureBody({ copy, item, decide, pending, onApprove, onSkip, onEdit }: {
+  copy: Messages; item: FailureCase; decide: boolean; pending: boolean;
   onApprove: (id?: string) => void; onSkip: (id?: string) => void; onEdit: () => void;
 }) {
-  return <div className="nz-cross" key={item.id}>
+  const proposed = item.proposed.trim().length > 0 || Boolean(item.proposalId);
+  const raw = [
+    item.rawEn ? { text: item.rawEn, lang: 'en' as const } : null,
+    item.rawAr ? { text: item.rawAr, lang: 'ar' as const } : null,
+    item.rawQuote ? { text: item.rawQuote } : null,
+  ].filter((line): line is { text: string; lang?: 'en' | 'ar' } => line !== null);
+  return <div className="nz-cross">
     <div className="nz-case-line"><div><p className="nz-case">{item.caseLabel}</p><h3>{copy.ui.openFailure}</h3></div><span className="nz-chip">{copy.ui.critical}</span></div>
     <p className="nz-kicker">{copy.ui.expectedVersus}</p>
     <div className="nz-versus">
@@ -64,29 +78,34 @@ function FailureBody({ copy, item, allow, pending, onApprove, onSkip, onEdit }: 
       <section><h4>{copy.ui.diagnosis}</h4><p>{item.diagnosis}</p></section>
       <section><h4>{copy.ui.proposedFix}</h4><p>{item.proposed || copy.ui.noRepair}</p></section>
     </div>
-    {allow ? <div className="nz-actions">
+    <RecordDetail copy={copy} lines={raw} />
+    {decide ? <div className="nz-actions">
       <button type="button" className="nz-btn nz-btn-rust" data-action="approve" disabled={pending} onClick={() => onApprove(item.proposalId)}>{pending ? <span className="nz-spin" /> : copy.ui.approve}</button>
       <button type="button" className="nz-btn nz-btn-ghost" data-action="edit" onClick={onEdit}>{copy.ui.editFix}</button>
       <button type="button" className="nz-btn nz-btn-ghost" data-action="skip" onClick={() => onSkip(item.proposalId)}>{copy.ui.skip}</button>
-    </div> : null}
+    </div> : proposed ? <p className="nz-note" data-note="reviewer">{copy.ui.reviewerDecides}</p> : null}
   </div>;
 }
 
+const sections = [['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['report', 'report']] as const;
+
 export function WorkspaceScreen({
-  lang, copy, demo, seat, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
-  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop,
+  lang, copy, demo, seat, roles, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
+  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck,
 }: {
-  lang: Lang; copy: Messages; demo: boolean; seat: Seat; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
+  lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
-  onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void;
+  onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
 }) {
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState(false);
   const [draft, setDraft] = useState('');
   const [drag, setDrag] = useState(0);
   const dragStart = useRef<number | null>(null);
-  const allow = canApprove(seat, shared);
+  const decide = canApprove(roles, shared);
+  const recheck = canRunRecheck(roles, shared);
+  const recheckReady = model.failures.some((item) => Boolean(item.proposalId));
   const compose = canCompose(seat, shared);
   const active = model.failures[Math.min(tab, Math.max(0, model.failures.length - 1))];
   const labelFor = (item: FailureCase) => lang === 'ar' ? item.tabAr : item.tab;
@@ -96,12 +115,24 @@ export function WorkspaceScreen({
     setDraft(copy.ui.editPrompt);
   }
 
+  function open(id: ScreenId) {
+    onScreen(id);
+    if (typeof window === 'undefined' || !window.matchMedia('(min-width: 1280px)').matches) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`nz-${id}`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+    });
+  }
+
   return <div className="nz-app" lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'} data-demo={demo ? 'true' : 'false'} data-seat={seat}>
     <header className="nz-header">
       <div className="nz-brand">
         <span className="nz-logo" aria-hidden="true">N<span className="nz-logo-dot" /></span>
         <div><p className="nz-title">{copy.name}</p><p className="nz-sub">{copy.ui.subtitle}</p></div>
       </div>
+      <nav className="nz-desk-nav" aria-label={copy.ui.sections}>
+        {sections.map(([id, icon]) => <button type="button" key={id} aria-current={screen === id ? 'page' : undefined} onClick={() => open(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
+      </nav>
       <div className="nz-header-actions">
         {demo ? <span className="nz-pill">{copy.ui.sampleData}</span> : null}
         <div className="nz-lang" role="group" aria-label={copy.ui.english}>
@@ -121,12 +152,12 @@ export function WorkspaceScreen({
       </div>
     </header>
     <div className="nz-columns" data-screen={screen}>
-      <section className="nz-panel nz-log" aria-label={copy.ui.agentLog}>
+      <section className="nz-panel nz-log" id="nz-chat" aria-label={copy.ui.agentLog}>
         <div className="nz-panel-head">
           <div><h2>{copy.ui.agentLog}</h2><p className="nz-status"><span className={`nz-dot nz-dot-${model.status}`} />{statusLabel(copy, model.status)}</p></div>
           {compose ? <button type="button" className="nz-btn nz-btn-ghost" data-action="replay" onClick={onReplay}>{copy.ui.replay}</button> : null}
         </div>
-        <button type="button" className="nz-compact" onClick={() => onScreen('score')}>
+        <button type="button" className="nz-compact" onClick={() => open('score')}>
           <span>{model.agentName}</span>
           <ScoreFigure value={model.metrics.score} compact />
           <span className="nz-compact-counts">{copy.ui.pass} {model.metrics.pass} · {copy.ui.fail} {model.metrics.fail} · {copy.ui.critical} {model.metrics.critical}</span>
@@ -140,10 +171,11 @@ export function WorkspaceScreen({
                 <div>
                   {event.title ? <strong>{event.title}</strong> : null}
                   <p>{event.body}</p>
+                  {event.detail ? <RecordDetail copy={copy} lines={[{ text: event.detail }]} /> : null}
                   {event.kind === 'fix' ? <div className="nz-actions">
-                    <button type="button" className="nz-btn nz-btn-rust" data-action="open-failure" onClick={() => onScreen('failures')}>{copy.ui.openFailure}</button>
+                    <button type="button" className="nz-btn nz-btn-rust" data-action="open-failure" onClick={() => open('failures')}>{copy.ui.openFailure}</button>
                   </div> : null}
-                  {event.kind === 'recheck' ? <button type="button" className="nz-btn nz-btn-ghost" onClick={() => onScreen('report')}>{copy.ui.report}</button> : null}
+                  {event.kind === 'recheck' ? <button type="button" className="nz-btn nz-btn-ghost" onClick={() => open('report')}>{copy.ui.report}</button> : null}
                 </div>
               </li>;
             })}
@@ -157,7 +189,7 @@ export function WorkspaceScreen({
         </form> : <p className="nz-note">{copy.ui.viewerNote}</p>}
       </section>
       <div className="nz-side">
-        <section className="nz-panel nz-score-panel" aria-label={copy.ui.score}>
+        <section className="nz-panel nz-score-panel" id="nz-score" aria-label={copy.ui.score}>
           <div className="nz-score-top">
             <div>
               <p className="nz-agent">{model.agentName}</p>
@@ -166,9 +198,9 @@ export function WorkspaceScreen({
           </div>
           <Counters copy={copy} metrics={model.metrics} />
           <Bars copy={copy} metrics={model.metrics} lang={lang} />
-          <button type="button" className="nz-btn nz-btn-ghost" onClick={() => onScreen('report')}>{copy.ui.report}</button>
+          <button type="button" className="nz-btn nz-btn-ghost" onClick={() => open('report')}>{copy.ui.report}</button>
         </section>
-        <section className="nz-panel nz-failure" aria-label={copy.ui.failures}
+        <section className="nz-panel nz-failure" id="nz-failures" aria-label={copy.ui.failures}
           style={drag ? { transform: `translateY(${drag}px)` } : undefined}
           onPointerDown={(event) => { if (window.innerWidth >= 1280 || !(event.target as HTMLElement).closest('.nz-sheet-handle')) return; dragStart.current = event.clientY; }}
           onPointerMove={(event) => { if (dragStart.current === null) return; setDrag(Math.max(0, event.clientY - dragStart.current)); }}
@@ -179,29 +211,32 @@ export function WorkspaceScreen({
               <span className="nz-seg-pill" />
               {model.failures.map((item, index) => <button type="button" role="tab" key={item.id} className="nz-seg-btn" aria-selected={index === Math.min(tab, model.failures.length - 1)} onClick={() => setTab(index)}>{labelFor(item)}</button>)}
             </div>
-            <FailureBody copy={copy} item={active} allow={allow} pending={pending} onApprove={onApprove} onSkip={onSkip} onEdit={edit} />
+            <FailureBody key={active.id} copy={copy} item={active} decide={decide} pending={pending} onApprove={onApprove} onSkip={onSkip} onEdit={edit} />
           </> : <p className="nz-empty">{copy.ui.noReport}</p>}
         </section>
       </div>
-      <section className="nz-panel nz-report" aria-label={copy.ui.report}>
+      <section className="nz-panel nz-report" id="nz-report" aria-label={copy.ui.report}>
         <h2>{copy.ui.report}</h2>
-        <div className="nz-report-scores">
-          <div><p>{copy.ui.before}</p><ScoreFigure value={model.before?.score ?? model.metrics.score} ring="coral" /></div>
+        {model.before ? <div className="nz-report-scores">
+          <div><p>{copy.ui.before}</p><ScoreFigure value={model.before.score} ring="coral" /></div>
           <span className="nz-arrow" aria-hidden="true">→</span>
           <div><p>{copy.ui.after}</p><ScoreFigure value={model.metrics.score} ring="teal" named={screen === 'report'} /></div>
-        </div>
-        <table className="nz-table">
+        </div> : <div className="nz-recheck" data-state="recheck-pending">
+          <p>{copy.ui.recheckPending}</p>
+          {recheck && recheckReady ? <button type="button" className="nz-btn nz-btn-teal" data-action="recheck" disabled={pending} onClick={onRecheck}>{copy.ui.runRecheck}</button> : <p className="nz-note">{recheck ? copy.ui.noFixToRecheck : copy.ui.recheckNeedsRole}</p>}
+        </div>}
+        {model.before ? <table className="nz-table">
           <thead><tr><th>{copy.ui.measure}</th><th>{copy.ui.before}</th><th>{copy.ui.after}</th></tr></thead>
           <tbody>
             {(['score', 'critical', 'fail', 'safety', 'accuracy', 'rules', 'recovery'] as const).map((key) => {
-              const before = model.before?.[key] ?? model.metrics[key];
+              const before = model.before?.[key] ?? 0;
               const after = model.metrics[key];
               const better = key === 'fail' || key === 'critical' ? after < before : after > before;
               const label = key === 'score' ? copy.ui.overall : copy.ui[key];
               return <tr key={key}><th>{label}</th><td>{before}</td><td className={better ? 'is-better' : undefined}>{after}</td></tr>;
             })}
           </tbody>
-        </table>
+        </table> : null}
         <h3>{copy.ui.fixesApplied}</h3>
         {model.fixes.length === 0 ? <p className="nz-empty">{copy.ui.noRepair}</p> : <ul className="nz-fixes">{model.fixes.map((fix) => <li key={fix.id}><strong>{fix.title}</strong><span>{fill(copy.ui.approvedBy, { name: fix.name, role: fix.role })} {dubaiStamp(fix.at, lang)}, {copy.ui.dubai}</span></li>)}</ul>}
         <p className="nz-coverage">{model.coverage}</p>
@@ -212,8 +247,8 @@ export function WorkspaceScreen({
       </section>
       {screen === 'failures' ? <button type="button" className="nz-backdrop nz-only-phone" aria-label={copy.ui.close} onClick={() => onScreen('chat')} /> : null}
     </div>
-    <nav className="nz-tabs-bar" aria-label={copy.ui.chat}>
-      {([['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['report', 'report']] as const).map(([id, icon]) => <button type="button" key={id} className="nz-nav-btn" aria-current={screen === id ? 'page' : undefined} onClick={() => onScreen(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
+    <nav className="nz-tabs-bar" aria-label={copy.ui.sections}>
+      {sections.map(([id, icon]) => <button type="button" key={id} className="nz-nav-btn" aria-current={screen === id ? 'page' : undefined} onClick={() => open(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
     </nav>
   </div>;
 }
