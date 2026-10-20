@@ -28,13 +28,13 @@ type Claim = { workspace_id: string; conversation_id: string; run_id: string; at
 const infrastructure = new Set(['provider_exhausted','timeout','lease_expired','dirty_tenant','reading_failed']);
 const code = (s: unknown) => typeof s==='string' && /^[a-z][a-z0-9_]{0,63}$/.test(s) ? s : 'checks_missing';
 export type JudgeFactory = (context: ModelContext) => (input: { input: ReturnType<typeof buildJudgeInput>; agentFamilies: Family[]; seed: string }) => Promise<SemanticResult>;
-export async function runNextConversation({ driver,inspectionDriver,chatModelFactory,judgeFactory,evaluate=defaultEvaluator,workerId,leaseSeconds=60,conversationTimeoutMs=180000,now=Date.now }: {
+export async function runNextConversation({ driver,inspectionDriver,chatModelFactory,judgeFactory,evaluate=defaultEvaluator,workerId,leaseSeconds=60,conversationTimeoutMs=180000,now=Date.now,runId }: {
   driver: TransactionDriver; inspectionDriver: TransactionDriver; chatModelFactory?: (context: ModelContext) => ChatModel | RunnerModel | Promise<ChatModel | RunnerModel>;
   judgeFactory?: JudgeFactory;
-  evaluate?: (input: EvaluationInput) => Verdict | Promise<Verdict>; workerId: string; leaseSeconds?: number; conversationTimeoutMs?: number; now?: () => number;
+  evaluate?: (input: EvaluationInput) => Verdict | Promise<Verdict>; workerId: string; runId?: string; leaseSeconds?: number; conversationTimeoutMs?: number; now?: () => number;
 }) {
   if (!Number.isFinite(conversationTimeoutMs) || conversationTimeoutMs<=0) throw new Error('Invalid conversation deadline');
-  const claim = await driver.transaction(async (db) => { await db.query('SET LOCAL ROLE nazir_worker'); return (await db.query<Claim>('SELECT * FROM nazir.runner_claim($1,$2)',[workerId,leaseSeconds])).rows[0]; });
+  const claim = await driver.transaction(async (db) => { await db.query('SET LOCAL ROLE nazir_worker'); return (await (runId ? db.query<Claim>('SELECT * FROM nazir.runner_claim($1,$2,$3)',[workerId,leaseSeconds,runId]) : db.query<Claim>('SELECT * FROM nazir.runner_claim($1,$2)',[workerId,leaseSeconds]))).rows[0]; });
   if (!claim) return null;
   const { workspace_id:wid,conversation_id:cid,run_id:rid,attempt } = claim;
   const work = <T>(fn: (db: SqlConnection) => Promise<T>) => withWorker(driver,wid,fn);

@@ -31,6 +31,8 @@ export const errorLines = {
   lesson_role: { en: 'Your role cannot change what I have learned.', ar: 'دورك لا يسمح بتغيير ما تعلمته.' },
   lesson_not_found: { en: 'I could not find that lesson.', ar: 'لم أجد هذا الدرس.' },
   lesson_state: { en: 'That lesson cannot change this way now.', ar: 'لا يمكن تغيير هذا الدرس بهذه الطريقة الآن.' },
+  live_test_unavailable: { en: 'The live test is not connected here yet. Nothing was queued.', ar: 'الاختبار المباشر غير متصل هنا بعد. لم يوضع شيء في الطابور.' },
+  live_test_demo_only: { en: 'The live test runs in demo workspaces only.', ar: 'يعمل الاختبار المباشر في مساحات العرض فقط.' },
 } as const;
 export type ErrorCode = keyof typeof errorLines;
 export type CallerLanguage = 'en' | 'ar';
