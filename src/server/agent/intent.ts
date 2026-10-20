@@ -32,6 +32,10 @@ export const successReply = {
 } satisfies Record<string, Bilingual>;
 
 export const failureReply = {
+  list_runs: { en: 'The test runs were not shown.', ar: 'لم تعرض تشغيلات الاختبار.' },
+  list_findings: { en: 'The findings were not shown.', ar: 'لم تعرض النتائج.' },
+  propose_plan: { en: 'No plan was proposed.', ar: 'لم تقترح أي خطة.' },
+  none: { en: 'Nothing was changed.', ar: 'لم يتغير شيء.' },
   start_run: { en: 'No test run was queued.', ar: 'لم يوضع تشغيل في قائمة الانتظار.' },
   explain_finding: { en: 'No finding was explained.', ar: 'لم يشرح أي نتيجة.' },
   propose_repair: { en: 'No repair proposal was saved.', ar: 'لم يحفظ اقتراح للإصلاح.' },
@@ -103,7 +107,7 @@ function replyLine(table: Record<string, Bilingual>, kind: string): Bilingual | 
 
 /** A reply may name a success only when this call finished it. */
 export function replyFor(kind: string, done: boolean, error?: ActionError, extra?: Bilingual): Bilingual {
-  const base = (done ? replyLine(successReply, kind) : replyLine(failureReply, kind)) ?? (done ? successReply.none : failureReply.decide_repair);
+  const base = (done ? replyLine(successReply, kind) : replyLine(failureReply, kind)) ?? (done ? successReply.none : failureReply.none);
   const reply = !done && error
     ? { en: `${base.en} ${error.message}`, ar: `${base.ar} ${error.ar}` }
     : extra && done

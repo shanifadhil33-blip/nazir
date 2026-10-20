@@ -25,3 +25,10 @@ it('never lets a refusal reuse a success sentence', () => {
   expect(claimsDone(successReply.none.en)).toBe(false);
   expect(claimsDone(successReply.missing.en)).toBe(false);
 });
+
+it('a refused plan or unknown kind never mentions a repair decision', () => {
+  const plan = replyFor('propose_plan', false, { code: 'failed', message: 'The action was not completed.', ar: 'لم يتم تنفيذ الإجراء.' });
+  expect(plan.en.startsWith('No plan was proposed.')).toBe(true);
+  expect(plan.ar.startsWith('لم تقترح أي خطة.')).toBe(true);
+  expect(replyFor('anything', false).en).toBe('Nothing was changed.');
+});
