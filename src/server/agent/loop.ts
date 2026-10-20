@@ -30,7 +30,8 @@ function normalize(error: unknown): ActionError {
   if (error instanceof RepairRefused) return actionErrors.repair;
   if (error instanceof Coded) {
     const known = Object.values(actionErrors).find((item) => item.code === error.code);
-    return { code: error.code, message: error.message, ar: known?.ar ?? actionErrors.failed.ar };
+    // Both languages must say the same thing: an unlisted code falls back to the generic line in both.
+    return known ? { code: error.code, message: known.message, ar: known.ar } : { code: error.code, message: actionErrors.failed.message, ar: actionErrors.failed.ar };
   }
   const text = error instanceof Error ? error.message : '';
   if (text.includes('Another member must decide')) return actionErrors.four_eyes;

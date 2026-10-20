@@ -58,6 +58,9 @@ export const actionErrors = {
   impersonation: { code: 'impersonation', message: 'You cannot act as another member.', ar: 'لا يمكنك أن تتصرف بصفة عضو آخر.' },
   failed: { code: 'failed', message: 'The action was not completed.', ar: 'لم يتم تنفيذ الإجراء.' },
   repair: { code: 'invalid_patch', message: 'That repair is not allowed.', ar: 'هذا الإصلاح غير مسموح.' },
+  budget_too_small: { code: 'budget_too_small', message: 'The budget is too small for a test.', ar: 'الميزانية أصغر من أن تكفي لاختبار.' },
+  widens_tools: { code: 'widens_tools', message: 'A plan cannot add tools.', ar: 'لا يمكن للخطة أن تضيف أدوات.' },
+  widens_permissions: { code: 'widens_permissions', message: 'A plan cannot add permissions.', ar: 'لا يمكن للخطة أن تضيف صلاحيات.' },
   validation: { code: 'validation', message: 'Check the details and try again.', ar: 'تحقق من التفاصيل ثم أعد المحاولة.' },
 } satisfies Record<string, ActionError>;
 

@@ -32,3 +32,11 @@ it('a refused plan or unknown kind never mentions a repair decision', () => {
   expect(plan.ar.startsWith('لم تقترح أي خطة.')).toBe(true);
   expect(replyFor('anything', false).en).toBe('Nothing was changed.');
 });
+
+it('every planner refusal code has an Arabic line', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync('src/server/planner/bound.ts', 'utf8');
+  const codes = [...src.matchAll(/new Coded\(\d+, '([a-z_]+)'/g)].map((m) => m[1]);
+  const listed = Object.values(actionErrors).map((e) => e.code);
+  for (const code of codes) expect(listed).toContain(code);
+});
