@@ -6,6 +6,7 @@ import { requireRole } from '../auth/guard';
 import { withMember } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { Coded, NotFound } from '../http/errors';
+import { enqueueRun } from '../runner/enqueue';
 import { callsPerScenario } from '../repair/retest';
 
 /** Tools this planner is allowed to call. A request cannot add to this list. */
@@ -166,5 +167,27 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules)])).rows[0]!;
     await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order })]);
     return { id: row.id, ...plan };
+  });
+}
+
+/** Queues an approved bounded plan. Approval stays on approvePlan, and the worker enqueue is unchanged. */
+export async function startBoundedRun(driver: TransactionDriver, memberId: string, planId: string) {
+  z.uuid().parse(planId);
+  const plan = await withMember(driver, memberId, async (sql) => {
+    await requireRole(sql, 'plan.approve');
+    return (await sql.query<{ workspace_id: string; agent_version_id: string; stop_rules: { set?: string; scenario_ids?: string[] } }>(
+      "SELECT workspace_id,agent_version_id,stop_rules FROM nazir.plans WHERE id=$1 AND status='approved'",
+      [planId],
+    )).rows[0] ?? null;
+  });
+  if (!plan || plan.stop_rules.set !== 'bounded' || !plan.stop_rules.scenario_ids?.length) throw new Coded(409, 'not_approved', 'An approved plan is required.');
+  return enqueueRun(driver, {
+    workspaceId: plan.workspace_id,
+    planId,
+    agentVersionId: plan.agent_version_id,
+    scenarioIds: plan.stop_rules.scenario_ids,
+    repeats: 1,
+    idempotencyKey: `bounded:${planId}`,
+    order: plan.stop_rules.scenario_ids,
   });
 }

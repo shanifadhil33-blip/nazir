@@ -1,0 +1,15 @@
+name: Demo reset
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the production demo reset
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --silent --show-error --header "Authorization: Bearer ${CRON_SECRET}" "https://nazir-liard.vercel.app/api/cron/demo-reset"
