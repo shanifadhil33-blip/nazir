@@ -60,7 +60,8 @@ function FailureBody({ copy, item, decide, pending, onApprove, onSkip, onEdit }:
   copy: Messages; item: FailureCase; decide: boolean; pending: boolean;
   onApprove: (id?: string) => void; onSkip: (id?: string) => void; onEdit: () => void;
 }) {
-  const proposed = item.proposed.trim().length > 0 || Boolean(item.proposalId);
+  // Approve, edit and skip need a real proposal to act on; without one we say so plainly.
+  const proposed = Boolean(item.proposalId);
   const raw = [
     item.rawEn ? { text: item.rawEn, lang: 'en' as const } : null,
     item.rawAr ? { text: item.rawAr, lang: 'ar' as const } : null,
@@ -79,11 +80,11 @@ function FailureBody({ copy, item, decide, pending, onApprove, onSkip, onEdit }:
       <section><h4>{copy.ui.proposedFix}</h4><p>{item.proposed || copy.ui.noRepair}</p></section>
     </div>
     <RecordDetail copy={copy} lines={raw} />
-    {decide ? <div className="nz-actions">
+    {!proposed ? <p className="nz-note" data-note="no-fix">{copy.ui.noFixToApprove}</p> : decide ? <div className="nz-actions">
       <button type="button" className="nz-btn nz-btn-rust" data-action="approve" disabled={pending} onClick={() => onApprove(item.proposalId)}>{pending ? <span className="nz-spin" /> : copy.ui.approve}</button>
       <button type="button" className="nz-btn nz-btn-ghost" data-action="edit" onClick={onEdit}>{copy.ui.editFix}</button>
       <button type="button" className="nz-btn nz-btn-ghost" data-action="skip" onClick={() => onSkip(item.proposalId)}>{copy.ui.skip}</button>
-    </div> : proposed ? <p className="nz-note" data-note="reviewer">{copy.ui.reviewerDecides}</p> : null}
+    </div> : <p className="nz-note" data-note="reviewer">{copy.ui.reviewerDecides}</p>}
   </div>;
 }
 

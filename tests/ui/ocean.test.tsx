@@ -14,9 +14,11 @@ const receipt = '11111111-1111-4111-8111-111111111111';
 const rawEn = `Case NZ-000001, requester Saeed (saeed), queue complaint review (complaint_review), status in review (in_review), review complaint review (complaint_review), waiting for review (pending_review). Receipt ${receipt}: create_case, succeeded (ok). Receipt 22222222-2222-4222-8222-222222222222: request_human_review, failed (error), the tool did not finish (tool_failed).`;
 const rawAr = `الحالة NZ-000001، مقدم الطلب سعيد (saeed)، القائمة مراجعة الشكاوى (complaint_review)، الحالة قيد المراجعة (in_review)، المراجعة مراجعة الشكاوى (complaint_review)، بانتظار المراجعة (pending_review). الإيصال ${receipt}: create_case، نجحت (ok). الإيصال 22222222-2222-4222-8222-222222222222: request_human_review، فشلت (error)، لم تكمل الأداة العمل (tool_failed).`;
 
+const withFix = (model: ScreenModel): ScreenModel => ({ ...model, failures: model.failures.map((item, index) => ({ ...item, proposalId: `44444444-4444-4444-8444-44444444444${index}` })) });
+
 function screen(lang: 'en' | 'ar', seat: Seat, demo: boolean, options?: { roles?: string[]; shared?: boolean; screen?: ScreenId; model?: ScreenModel }) {
   const copy = messagesFor(lang);
-  return renderToStaticMarkup(<WorkspaceScreen lang={lang} copy={copy} demo={demo} seat={seat} roles={options?.roles ?? rolesForSeat(seat)} shared={options?.shared} userName={copy.sample.user} model={options?.model ?? sampleModel(copy)} screen={options?.screen ?? 'chat'} {...handlers} />);
+  return renderToStaticMarkup(<WorkspaceScreen lang={lang} copy={copy} demo={demo} seat={seat} roles={options?.roles ?? rolesForSeat(seat)} shared={options?.shared} userName={copy.sample.user} model={options?.model ?? withFix(sampleModel(copy))} screen={options?.screen ?? 'chat'} {...handlers} />);
 }
 
 it('shows the score count up final value', () => {
@@ -202,4 +204,27 @@ it('ends the failure entrance fully opaque and keeps a reduced motion fallback',
   expect(countAt(82, 0.5)).toBeGreaterThan(0);
   expect(countAt(82, 0.5)).toBeLessThan(82);
   expect(countAt(82, 1)).toBe(82);
+});
+
+it('hides approve, edit and skip when a failure has no proposed fix and says so in EN and AR', () => {
+  for (const lang of ['en', 'ar'] as const) {
+    const copy = messagesFor(lang);
+    const noFix = sampleModel(copy);
+    for (const seat of ['editor', 'owner', 'viewer'] as Seat[]) {
+      for (const view of ['chat', 'failures'] as ScreenId[]) {
+        const html = screen(lang, seat, true, { model: noFix, screen: view });
+        expect(html).not.toContain('data-action="approve"');
+        expect(html).not.toContain('data-action="edit"');
+        expect(html).not.toContain('data-action="skip"');
+        expect(html).not.toContain(copy.ui.reviewerDecides);
+      }
+    }
+    const reviewer = screen(lang, 'editor', true, { model: noFix, screen: 'failures' });
+    expect(reviewer).toContain('data-note="no-fix"');
+    expect(reviewer).toContain(copy.ui.noFixToApprove);
+    expect(copy.ui.noFixToApprove).not.toMatch(/[\u2013\u2014]| - /);
+    const first = noFix.failures[0]!;
+    for (const text of [first.expectedEn, first.expectedAr, first.actualEn, first.actualAr]) expect(reviewer).toContain(text);
+    expect(screen(lang, 'editor', true, { screen: 'failures' })).toContain('data-action="approve"');
+  }
 });

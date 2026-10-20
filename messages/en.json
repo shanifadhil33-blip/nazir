@@ -65,6 +65,7 @@
     "previewHint": "This is sample data. Sign in to run a test.",
     "stopped": "Stopped waiting on this screen.",
     "caseWord": "Case",
+    "noFixToApprove": "No saved fix is ready for approval yet.",
     "noRepair": "No repair is waiting.",
     "noQuote": "No reply was stored.",
     "note": "Note",
