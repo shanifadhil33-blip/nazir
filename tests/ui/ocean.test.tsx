@@ -164,7 +164,12 @@ it('shows a recheck state instead of duplicate before and after scores', () => {
   expect(canRunRecheck(['viewer'])).toBe(false);
   expect(canRunRecheck(['service_owner'], true)).toBe(false);
   const copy = messagesFor('en');
-  const pending = { ...sampleModel(copy), before: null };
+  const base = sampleModel(copy);
+  const pending = { ...base, before: null, failures: base.failures.map((item, index) => index === 0 ? { ...item, proposalId: '44444444-4444-4444-8444-444444444444' } : item) };
+  const noFix = { ...base, before: null, failures: base.failures.map((item) => ({ ...item, proposalId: undefined })) };
+  const ownerNoFix = screen('en', 'owner', true, { screen: 'report', model: noFix });
+  expect(ownerNoFix).not.toContain('data-action="recheck"');
+  expect(ownerNoFix).toContain('There is no approved fix to recheck yet.');
   const owner = screen('en', 'owner', true, { screen: 'report', model: pending });
   expect(owner).toContain('data-state="recheck-pending"');
   expect(owner).toContain('Recheck not run yet.');

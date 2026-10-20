@@ -89,6 +89,7 @@
     "recordDetail": "Record detail",
     "reviewerDecides": "Only a service quality reviewer can approve this fix.",
     "recheckPending": "Recheck not run yet.",
+    "noFixToRecheck": "There is no approved fix to recheck yet.",
     "runRecheck": "Run recheck",
     "recheckNeedsRole": "A service owner or a service quality reviewer runs the recheck.",
     "sections": "Sections"

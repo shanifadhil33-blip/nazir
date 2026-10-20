@@ -105,6 +105,7 @@ export function WorkspaceScreen({
   const dragStart = useRef<number | null>(null);
   const decide = canApprove(roles, shared);
   const recheck = canRunRecheck(roles, shared);
+  const recheckReady = model.failures.some((item) => Boolean(item.proposalId));
   const compose = canCompose(seat, shared);
   const active = model.failures[Math.min(tab, Math.max(0, model.failures.length - 1))];
   const labelFor = (item: FailureCase) => lang === 'ar' ? item.tabAr : item.tab;
@@ -222,7 +223,7 @@ export function WorkspaceScreen({
           <div><p>{copy.ui.after}</p><ScoreFigure value={model.metrics.score} ring="teal" named={screen === 'report'} /></div>
         </div> : <div className="nz-recheck" data-state="recheck-pending">
           <p>{copy.ui.recheckPending}</p>
-          {recheck ? <button type="button" className="nz-btn nz-btn-teal" data-action="recheck" disabled={pending} onClick={onRecheck}>{copy.ui.runRecheck}</button> : <p className="nz-note">{copy.ui.recheckNeedsRole}</p>}
+          {recheck && recheckReady ? <button type="button" className="nz-btn nz-btn-teal" data-action="recheck" disabled={pending} onClick={onRecheck}>{copy.ui.runRecheck}</button> : <p className="nz-note">{recheck ? copy.ui.noFixToRecheck : copy.ui.recheckNeedsRole}</p>}
         </div>}
         {model.before ? <table className="nz-table">
           <thead><tr><th>{copy.ui.measure}</th><th>{copy.ui.before}</th><th>{copy.ui.after}</th></tr></thead>
