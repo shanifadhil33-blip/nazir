@@ -109,7 +109,8 @@
     "m_evidence_completeness": "Conversations with full evidence",
     "m_cost": "Model calls per conversation",
     "mPoints": "{v} points",
-    "mCalls": "{v} calls"
+    "mCalls": "{v} calls",
+    "measuredRestricted": "Measured results are shown to members who run tests."
   },
   "sample": {
     "agent": "Harbor permits desk",

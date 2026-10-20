@@ -252,18 +252,18 @@ export function WorkspaceScreen({
       {screen === 'failures' ? <button type="button" className="nz-backdrop nz-only-phone" aria-label={copy.ui.close} onClick={() => onScreen('chat')} /> : null}
     </div>
     <nav className="nz-tabs-bar" aria-label={copy.ui.sections}>
-      {sections.map(([id, icon]) => <button type="button" key={id} className="nz-nav-btn" aria-current={screen === id ? 'page' : undefined} onClick={() => open(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
+      {sections.map(([id, icon]) => <button type="button" key={id} className="nz-nav-btn" data-section={id} aria-current={screen === id ? 'page' : undefined} onClick={() => open(id)}><Icon name={icon} />{copy.ui[id === 'failures' ? 'failures' : id]}</button>)}
     </nav>
   </div>;
 }
 
-export type Measured = { conversations: number; runs?: number; metrics: { id: string; value: number | null; numerator: number; denominator: number; unit: 'percent' | 'points' | 'calls' }[] };
+export type Measured = { conversations: number; runs?: number; restricted?: boolean; metrics: { id: string; value: number | null; numerator: number; denominator: number; unit: 'percent' | 'points' | 'calls' }[] };
 function MeasuredTable({ copy, lang, data }: { copy: Messages; lang: Lang; data: Measured }) {
   const ui = copy.ui as unknown as Record<string, string>;
   const num = (v: number) => v.toLocaleString(lang === 'ar' ? 'ar-AE' : 'en-US');
   return <div className="nz-measured" data-state="measured">
     <h3>{ui.measured}</h3>
-    {data.conversations === 0 ? <p className="nz-empty">{ui.measuredEmpty}</p> : <>
+    {data.restricted ? <p className="nz-note" data-note="measured-restricted">{ui.measuredRestricted}</p> : data.conversations === 0 ? <p className="nz-empty">{ui.measuredEmpty}</p> : <>
       <p className="nz-note">{fill(ui.measuredNote!, { n: num(data.conversations), runs: num(data.runs ?? 0) })}</p>
       <table className="nz-table"><thead><tr><th>{copy.ui.measure}</th><th>{ui.mValue}</th><th>{ui.mBasis}</th></tr></thead><tbody>
         {data.metrics.map((m) => <tr key={m.id} data-metric={m.id}><th>{ui[`m_${m.id}`]}</th>

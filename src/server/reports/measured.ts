@@ -48,14 +48,18 @@ export function measure(rows: MeasureRow[]): { metrics: Metric[]; conversations:
 export async function measuredResults(driver: TransactionDriver, memberId: string) {
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'run.read');
+    // Raw conversations are readable only by members who run tests; a viewer gets an honest note, not zeros.
+    const canWork = (await sql.query<{ ok: boolean }>('SELECT nazir.member_can_work() AS ok')).rows[0]?.ok === true;
+    if (!canWork) return { conversations: 0, metrics: [] as Metric[], runs: 0, cost_money: 0, restricted: true };
     const rows = (await sql.query<MeasureRow & { records: unknown }>(`SELECT v.config->>'registry_id' AS registry, c.status, c.language, s.stable_key,
         coalesce((SELECT jsonb_agg(jsonb_build_object('id',x->>'id','status',x->>'status')) FROM jsonb_array_elements(CASE WHEN jsonb_typeof(c.result_summary->'records')='array' THEN c.result_summary->'records' ELSE '[]'::jsonb END) x),'[]'::jsonb) AS records,
         c.result_summary->'semantic'->>'status' AS semantic,
         CASE WHEN jsonb_typeof(c.model_calls)='array' THEN jsonb_array_length(c.model_calls) ELSE 0 END AS calls,
         EXISTS(SELECT 1 FROM nazir.state_readings r WHERE r.conversation_id=c.id) AS has_reading
-      FROM nazir.conversations c JOIN nazir.agent_versions v ON v.id=c.agent_version_id LEFT JOIN nazir.scenarios s ON s.id=c.scenario_id
+      FROM nazir.conversations c JOIN nazir.runs ru ON ru.id=c.run_id LEFT JOIN nazir.agent_versions v ON v.id=coalesce(c.agent_version_id,ru.agent_version_id) LEFT JOIN nazir.scenarios s ON s.id=c.scenario_id
+      WHERE c.workspace_id=nazir.current_workspace_id() AND (c.scenario_id IS NULL OR s.id IS NOT NULL)
       ORDER BY c.created_at DESC LIMIT 2000`)).rows;
     const runs = Number((await sql.query<{ n: string }>('SELECT count(*) AS n FROM nazir.runs')).rows[0]!.n);
-    return { ...measure(rows.map((r) => ({ ...r, records: r.records as MeasureRow['records'], calls: Number(r.calls) }))), runs, cost_money: 0 };
+    return { ...measure(rows.map((r) => ({ ...r, records: r.records as MeasureRow['records'], calls: Number(r.calls) }))), runs, cost_money: 0, restricted: false };
   });
 }
