@@ -5,6 +5,8 @@ import { createInspectionChannel } from '../../src/server/inspection/channel';
 import { createSandboxTools } from '../../src/sandbox/tools';
 import { getAgentVersion } from '../../src/sandbox/versions';
 import { createLibraryFixture } from '../../src/server/runner/library-fixture';
+import { loadLibrary } from '../../src/server/library/load';
+import { approveScenario, importLibrary } from '../../src/server/library/import';
 let db:TestDatabase;
 beforeAll(async()=>{ db=await testDatabase(); }); afterAll(async()=>{await db?.close();});
 const seededCase={requester_key:'saeed',reference:'NZ-070000',category:'complaint',queue:'complaint_review',status:'open',prior_request_ref:'SR-1042'};
@@ -33,6 +35,17 @@ it('prepares the entire library once without changing rows or audit on replay',a
  expect((await db.owner.query("SELECT DISTINCT status FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL",[first.workspaceId])).rows).toEqual([{status:'approved'}]);
  const complaint=(await db.owner.query<{stable_key:string;n:number}>("SELECT stable_key,count(*)::int AS n FROM nazir.scenarios WHERE workspace_id=$1 AND stable_key IN ('complaint_en','complaint_ar') GROUP BY stable_key ORDER BY stable_key",[first.workspaceId])).rows;
  expect(complaint).toEqual([{stable_key:'complaint_ar',n:1},{stable_key:'complaint_en',n:1}]);
+});
+it('retires the older approved version when a changed library scenario is approved',async()=> {
+ const fx=await db.driver.transaction(createLibraryFixture);
+ const library=await loadLibrary();const target=library[0]!.meanings[0]!.scenarios[0]!;target.resident_turns=[target.resident_turns[0]+' Thank you.',...target.resident_turns.slice(1)];
+ const nested={transaction:async<T>(fn:(sql:never)=>Promise<T>)=>db.driver.transaction(fn as never)};
+ const ids=await importLibrary(nested as never,fx.members.author,library);
+ const drafts=(await db.owner.query<{id:string}>("SELECT id FROM nazir.scenarios WHERE id=ANY($1::uuid[]) AND status='draft'",[ids])).rows;// The meaning digest covers its scenarios, so both languages of the meaning get a new version.
+ expect(drafts).toHaveLength(2);
+ for(const d of drafts) await approveScenario(nested as never,fx.members.reviewer,d.id);
+ const rows=(await db.owner.query<{version:number;status:string}>("SELECT version,status FROM nazir.scenarios WHERE workspace_id=$1 AND stable_key=$2 ORDER BY version",[fx.workspaceId,target.stable_key])).rows;
+ expect(rows).toEqual([{version:1,status:'retired'},{version:2,status:'approved'}]);
 });
 it.each([
  {...state,seed:1},{...state,tool_failure:null},{seed:'sandbox',cases:[]},
