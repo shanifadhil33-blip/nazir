@@ -53,6 +53,13 @@ it('provider exhaustion through N09 overrides passed, retries, and then passes o
   await due(first.id); await next({ evaluate:passed });
   const second=await row(run.id); expect(second).toMatchObject({ status:'passed',attempt:2 }); expect(second.sandbox_tenant).not.toBe(first.sandbox_tenant);
 });
+it('ends a conversation on the daily cap without a retry',async () => {
+  const run=await enqueue(db,f); let clock=Date.now();
+  const chain=createAiChain({ store:memoryAiStore(() => clock),env:{ AI_DAILY_CAP_TEST_RUN:'0' },now:() => clock,sleep:async (ms) => { clock+=ms; },fetch:async () => new Response('',{ status:503 }) });
+  await next({ evaluate:passed,chatModelFactory:(ctx) => chainChatModel(chain,{ task:'test_run',...ctx }) });
+  expect(await row(run.id)).toMatchObject({ status:'inconclusive',last_error:'daily_cap',attempt:1 });
+  expect(await next()).toBeNull();
+});
 it('retry after a case write uses a new tenant and preserves old evidence',async () => {
   const run=await enqueue(db,f);
   await next({ evaluate:() => ({ status:'inconclusive',reason:'timeout',results:{} }) });
