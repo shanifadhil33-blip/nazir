@@ -1,9 +1,10 @@
 import 'server-only';
+import { packById } from '../packs/catalog';
 import { createHash } from 'node:crypto';
 import { requireRole } from '../auth/guard';
 import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Coded, NotFound, TooMany } from '../http/errors';
+import { Coded, NotFound, TooMany, errorLines } from '../http/errors';
 import { providerRegistry } from '../ai/providers';
 import { enqueueRun } from '../runner/enqueue';
 
@@ -35,6 +36,8 @@ export async function startLiveTest(driver: TransactionDriver, memberId: string,
     const w = (await sql.query<{ id: string; kind: string }>('SELECT id,kind FROM nazir.workspaces WHERE id=nazir.current_workspace_id()')).rows[0];
     if (!w) throw new NotFound();
     if (w.kind !== 'demo') throw new Coded(403, 'live_test_demo_only', 'The live test runs in demo workspaces only.');
+    const pack = (await sql.query<{ p: string | null }>("SELECT nazir.read_agent_settings()->>'focus_pack' AS p")).rows[0]?.p ?? 'government';
+    if ((packById(pack)?.runner ?? 'government_sandbox') !== 'government_sandbox') throw new Coded(409, 'pack_not_running', errorLines.pack_not_running.en);
     if (!liveTestReady(env)) throw new Coded(503, 'live_test_unavailable', 'The live test is not connected here yet. Nothing was queued.');
 
     return { workspaceId: w.id };

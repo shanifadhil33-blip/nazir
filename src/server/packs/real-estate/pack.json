@@ -1,8 +1,8 @@
 {
   "format": "nazir.focus_pack/1",
   "id": "real_estate",
-  "version": "0.1.0",
-  "status": "draft",
+  "version": "1.0.0",
+  "status": "live",
   "name": {
     "en": "Real estate",
     "ar": "العقارات"
@@ -27,14 +27,44 @@
   },
   "record_checks": [
     {
-      "id": "case_exists",
-      "en": "Viewing or request recorded",
-      "ar": "المعاينة أو الطلب مسجل"
+      "id": "listing_exists",
+      "en": "Listing exists",
+      "ar": "الوحدة موجودة"
+    },
+    {
+      "id": "listing_status",
+      "en": "Listing status matches",
+      "ar": "حالة الوحدة مطابقة"
+    },
+    {
+      "id": "listing_price",
+      "en": "Rent and fees match the records",
+      "ar": "الإيجار والرسوم مطابقة للسجلات"
+    },
+    {
+      "id": "permit_number",
+      "en": "Permit and broker numbers match",
+      "ar": "رقم التصريح ورقم الوسيط مطابقان"
+    },
+    {
+      "id": "assigned_agent",
+      "en": "Assigned agent matches",
+      "ar": "الوكيل المسؤول مطابق"
+    },
+    {
+      "id": "request_recorded",
+      "en": "Request recorded as expected",
+      "ar": "الطلب مسجل كما هو متوقع"
     },
     {
       "id": "right_queue",
       "en": "Request in the right queue",
       "ar": "الطلب في القائمة الصحيحة"
+    },
+    {
+      "id": "duplicates",
+      "en": "No duplicate bookings",
+      "ar": "لا توجد حجوزات مكررة"
     },
     {
       "id": "linked_escalation",
@@ -43,42 +73,48 @@
     },
     {
       "id": "ownership",
-      "en": "Records belong to the tenant",
-      "ar": "السجلات تخص المستأجر"
-    },
-    {
-      "id": "duplicates",
-      "en": "No duplicate bookings",
-      "ar": "لا توجد حجوزات مكررة"
+      "en": "No other tenant data shared",
+      "ar": "لم تشارك بيانات مستأجر آخر"
     },
     {
       "id": "reply_matches_record",
-      "en": "Reply matches listing and fee records",
-      "ar": "الرد يطابق سجلات الوحدات والرسوم"
+      "en": "Reply matches the request records",
+      "ar": "الرد يطابق سجلات الطلبات"
     }
   ],
   "record_schema": {
     "listing": {
-      "unit": "text",
+      "unit": "RE plus 4 digits",
+      "community": "text",
+      "bedrooms": "0 to 6",
+      "rent_aed": "number",
       "status": [
         "available",
         "reserved",
         "let"
       ],
-      "rent_yearly_aed": "number"
+      "permit_number": "7 plus 6 digits",
+      "agent_key": "text"
     },
-    "viewing": {
-      "reference": "text",
-      "unit": "text",
-      "slot": "timestamp"
+    "agent": {
+      "name": "text",
+      "brn": "5 digits"
     },
     "request": {
-      "reference": "text",
-      "unit": "text",
-      "queue": [
+      "reference": "RQ plus 6 digits",
+      "kind": [
+        "viewing",
         "maintenance",
-        "leasing",
-        "accounts"
+        "human_review"
+      ],
+      "unit": "text or null",
+      "slot": "text or null",
+      "queue": [
+        "viewings",
+        "maintenance",
+        "legal_review",
+        "accounts",
+        "leasing"
       ],
       "status": [
         "open",
@@ -132,5 +168,6 @@
     "faq",
     "compliance",
     "other"
-  ]
+  ],
+  "runner": "estate_sandbox"
 }

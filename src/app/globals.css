@@ -540,7 +540,9 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: rgba(255, 255
 .nz-kb-hits li { display: grid; }
 .nz-kb-hits p { margin: 2px 0 0; font-size: 13px; color: var(--ink-muted); white-space: pre-wrap; }
 .nz-kb-form { display: grid; gap: 10px; }
-.nz-kb-search input { flex: 1; }
+.nz-kb-search { display: flex; gap: 8px; align-items: center; }
+.nz-kb-search input { flex: 1 1 auto; min-width: 0; }
+.nz-kb-search button { flex: 0 0 auto; width: auto; }
 .nz-servers { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .nz-servers li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--mint); }
 .nz-servers span { color: var(--ink-muted); font-size: 13px; overflow-wrap: anywhere; flex: 1; }

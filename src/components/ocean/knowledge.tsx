@@ -8,6 +8,12 @@ type Hit = { cite: number; title: string; excerpt: string };
 type Kind = 'policy' | 'price_table' | 'faq' | 'compliance' | 'other';
 const kinds: Kind[] = ['policy', 'price_table', 'faq', 'compliance', 'other'];
 
+/** Counted words follow the language: English one or many; Arabic one, two, three to ten, eleven and up. */
+export function partsLabel(t: Messages['settings'], n: number) {
+  const template = n === 1 ? t.kbPartsOne : n === 2 ? t.kbPartsTwo : n >= 3 && n <= 10 ? t.kbPartsFew : t.kbParts;
+  return fill(template, { chunks: String(n) });
+}
+
 /** Its own card with its own requests: a slow or failed upload never blocks saving the other settings. */
 export function KnowledgeCard({ copy, lang, workspaceId, pack, sample }: { copy: Messages; lang: Lang; workspaceId?: string; pack: string; sample: boolean }) {
   const t = copy.settings;
@@ -81,7 +87,7 @@ export function KnowledgeCard({ copy, lang, workspaceId, pack, sample }: { copy:
     {load === 'failed' ? <p className="nz-note" data-note="kb-failed">{t.kbLoadFailed}</p> : null}
     <ul className="nz-kb-list" data-list="knowledge">
       {shown.length ? shown.map((d) => <li key={d.id} data-doc={d.id}>
-        <div><strong>{d.title}</strong><small>{t.kbKinds[d.kind]} · {d.agent_name ?? t.kbAllAgents} · {fill(t.kbParts, { chunks: String(d.chunks) })} · {fill(t.kbBy, { name: d.created_by_name })}</small></div>
+        <div><strong>{d.title}</strong><small>{t.kbKinds[d.kind]} · {d.agent_name ?? t.kbAllAgents} · {partsLabel(t, d.chunks)} · {fill(t.kbBy, { name: d.created_by_name })}</small></div>
         {edit ? <button type="button" className="nz-btn nz-btn-ghost" data-action="remove-knowledge" onClick={() => void remove(d.id)}>{t.kbRemove}</button> : null}
       </li>) : <li className="nz-kb-empty">{t.kbEmpty}</li>}
     </ul>
@@ -100,7 +106,7 @@ export function KnowledgeCard({ copy, lang, workspaceId, pack, sample }: { copy:
         <button type="submit" className="nz-btn nz-btn-rust" data-action="add-knowledge" disabled={state === 'adding' || !title.trim() || !body.trim()}>{state === 'adding' ? t.kbAdding : t.kbAdd}</button>
       </div>
     </form> : null}
-    {!sample ? <form className="nz-row nz-kb-search" onSubmit={search} data-form="search-knowledge">
+    {!sample ? <form className="nz-kb-search" onSubmit={search} data-form="search-knowledge">
       <input aria-label={t.kbSearch} placeholder={t.kbSearch} value={question} maxLength={300} dir="auto" onChange={(e) => setQuestion(e.target.value)} />
       <button type="submit" className="nz-btn nz-btn-ghost" data-action="search-knowledge" disabled={!question.trim()}>{t.kbSearchGo}</button>
     </form> : null}

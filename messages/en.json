@@ -255,7 +255,10 @@
     "kbSearchGo": "Search",
     "kbNoHits": "Nothing in the knowledge base matches that.",
     "kbLoadFailed": "The knowledge base could not load. Everything else still works.",
-    "kbSample": "Sample data. Documents are not saved here."
+    "kbSample": "Sample data. Documents are not saved here.",
+    "kbPartsOne": "1 part",
+    "kbPartsTwo": "2 parts",
+    "kbPartsFew": "{chunks} parts"
   },
   "live": {
     "open": "Live test",
