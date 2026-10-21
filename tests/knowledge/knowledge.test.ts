@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { seed, testDatabase, type TestDatabase } from '../helpers/pglite';
 import { Forbidden } from '../../src/server/http/errors';
 import { addKnowledge, listKnowledge, removeKnowledge, searchKnowledge, searchKnowledgeForWorker } from '../../src/server/knowledge/knowledge';
 import { chunkText, searchTerms } from '../../src/server/knowledge/chunk';
 import { readAgentSettings, saveAgentSettings } from '../../src/server/settings/agent-settings';
 import { agentChat } from '../../src/server/agent/chat';
+import * as catalog from '../../src/server/packs/catalog';
 
 let db: TestDatabase; let owner: string; let reviewer: string; let viewer: string; let other: string; let workspace: string; let otherWorkspace: string; let agentId: string;
 const fees = 'Synthetic demo fee table.\n\nService,Fee in AED\nTrade permit renewal,200\nLate renewal penalty,50 per month';
@@ -32,7 +33,7 @@ it('chunks on paragraph ends, keeps table headers and caps size', () => {
 it('lets only the owner add, stores the writer name, and finds English and Arabic with free full text search', async () => {
   await expect(addKnowledge(db.driver, reviewer, { pack: 'government', kind: 'price_table', language: 'en', title: 'Fees', body: fees })).rejects.toBeInstanceOf(Forbidden);
   await expect(addKnowledge(db.driver, viewer, { pack: 'government', kind: 'price_table', language: 'en', title: 'Fees', body: fees })).rejects.toBeInstanceOf(Forbidden);
-  await expect(addKnowledge(db.driver, owner, { pack: 'schools', kind: 'faq', language: 'en', title: 'Draft', body: 'x' })).rejects.toMatchObject({ code: 'validation' });
+  await expect(addKnowledge(db.driver, owner, { pack: 'unknown_pack', kind: 'faq', language: 'en', title: 'Unknown', body: 'x' })).rejects.toMatchObject({ code: 'validation' });
   const added = await addKnowledge(db.driver, owner, { pack: 'government', kind: 'price_table', language: 'en', title: 'Synthetic fee table', body: fees });
   expect(added.chunks).toBe(1);
   await addKnowledge(db.driver, owner, { pack: 'government', kind: 'policy', language: 'ar', title: 'سياسة التجديد', body: arabic, agent_id: agentId });
@@ -72,10 +73,10 @@ it('answers in chat with cited knowledge, never from the model', async () => {
   expect(nothing.data).toBeNull();
 });
 
-it('saves the focus pack in settings, refuses a draft pack, and owners can remove documents', async () => {
+it('saves the focus pack in settings, refuses an unknown pack, and owners can remove documents', async () => {
   const base = { name: 'Amal Desk', instructions: '', language: 'en', avatar: 'preset:2' };
   expect((await saveAgentSettings(db.driver, owner, base)).focus_pack).toBe('government');
-  await expect(saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'schools' })).rejects.toThrow();
+  await expect(saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'unknown_pack' })).rejects.toThrow();
   expect((await readAgentSettings(db.driver, viewer)).focus_pack).toBe('government');
   const doc = (await listKnowledge(db.driver, owner)).docs[0]!;
   await expect(removeKnowledge(db.driver, reviewer, doc.id)).rejects.toBeInstanceOf(Forbidden);
@@ -93,4 +94,23 @@ it('opens test runs for a live pack with its own sandbox, and Government runs as
   await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'government' });
   const again = await agentChat(db.driver, owner, { message: 'propose a plan' }, null);
   expect(again.reply.en).not.toContain('not open yet');
+});
+
+it('keeps pack_not_running refusals for a temporarily unavailable catalog entry', async () => {
+  const base = { name: 'School Desk', instructions: '', language: 'en', avatar: 'preset:2' };
+  await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'schools' });
+  const lookup = catalog.packById;
+  const unavailable = vi.spyOn(catalog, 'packById').mockImplementation((id) => {
+    const p = lookup(id);
+    return id === 'schools' && p ? { ...p, status: 'draft', runner: 'none' } : p;
+  });
+  try {
+    for (const message of ['propose a plan', 'start the run']) {
+      const result = await agentChat(db.driver, owner, { message }, null);
+      expect(JSON.stringify(result)).toContain('pack_not_running');
+    }
+  } finally {
+    unavailable.mockRestore();
+    await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'government' });
+  }
 });

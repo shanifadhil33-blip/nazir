@@ -17,6 +17,11 @@ import { clinicToolManifestHash, clinicToolNames } from '../../sandbox/clinic/to
 import { clinicPolicy } from '../../sandbox/clinic/policy';
 import { readClinic, type ClinicReading } from '../../sandbox/clinic/inspect';
 import { runClinicChecks } from '../checks/clinic-checks';
+import { runSchoolAgent, schoolSystemPrompt, schoolVersions, type SchoolVersion } from '../../sandbox/school/agent';
+import { schoolToolManifestHash, schoolToolNames } from '../../sandbox/school/tools';
+import { schoolPolicy } from '../../sandbox/school/policy';
+import { readSchool, type SchoolReading } from '../../sandbox/school/inspect';
+import { runSchoolChecks } from '../checks/school-checks';
 import { packById } from './catalog';
 import type { FocusPack, InlineCase, PackId } from './schema';
 
@@ -100,7 +105,26 @@ const clinic: PackRuntime = {
   },
   clause: clauseOf(clinicPolicy.clauses),
 };
-export const packRuntimes: readonly PackRuntime[] = [estate, shop, clinic];
+const school: PackRuntime = {
+  pack: packById('schools')!, id: 'schools', seed: 'school_sandbox', prefix: 'sc_',
+  versions: Object.values(schoolVersions), systemPromptHash: hash(schoolSystemPrompt), toolManifestHash: schoolToolManifestHash(), rulesHash: hash(schoolPolicy), toolNames: schoolToolNames,
+  async prepare(db, tenant) { await db.query('SELECT sandbox.sc_seed_tenant($1)', [tenant]); },
+  run: ({ version, ...rest }) => runSchoolAgent({ ...rest, version: version as SchoolVersion }),
+  read: readSchool,
+  clean(reading) { const r = reading as SchoolReading; return r.students.length === 12 && r.grades.length === 6 && r.calendar.length === 4 && !r.receipts.length && r.requests.every((x) => x.seeded); },
+  checks: ({ scenario, reply, reading }) => runSchoolChecks({ scenario, reply, reading: reading as SchoolReading }),
+  facts(reading, c) {
+    const r = reading as SchoolReading; const me = c.persona.requester_key;
+    const mine = r.requests.filter((x) => x.guardian_key === me);
+    const judge = { guardian: r.guardians.find((x) => x.guardian_key === me), students: r.students.filter((x) => x.guardian_key === me), grades: r.grades, calendar: r.calendar, bus_fee_aed: schoolPolicy.bus_fee_aed, late_fee_aed: schoolPolicy.late_fee_aed, requests: mine, receipts: r.receipts };
+    const rec = receiptsText(r.receipts);
+    return { judge, text: {
+      en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this guardian.') + ' ' + rec.en,
+      ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لولي الأمر.') + ' ' + rec.ar } };
+  },
+  clause: clauseOf(schoolPolicy.clauses),
+};
+export const packRuntimes: readonly PackRuntime[] = [estate, shop, clinic, school];
 export const runtimeForSeed = (state: unknown) => { const seed = (state as { seed?: unknown } | null)?.seed; return packRuntimes.find((r) => r.seed === seed) ?? null; };
 export const runtimeForPack = (id: string) => packRuntimes.find((r) => r.id === id) ?? null;
 /** A pack agent version is referenced by registry id plus its pinned hash, so a changed prompt or tool list reads as drift. */

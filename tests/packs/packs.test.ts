@@ -37,13 +37,13 @@ it('adds the knowledge block only when something matched', () => {
   expect(plain.prompt).not.toContain('KNOWLEDGE');
 });
 
-it('lists every focus pack as data; Government, Real estate and Ecommerce are live, Clinics is a draft', async () => {
+it('lists every focus pack as data; all five packs are live', async () => {
   expect(focusPacks.map((p) => p.id).every((id) => (packIds as readonly string[]).includes(id))).toBe(true);
-  expect(livePackIds).toEqual(['government', 'real_estate', 'ecommerce', 'clinics']);
+  expect(livePackIds).toEqual(['government', 'real_estate', 'ecommerce', 'clinics', 'schools']);
   await expect(loadPackCases('real_estate')).rejects.toThrow();
-  await expect(loadPackCases('schools')).rejects.toThrow();
-  expect(packById('schools')!.status).toBe('draft');
-  expect(packById('schools')!.runner).toBe('none');
+  await expect(loadPackCases('unknown_pack')).rejects.toThrow();
+  expect(packById('unknown_pack')).toBeNull();
+  expect(packById('schools')!.runner).toBe('school_sandbox');
   expect(packById('ecommerce')!.runner).toBe('shop_sandbox');
   expect(packSummary(packById('government')!)).toEqual({ id: 'government', version: '1.0.0', name: expect.any(Object), summary: expect.any(Object), cases: 48, record_checks: 7, refusal_policies: 3, compliance: 5 });
   expect(JSON.stringify(packSummary(packById('government')!))).not.toContain(rubric);
