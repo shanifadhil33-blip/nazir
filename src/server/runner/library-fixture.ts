@@ -22,13 +22,18 @@ async function prepare(db:SqlConnection) {
   const supplier=await member('library_supplier@example.test','Yusuf Rahman','supplier_maintainer');
   return { fixture,wid,author,reviewer,supplier };
 }
-const libraryCount=async (db:SqlConnection,wid:string) => (await db.query<{id:string}>('SELECT id FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL',[wid])).rows.length;
+// Import only when a scenario is missing or its content changed, so a replay writes no rows or audit (21 Oct 2026).
+const libraryStale=async (db:SqlConnection,wid:string,library:Awaited<ReturnType<typeof loadLibrary>>) => {
+  const rows=(await db.query<{stable_key:string;library_hash:string}>('SELECT DISTINCT ON (stable_key) stable_key,library_hash FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL ORDER BY stable_key,version DESC',[wid])).rows;
+  const have=new Map(rows.map((r) => [r.stable_key,r.library_hash]));
+  return library.some((f) => f.meanings.some((m) => m.scenarios.some((x) => have.get(x.stable_key)!==x.content_hash)));
+};
 const draftIds=async (db:SqlConnection,wid:string) => (await db.query<{id:string}>("SELECT id FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL AND status='draft'",[wid])).rows.map((r) => r.id);
 async function finish(db:SqlConnection,prep:Awaited<ReturnType<typeof prepare>>,families:string[]) {
   const plan=(await db.query<{id:string}>('SELECT id FROM nazir.plans WHERE workspace_id=$1 ORDER BY created_at,id LIMIT 1',[prep.wid])).rows[0]!;
   // Plans are prepared before any run uses this fixture.
   await db.query("UPDATE nazir.plans SET budget_calls=80,stop_rules='{}',families=$2 WHERE id=$1 AND (budget_calls<>80 OR stop_rules<>'{}'::jsonb OR families<>$2::text[])",[plan.id,families]);
-  const scenarios=(await db.query<{id:string;stable_key:string}>("SELECT id,stable_key FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL ORDER BY stable_key",[prep.wid])).rows;
+  const scenarios=(await db.query<{id:string;stable_key:string}>("SELECT id,stable_key FROM nazir.scenarios WHERE workspace_id=$1 AND library_hash IS NOT NULL ORDER BY stable_key,version",[prep.wid])).rows;
   return { workspaceId:prep.wid,planId:plan.id,versions:prep.fixture.versions,members:{ author:prep.author,reviewer:prep.reviewer,supplier:prep.supplier },scenarios:Object.fromEntries(scenarios.map((s) => [s.stable_key,s.id])) };
 }
 // One owner transaction. Nested member operations use the same reserved connection (tests, local owner with every role).
@@ -36,7 +41,7 @@ export async function createLibraryFixture(db:SqlConnection) {
   const prep=await prepare(db);
   const library=await loadLibrary();
   const nested:TransactionDriver={ transaction:async (fn) => { try { return await fn(db); } finally { await db.query('RESET ROLE'); } } };
-  if(await libraryCount(db,prep.wid)!==48) await importLibrary(nested,prep.author,library);
+  if(await libraryStale(db,prep.wid,library)) await importLibrary(nested,prep.author,library);
   for(const id of await draftIds(db,prep.wid)) await approveScenario(nested,prep.reviewer,id);
   return finish(db,prep,library.map((item)=>item.family));
 }
@@ -45,7 +50,7 @@ export async function createLibraryFixture(db:SqlConnection) {
 export async function createLibraryFixtureStaged(owner:TransactionDriver,member:TransactionDriver) {
   const prep=await owner.transaction(prepare);
   const library=await loadLibrary();
-  if(await owner.transaction((db) => libraryCount(db,prep.wid))!==48) await importLibrary(member,prep.author,library);
+  if(await owner.transaction((db) => libraryStale(db,prep.wid,library))) await importLibrary(member,prep.author,library);
   for(const id of await owner.transaction((db) => draftIds(db,prep.wid))) await approveScenario(member,prep.reviewer,id);
   return owner.transaction((db) => finish(db,prep,library.map((item)=>item.family)));
 }
