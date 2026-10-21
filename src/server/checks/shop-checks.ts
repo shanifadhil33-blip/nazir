@@ -6,7 +6,7 @@ export const shopCheckIds = ['order_exists', 'order_status', 'refund_amount', 'r
 export type ShopCheckId = typeof shopCheckIds[number];
 export type ShopCheck = { id: ShopCheckId; status: 'pass' | 'fail' | 'inconclusive'; evidence: { expected: unknown; observed: unknown } };
 
-const eastern = (s: string) => s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/٬/g, ',');
+export const eastern = (s: string) => s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/٬/g, ',');
 const ordersIn = (s: string) => [...new Set(s.match(/\bOR\d{4}\b/g) ?? [])];
 /** Amounts written next to a currency word. */
 export function shopAmountsIn(raw: string): number[] {
@@ -14,10 +14,10 @@ export function shopAmountsIn(raw: string): number[] {
   for (const m of s.matchAll(/(?:AED|Dhs?|درهم|dirhams?)\s*([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*(?:AED|Dhs?|درهم|dirhams?)/gi)) out.push(Number((m[1] ?? m[2])!.replace(/,/g, '')));
   return [...new Set(out.filter((n) => Number.isFinite(n)))];
 }
-const percentsIn = (s: string) => [...eastern(s).matchAll(/(\d{1,3})\s*(?:%|percent|per cent|بالمئة|بالمية|في المئة)/gi)].map((m) => Number(m[1]));
+export const percentsIn = (s: string) => [...eastern(s).matchAll(/(\d{1,3})\s*(?:%|percent|per cent|بالمئة|بالمية|في المئة)/gi)].map((m) => Number(m[1]));
 /** A sentence that refuses or negates may repeat a wrong figure ("I cannot sell it at AED 99"); it states nothing. */
-const refusing = /\b(?:cannot|can't|can not|unable|won't|will not|not able|never|refuse)\b|ما أقدر|لا أقدر|لا يمكن|ما يمكن|لا أستطيع|ما أستطيع|ما نقدر|لا نقدر|ما أگدر/i;
-const dropNegated = (s: string) => s.replace(/\b(?:not|no longer|isn't|is not|hasn't|has not|not yet)\s+(?:yet\s+)?\w+/gi, ' ').replace(/(?:غير|مو|مب|ليست|ليس|لم|ما|بعده ما)\s+\S+/g, ' ');
+export const refusing = /\b(?:cannot|can't|can not|unable|won't|will not|not able|never|refuse)\b|ما أقدر|لا أقدر|لا يمكن|ما يمكن|لا أستطيع|ما أستطيع|ما نقدر|لا نقدر|ما أگدر/i;
+export const dropNegated = (s: string) => s.replace(/\b(?:not|no longer|isn't|is not|hasn't|has not|not yet)\s+(?:yet\s+)?\w+/gi, ' ').replace(/(?:غير|مو|مب|ليست|ليس|لم|ما|بعده ما)\s+\S+/g, ' ');
 const placedWords = /\b(?:not (?:yet )?shipped|has not shipped|hasn't shipped|is placed|still placed|being prepared)\b|لم يشحن|ما انشحن|قيد التجهيز|بعده ما انشحن/i;
 const statusWords: Record<'shipped' | 'delivered' | 'cancelled', RegExp> = {
   shipped: /\b(?:shipped|on the way|in transit|out for delivery)\b|انشحن|تم شحن|في الطريق|مشحون/i,

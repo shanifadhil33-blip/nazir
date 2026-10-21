@@ -2,9 +2,10 @@ import government from './government/pack.json';
 import realEstate from './real-estate/pack.json';
 import ecommerce from './ecommerce/pack.json';
 import clinics from './clinics/pack.json';
+import schools from './schools/pack.json';
 import { packSchema, type FocusPack, type PackId } from './schema';
 /** Parsed once at import. A malformed pack fails the build, not a request. */
-export const focusPacks: readonly FocusPack[] = Object.freeze([government, realEstate, ecommerce, clinics].map((p) => packSchema.parse(p)));
+export const focusPacks: readonly FocusPack[] = Object.freeze([government, realEstate, ecommerce, clinics, schools].map((p) => packSchema.parse(p)));
 export const livePacks = focusPacks.filter((p) => p.status === 'live');
 export const livePackIds = livePacks.map((p) => p.id) as PackId[];
 export function packById(id: string) { return focusPacks.find((p) => p.id === id) ?? null; }

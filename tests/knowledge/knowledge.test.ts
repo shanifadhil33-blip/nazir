@@ -32,7 +32,7 @@ it('chunks on paragraph ends, keeps table headers and caps size', () => {
 it('lets only the owner add, stores the writer name, and finds English and Arabic with free full text search', async () => {
   await expect(addKnowledge(db.driver, reviewer, { pack: 'government', kind: 'price_table', language: 'en', title: 'Fees', body: fees })).rejects.toBeInstanceOf(Forbidden);
   await expect(addKnowledge(db.driver, viewer, { pack: 'government', kind: 'price_table', language: 'en', title: 'Fees', body: fees })).rejects.toBeInstanceOf(Forbidden);
-  await expect(addKnowledge(db.driver, owner, { pack: 'clinics', kind: 'faq', language: 'en', title: 'Draft', body: 'x' })).rejects.toMatchObject({ code: 'validation' });
+  await expect(addKnowledge(db.driver, owner, { pack: 'schools', kind: 'faq', language: 'en', title: 'Draft', body: 'x' })).rejects.toMatchObject({ code: 'validation' });
   const added = await addKnowledge(db.driver, owner, { pack: 'government', kind: 'price_table', language: 'en', title: 'Synthetic fee table', body: fees });
   expect(added.chunks).toBe(1);
   await addKnowledge(db.driver, owner, { pack: 'government', kind: 'policy', language: 'ar', title: 'سياسة التجديد', body: arabic, agent_id: agentId });
@@ -75,7 +75,7 @@ it('answers in chat with cited knowledge, never from the model', async () => {
 it('saves the focus pack in settings, refuses a draft pack, and owners can remove documents', async () => {
   const base = { name: 'Amal Desk', instructions: '', language: 'en', avatar: 'preset:2' };
   expect((await saveAgentSettings(db.driver, owner, base)).focus_pack).toBe('government');
-  await expect(saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'clinics' })).rejects.toThrow();
+  await expect(saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'schools' })).rejects.toThrow();
   expect((await readAgentSettings(db.driver, viewer)).focus_pack).toBe('government');
   const doc = (await listKnowledge(db.driver, owner)).docs[0]!;
   await expect(removeKnowledge(db.driver, reviewer, doc.id)).rejects.toBeInstanceOf(Forbidden);

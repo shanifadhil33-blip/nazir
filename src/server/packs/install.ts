@@ -7,8 +7,9 @@ import { loadInlineCases } from './load';
 import { runtimeForPack } from './runtime';
 import { shopToolManifest } from '../../sandbox/shop/tools';
 import { estateToolManifest } from '../../sandbox/real-estate/tools';
+import { clinicToolManifest } from '../../sandbox/clinic/tools';
 
-const manifests: Record<string, unknown> = { real_estate: estateToolManifest, ecommerce: shopToolManifest };
+const manifests: Record<string, unknown> = { real_estate: estateToolManifest, ecommerce: shopToolManifest, clinics: clinicToolManifest };
 /**
  * Adds a live pack to the workspace: its fictional agent with the baseline and planted versions, and its 48 cases as drafts.
  * Stable keys carry the pack prefix so they never meet a Government key. Matching content is reused, never updated.
