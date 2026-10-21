@@ -6,6 +6,7 @@ import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, NotFound, errorLines, type ErrorCode } from '../http/errors';
 import { listFindings } from '../findings/read';
+import { packById } from '../packs/catalog';
 import { approvePlan } from '../memory/planner';
 import { proposeBoundedPlan, startBoundedRun } from '../planner/bound';
 import { compareRuns, readComparisons } from '../compare/compare';
@@ -100,8 +101,16 @@ function sentencesOf(value: unknown): Bilingual | undefined {
   return en && ar ? { en, ar } : undefined;
 }
 
+/** The test runner drives the government sandbox only; another focus pack refuses runs instead of testing the wrong cases. */
+async function packRuns(driver: TransactionDriver, memberId: string) {
+  const pack = await withMember(driver, memberId, async (sql) => {
+    try { return (await sql.query<{ p: string | null }>("SELECT nazir.read_agent_settings()->>'focus_pack' AS p")).rows[0]?.p ?? 'government'; } catch { return 'government'; }
+  }).catch(() => 'government');
+  return (packById(pack ?? 'government')?.runner ?? 'government_sandbox') === 'government_sandbox';
+}
 async function propose(driver: TransactionDriver, memberId: string, args: unknown, origin: Origin): Promise<AgentResult> {
   await allow(driver, memberId, 'plan.propose');
+  if (!await packRuns(driver, memberId)) return refused('propose_plan', actionErrors.pack_not_running);
   const record = args && typeof args === 'object' ? { ...(args as Record<string, unknown>) } : {};
   if (typeof record.agent_version_id !== 'string') {
     const found = await versions(driver, memberId);
@@ -117,6 +126,7 @@ async function propose(driver: TransactionDriver, memberId: string, args: unknow
 }
 async function startRun(driver: TransactionDriver, memberId: string, args: unknown, origin: Origin): Promise<AgentResult> {
   await allow(driver, memberId, 'plan.approve');
+  if (!await packRuns(driver, memberId)) return refused('start_run', actionErrors.pack_not_running);
   const fromMessage = origin.message ? exactPlan(origin.message) : null;
   const fromMcp = origin.message ? null : mcpPlan(args);
   const approval = fromMessage ?? (fromMcp ? { id: fromMcp.plan_id, reason: fromMcp.reason, evidence_opened: true as const } : null);

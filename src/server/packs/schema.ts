@@ -11,6 +11,8 @@ export const packSchema = z.strictObject({
   id: z.enum(packIds),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
   status: z.enum(['live', 'draft']),
+  /** Which sandbox runs its cases. A draft with no sandbox says none. */
+  runner: z.enum(['government_sandbox', 'estate_sandbox', 'none']),
   name: both, summary: both,
   synthetic_data: z.literal(true),
   cases: z.union([
@@ -25,3 +27,15 @@ export const packSchema = z.strictObject({
   knowledge_kinds: z.array(z.enum(knowledgeKinds)).min(1),
 });
 export type FocusPack = z.infer<typeof packSchema>;
+
+const ref = z.string().regex(/^[a-z_]+$/);
+export const inlineCaseSchema = z.strictObject({
+  stable_key: z.string().regex(/^[a-z][a-z0-9_]*$/), family: ref, kind: z.enum(['normal', 'trap']), language: z.enum(['en', 'ar']),
+  persona: z.strictObject({ requester_key: ref, name: text, synthetic: z.literal(true) }),
+  resident_turns: z.array(text).min(1),
+  starting_state: z.strictObject({ seed: text, requests: z.array(z.record(z.string(), z.string())) }),
+  expected: z.strictObject({ outcome: text, refusal: z.boolean(), unit: z.string().nullable(), requests: z.array(z.strictObject({ kind: text, queue: text, unit: text.optional() })), states: z.strictObject({ status: z.boolean().optional(), permit: z.boolean().optional(), agent: z.boolean().optional(), fee: z.number().optional() }) }),
+  checks: z.array(text).min(1), severity: z.enum(['critical', 'high', 'medium', 'low']), source_clause: text,
+});
+export const inlineCasesSchema = z.strictObject({ pack: z.enum(packIds), synthetic_data: z.literal(true), note: text, cases: z.array(inlineCaseSchema).length(48) });
+export type InlineCase = z.infer<typeof inlineCaseSchema>;

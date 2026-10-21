@@ -32,7 +32,7 @@ it('chunks on paragraph ends, keeps table headers and caps size', () => {
 it('lets only the owner add, stores the writer name, and finds English and Arabic with free full text search', async () => {
   await expect(addKnowledge(db.driver, reviewer, { pack: 'government', kind: 'price_table', language: 'en', title: 'Fees', body: fees })).rejects.toBeInstanceOf(Forbidden);
   await expect(addKnowledge(db.driver, viewer, { pack: 'government', kind: 'price_table', language: 'en', title: 'Fees', body: fees })).rejects.toBeInstanceOf(Forbidden);
-  await expect(addKnowledge(db.driver, owner, { pack: 'real_estate', kind: 'faq', language: 'en', title: 'Draft', body: 'x' })).rejects.toMatchObject({ code: 'validation' });
+  await expect(addKnowledge(db.driver, owner, { pack: 'ecommerce', kind: 'faq', language: 'en', title: 'Draft', body: 'x' })).rejects.toMatchObject({ code: 'validation' });
   const added = await addKnowledge(db.driver, owner, { pack: 'government', kind: 'price_table', language: 'en', title: 'Synthetic fee table', body: fees });
   expect(added.chunks).toBe(1);
   await addKnowledge(db.driver, owner, { pack: 'government', kind: 'policy', language: 'ar', title: 'سياسة التجديد', body: arabic, agent_id: agentId });
@@ -75,7 +75,7 @@ it('answers in chat with cited knowledge, never from the model', async () => {
 it('saves the focus pack in settings, refuses a draft pack, and owners can remove documents', async () => {
   const base = { name: 'Amal Desk', instructions: '', language: 'en', avatar: 'preset:2' };
   expect((await saveAgentSettings(db.driver, owner, base)).focus_pack).toBe('government');
-  await expect(saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'real_estate' })).rejects.toThrow();
+  await expect(saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'ecommerce' })).rejects.toThrow();
   expect((await readAgentSettings(db.driver, viewer)).focus_pack).toBe('government');
   const doc = (await listKnowledge(db.driver, owner)).docs[0]!;
   await expect(removeKnowledge(db.driver, reviewer, doc.id)).rejects.toBeInstanceOf(Forbidden);
@@ -83,4 +83,16 @@ it('saves the focus pack in settings, refuses a draft pack, and owners can remov
   expect(await removeKnowledge(db.driver, owner, doc.id)).toEqual({ removed: true });
   const left = await db.owner.query<{ n: number }>('SELECT count(*)::int AS n FROM nazir.knowledge_chunks WHERE doc_id=$1', [doc.id]);
   expect(left.rows[0]!.n).toBe(0);
+});
+
+it('refuses test runs while the chosen pack has no runner wired, then runs again on Government', async () => {
+  const base = { name: 'Amal Desk', instructions: '', language: 'en', avatar: 'preset:2' };
+  expect((await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'real_estate' })).focus_pack).toBe('real_estate');
+  const refused = await agentChat(db.driver, owner, { message: 'propose a plan' }, null);
+  expect(refused.done).toBe(false);
+  expect(refused.reply.en).toContain('Test runs for this focus pack are not open yet');
+  expect(refused.reply.ar).toContain('غير متاحة بعد');
+  await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'government' });
+  const again = await agentChat(db.driver, owner, { message: 'propose a plan' }, null);
+  expect(again.reply.en).not.toContain('not open yet');
 });

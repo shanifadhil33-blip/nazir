@@ -6,6 +6,7 @@ export const errorLines = {
   token_invalid: { en: 'The token is no longer valid.', ar: 'لم يعد الرمز صالحا.' },
   forbidden: { en: 'Your role cannot do this.', ar: 'دورك لا يسمح بهذا.' },
   not_demo: { en: 'This workspace is not a demo.', ar: 'مساحة العمل هذه ليست للعرض.' },
+  pack_not_running: { en: 'Test runs for this focus pack are not open yet. Its cases and record checks are ready; switch the focus pack to Government to run tests now.', ar: 'تشغيلات الاختبار لهذه الحزمة غير متاحة بعد. حالاتها وفحوص سجلاتها جاهزة؛ اختر حزمة الخدمات الحكومية لتشغيل الاختبارات الآن.' },
   too_many: { en: 'You have reached the limit for now.', ar: 'بلغت الحد المسموح حاليا.' },
   workspace_limit: { en: 'You can belong to at most 10 workspaces. Remove one to add another.', ar: 'يمكنك الانتماء إلى عشر مساحات عمل على الأكثر. أزل واحدة لتضيف غيرها.' },
   not_found: { en: 'The record was not found.', ar: 'لم يعثر على السجل.' },

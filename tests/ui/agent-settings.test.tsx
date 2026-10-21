@@ -68,3 +68,10 @@ it('shows the focus pack picker and the knowledge base card in EN and AR, with m
   expect(Object.keys(en.settings).sort()).toEqual(Object.keys(ar.settings).sort());
   expect(Object.keys(en.settings.kbKinds)).toEqual(Object.keys(ar.settings.kbKinds));
 });
+
+it('counts knowledge parts with the right plural in EN and AR', async () => {
+  const { partsLabel } = await import('../../src/components/ocean/knowledge');
+  const e = messagesFor('en').settings; const a = messagesFor('ar').settings;
+  expect([1, 2, 5].map((n) => partsLabel(e, n))).toEqual(['1 part', '2 parts', '5 parts']);
+  expect([1, 2, 5, 12].map((n) => partsLabel(a, n))).toEqual(['جزء واحد', 'جزآن', '5 أجزاء', '12 جزءا']);
+});

@@ -67,6 +67,7 @@ export const actionErrors = {
   widens_permissions: actionError('widens_permissions'),
   validation: actionError('validation'),
   no_tests: actionError('no_tests'),
+  pack_not_running: actionError('pack_not_running'),
 } satisfies Record<string, ActionError>;
 
 export const causeCopy: Record<string, Bilingual> = {
