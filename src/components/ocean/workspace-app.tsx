@@ -8,7 +8,7 @@ import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
 import type { Measured } from './screen';
 import { LiveTestPanel } from './live-test';
-import { AgentSettingsPanel, defaultSettings, type SettingsView } from './agent-settings';
+import { AgentSettingsPanel, defaultSettings, type PackView, type SettingsView } from './agent-settings';
 
 type Bundle = { latest: ReportBody; previous: ReportBody | null; agentName: string; sample: boolean } | 'sample';
 
@@ -49,6 +49,7 @@ export function WorkspaceApp({
   const [measured, setMeasured] = useState<Measured | null>(null);
   const [liveOpen, setLiveOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [packs, setPacks] = useState<PackView[] | null>(null);
   const thread = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const langRef = useRef(lang);
@@ -83,6 +84,7 @@ export function WorkspaceApp({
       setUserName(nextName);
       const headers = { 'accept-language': langRef.current };
       const settingsResponse = await fetch(`/api/workspaces/${workspaceId}/settings`, { headers }).catch(() => null);
+      void fetch(`/api/workspaces/${workspaceId}/packs`, { headers }).then((r) => r.ok ? r.json() : null).then((p) => { if (!cancel && p && Array.isArray(p.packs)) setPacks(p.packs as PackView[]); }).catch(() => undefined);
       void fetch(`/api/workspaces/${workspaceId}/results`, { headers }).then((r) => r.ok ? r.json() : null).then((m) => { if (!cancel && m && Array.isArray(m.metrics)) setMeasured(m as Measured); }).catch(() => undefined);
       const settingsBody = settingsResponse?.ok ? await settingsResponse.json().catch(() => null) as SettingsView | null : null;
       if (cancel) return;
@@ -252,7 +254,7 @@ export function WorkspaceApp({
     onReplay={() => void send(lang === 'ar' ? 'اقترح خطة' : 'propose a plan', copy.ui.replay)}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
     onRecheck={recheck} measured={preview ? null : measured} onLiveTest={() => setLiveOpen(true)} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
-  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}{liveOpen ? <LiveTestPanel key={lang} copy={copy} lang={lang} workspaceId={workspaceId} sample={preview} reportHref={`/w/${workspaceId}/report`} onClose={() => setLiveOpen(false)} /> : null}</>;
+  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} workspaceId={preview ? undefined : workspaceId} packs={packs ?? undefined} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}{liveOpen ? <LiveTestPanel key={lang} copy={copy} lang={lang} workspaceId={workspaceId} sample={preview} reportHref={`/w/${workspaceId}/report`} onClose={() => setLiveOpen(false)} /> : null}</>;
 }
 
 function deriveModel(bundle: Bundle | null, copy: Messages, lang: Lang, preview: boolean): ScreenModel {

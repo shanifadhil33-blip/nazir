@@ -10,6 +10,7 @@ import { AiChainExhausted, type CallMeta } from '../ai/chain';
 import { networkChatModel, type RunnerModel } from './network-model';
 import type { RunnerScenario } from './demo-scenarios';
 import { buildJudgeInput } from '../judge/rubric';
+import { searchKnowledgeForWorker } from '../knowledge/knowledge';
 import { judgeNotes, type FrozenLesson } from '../memory/frozen';
 import { unavailable, type SemanticResult } from '../judge/judge';
 import type { Family } from '../ai/providers';
@@ -125,7 +126,10 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
               verdict=await bounded(Promise.resolve(evaluate(evaluationInput)));
               if(!data.manifest.recordsOnly) {
                 judging=true;
-                const input=buildJudgeInput({ ...evaluationInput,notes:judgeNotes(data.manifest.lessons,String((data.scenario as Record<string,unknown>).family ?? '')) }),seed=`${cid}:${attempt}`;
+                // Cited owner knowledge for the judge; any failure means none, never a failed conversation.
+                const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
+                const knowledge=await searchKnowledgeForWorker(driver,wid,data.scenario.persona.resident_turns.join(' '),agentId);
+                const input=buildJudgeInput({ ...evaluationInput,notes:judgeNotes(data.manifest.lessons,String((data.scenario as Record<string,unknown>).family ?? '')),knowledge }),seed=`${cid}:${attempt}`;
                 const prior=(await work(async (db) => (await db.query<{model_calls:{family?:Family}[]}>('SELECT model_calls FROM nazir.conversations WHERE id=$1',[cid])).rows[0]!.model_calls));
                 const agentFamilies=[...new Set([...prior.map((m) => m.family ?? 'unknown'),...metas.map((m) => m.family)])];
                 try {
