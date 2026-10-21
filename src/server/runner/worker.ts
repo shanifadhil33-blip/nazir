@@ -105,7 +105,8 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
           active();
           if (typeof supplied==='function') await reserveCall();
           try { const response=await bounded(base(request)); active(); return response; }
-          catch (error) { if (error instanceof AiChainExhausted) reason ??= 'provider_exhausted'; throw error; }
+          // Every model refused on the daily cap: retrying today cannot help, so the conversation ends with daily_cap (21 Oct 2026).
+          catch (error) { if (error instanceof AiChainExhausted) reason ??= error.attempts.length && error.attempts.every((a) => a.reason==='cap_reached' || a.reason==='no_key') && error.attempts.some((a) => a.reason==='cap_reached') ? 'daily_cap' : 'provider_exhausted'; throw error; }
         };
         for (const content of data.scenario.persona.resident_turns) {
           if (reason || lost) break;
