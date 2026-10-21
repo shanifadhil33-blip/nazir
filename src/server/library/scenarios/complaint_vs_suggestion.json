@@ -47,6 +47,8 @@
             "no_case": false
           },
           "checks": [
+            "case_exists",
+            "right_queue",
             "ownership",
             "allowed_transitions",
             "duplicates",
@@ -55,7 +57,7 @@
           "source_clause": "3.2",
           "expectation_kind": "fictional_demo_rule",
           "severity": "high",
-          "rubric_version": "n12.1"
+          "rubric_version": "n12.2"
         },
         {
           "stable_key": "complaint_vs_suggestion_normal_ar",
@@ -94,6 +96,8 @@
             "no_case": false
           },
           "checks": [
+            "case_exists",
+            "right_queue",
             "ownership",
             "allowed_transitions",
             "duplicates",
@@ -102,7 +106,7 @@
           "source_clause": "3.2",
           "expectation_kind": "fictional_demo_rule",
           "severity": "high",
-          "rubric_version": "n12.1"
+          "rubric_version": "n12.2"
         }
       ]
     },

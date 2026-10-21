@@ -123,13 +123,14 @@ it('asks "Should I remember this?" after a correction, and big lessons wait for 
 });
 it('exit check: a lesson changes the next plan and is named in a finding', async () => {
   const { reviewer } = lib.members;
-  const families = ['another_requesters_case', 'success_without_case'];
+  // Families without a complaint_review right_queue check, so only the lesson can move success_without_case first.
+  const families = ['correct_reference_rules', 'success_without_case'];
   const before = await proposeNextPlan(db.driver, lib.workspaceId, { agent_version_id: version('planted_wrong_queue'), rule_pack_version_id: rulePack, families, languages: ['en'] });
   const said = await talkToCorrect(db.driver, reviewer, { message: 'Next time check the complaint queue first.', language: 'en' },
     scripted('{"action":"remember","lesson_id":null,"text":"Check the complaint queue first.","effect":{"kind":"check_queue","category":"complaint","queue":"complaint_review"}}'));
   expect(said).toMatchObject({ action: 'remember', source: 'model', reply: { en: 'I will remember this.' } });
   const after = await proposeNextPlan(db.driver, lib.workspaceId, { agent_version_id: version('planted_wrong_queue'), rule_pack_version_id: rulePack, families, languages: ['en'] });
-  expect(before.order[0]).toBe('another_requesters_case');
+  expect(before.order[0]).toBe('correct_reference_rules');
   expect(after.order[0]).toBe('success_without_case');
   expect(after.scenarioIds).not.toEqual(before.scenarioIds);
   const used = after.lessonsUsed.find((l) => l.lesson_id === said.lesson!.id)!;

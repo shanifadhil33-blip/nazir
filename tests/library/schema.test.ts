@@ -33,7 +33,7 @@ it('has 12 families, 24 meanings, 48 scenarios, eight development and four hidde
 });
 it('pins the canonical whole library digest and repeats hashes across loads', async () => {
   expect(await loadLibrary()).toEqual(library);
-  expect(hash(library)).toBe('d360bd58e9e4962b3c1e6d2e03af9962f6edf06f45dff34800c97b24fd55546d');
+  expect(hash(library)).toBe('ddfa228788bb53fdeda3fbcf5ec97c9c722b4b02b405f05525133b3abbf9bee4');
 });
 it('retains the exact two demo complaint inputs and hashes', () => {
   const normal = library.find((f) => f.family === 'unresolved_prior_request')!.meanings[0]!;
