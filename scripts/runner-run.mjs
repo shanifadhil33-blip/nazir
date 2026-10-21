@@ -19,6 +19,8 @@ export async function main() {
   const maxConversations=cap('MAX_CONVERSATIONS',2,48),maxCalls=cap('MAX_CALLS',24,300);
   const version=process.env.VERSION??'baseline',languages=(process.env.LANGUAGES??'en,ar').split(',');
   if (!languages.length || languages.some((l) => !['en','ar'].includes(l)) || new Set(languages).size!==languages.length) throw new Error('Invalid languages');
+  const pack=process.env.PACK??'government';
+  if (!['government','real_estate','ecommerce','clinics','schools'].includes(pack)) throw new Error('Invalid pack');
   const app=new Pool({ connectionString:process.env.DATABASE_URL }),inspect=new Pool({ connectionString:process.env.INSPECT_DATABASE_URL });
   const driver=poolDriver(app),inspectionDriver=poolDriver(inspect);
   let calls=0;
@@ -30,7 +32,7 @@ export async function main() {
       const plan=(await db.query("SELECT id FROM nazir.plans WHERE status='approved' AND ($1::uuid IS NULL OR id=$1) ORDER BY created_at,id LIMIT 1",[process.env.PLAN_ID??null])).rows[0];
       const agent=(await db.query("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1 AND ($2::uuid IS NULL OR id=$2) ORDER BY created_at,id LIMIT 1",[version,process.env.AGENT_VERSION_ID??null])).rows[0];
       const keys=process.env.RUN_SCENARIOS?.split(',').map((s)=>s.trim()).filter(Boolean);
-      const rows=(await db.query("SELECT id,stable_key,language,(library_hash IS NOT NULL) AS library FROM nazir.scenarios WHERE status='approved' AND language=ANY($1::text[]) AND ($2::text[] IS NULL OR stable_key=ANY($2::text[])) ORDER BY stable_key,language,id",[languages,keys??null])).rows;
+      const rows=(await db.query("SELECT id,stable_key,language,(library_hash IS NOT NULL) AS library FROM nazir.scenarios WHERE status='approved' AND language=ANY($1::text[]) AND ($2::text[] IS NULL OR stable_key=ANY($2::text[])) AND nazir.scenario_pack(starting_state)=$3 ORDER BY stable_key,language,id",[languages,keys??null,pack])).rows;
       const chosen=chooseScenarios(rows);
       for (const note of chosen.notes) console.log(JSON.stringify({ chosen_scenario: note.stable_key, language: note.language, id: note.id, skipped: note.skipped }));
       if (!plan || !agent || !chosen.ids.length || (keys && chosen.ids.length!==keys.length)) throw new Error('Fixture required');
