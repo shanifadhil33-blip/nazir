@@ -28,6 +28,10 @@ export function KnowledgeCard({ copy, lang, workspaceId, pack, sample }: { copy:
   const [body, setBody] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'adding' | 'added' | 'failed' | 'file'>('idle');
+  const [pdf, setPdf] = useState<File | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfResult, setPdfResult] = useState<{ chars: number; chunks: number } | null>(null);
+  const [pdfError, setPdfError] = useState('');
   const [question, setQuestion] = useState('');
   const [hits, setHits] = useState<Hit[] | null>(null);
   const headers = { 'accept-language': lang };
@@ -71,6 +75,24 @@ export function KnowledgeCard({ copy, lang, workspaceId, pack, sample }: { copy:
     if (response?.ok) setDocs((list) => list.filter((d) => d.id !== id));
   }
 
+  async function uploadPdf() {
+    if (!workspaceId || sample || !pdf || language === 'mixed') return;
+    setPdfResult(null); setPdfError('');
+    if (pdf.type !== 'application/pdf' || pdf.size > 4 * 1024 * 1024) { setPdfError(t.kbPdfBad); return; }
+    const form = new FormData();
+    form.set('file', pdf); form.set('pack', pack); form.set('kind', kind);
+    form.set('language', language); form.set('title', title.trim());
+    if (scope) form.set('agent_id', scope);
+    setPdfBusy(true);
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/knowledge/pdf`, { method: 'POST', headers, body: form });
+      const value = await response.json() as { chars: number; chunks: number; error?: { message?: string } };
+      if (response.ok) { setPdfResult({ chars: value.chars, chunks: value.chunks }); refresh(); }
+      else setPdfError(value.error?.message ?? t.kbFailed);
+    } catch { setPdfError(t.kbFailed); }
+    finally { setPdfBusy(false); }
+  }
+
   async function search(event: React.FormEvent) {
     event.preventDefault();
     if (!workspaceId || sample || !question.trim()) return;
@@ -105,6 +127,15 @@ export function KnowledgeCard({ copy, lang, workspaceId, pack, sample }: { copy:
         <p className="nz-hint" role="status">{state === 'added' ? t.kbAdded : state === 'failed' ? t.kbFailed : ''}</p>
         <button type="submit" className="nz-btn nz-btn-rust" data-action="add-knowledge" disabled={state === 'adding' || !title.trim() || !body.trim()}>{state === 'adding' ? t.kbAdding : t.kbAdd}</button>
       </div>
+      <fieldset disabled={pdfBusy}>
+        <legend>{t.kbPdf}</legend>
+        <label className="nz-upload">{t.kbPdfFile}<input type="file" accept="application/pdf" onChange={(e) => { setPdf(e.target.files?.[0] ?? null); setPdfError(''); setPdfResult(null); }} /></label>
+        <p className="nz-hint">{t.kbPdfHint}</p>
+        <div className="nz-settings-foot">
+          <p className="nz-hint" role="status">{pdfError || (pdfResult ? fill(t.kbPdfAdded, { chars: String(pdfResult.chars), parts: partsLabel(t, pdfResult.chunks) }) : '')}</p>
+          <button type="button" className="nz-btn nz-btn-ghost" data-action="upload-pdf" disabled={pdfBusy || !pdf || !title.trim() || language === 'mixed'} onClick={() => void uploadPdf()}>{pdfBusy ? t.kbPdfUploading : t.kbPdf}</button>
+        </div>
+      </fieldset>
     </form> : null}
     {!sample ? <form className="nz-kb-search" onSubmit={search} data-form="search-knowledge">
       <input aria-label={t.kbSearch} placeholder={t.kbSearch} value={question} maxLength={300} dir="auto" onChange={(e) => setQuestion(e.target.value)} />
