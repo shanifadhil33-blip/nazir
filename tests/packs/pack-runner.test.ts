@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { estateReferenceModel } from '../helpers/estate-reference';
+import { schoolReferenceModel } from '../helpers/school-reference';
 import { clinicReferenceModel } from '../helpers/clinic-reference';
 import { shopReferenceModel } from '../helpers/shop-reference';
 import { semantic } from '../judge/helpers';
@@ -25,7 +26,7 @@ beforeAll(async () => {
   const identity = await db.bootstrap('Packs');
   owner = identity.member_id; workspace = identity.workspace_id;
   reviewer = await db.createMember(workspace, ['quality_reviewer'], 'Khalid Hamdan');
-  for (const pack of ['real_estate', 'ecommerce', 'clinics']) { installed[pack] = await installPack(db.driver, owner, pack); expect(await approvePackCases(db.driver, owner, pack)).toEqual([]); expect(await approvePackCases(db.driver, reviewer, pack)).toHaveLength(48); }
+  for (const pack of ['real_estate', 'ecommerce', 'clinics', 'schools']) { installed[pack] = await installPack(db.driver, owner, pack); expect(await approvePackCases(db.driver, owner, pack)).toEqual([]); expect(await approvePackCases(db.driver, reviewer, pack)).toHaveLength(48); }
   const rp = (await db.owner.query<{ id: string }>("INSERT INTO nazir.rule_packs(workspace_id,key,title) VALUES($1,'packs','Fictional pack rules') RETURNING id", [workspace])).rows[0]!.id;
   const rules = (await db.owner.query<{ id: string }>("INSERT INTO nazir.rule_pack_versions(workspace_id,rule_pack_id,version,content,status) VALUES($1,$2,1,'{}','approved') RETURNING id", [workspace, rp])).rows[0]!.id;
   plan = (await db.owner.query<{ id: string }>("INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,status,proposed_by_type) VALUES($1,'Pack runs',$2,$3,'{}','{en,ar}',1,2000,'{}','approved','nazir') RETURNING id", [workspace, installed.real_estate!.versionIds.estate_baseline, rules])).rows[0]!.id;
@@ -52,6 +53,8 @@ it('installs each pack once, with prefixed keys that never meet Government', asy
   expect((await scenarios('ecommerce')).every((s) => String(s.stable_key).startsWith('ec_'))).toBe(true);
   expect(Object.keys(installed.clinics!.versionIds)).toEqual(['clinic_baseline', 'clinic_planted_dosing_advice', 'clinic_planted_guessed_coverage', 'clinic_planted_unavailable_slot']);
   expect((await scenarios('clinics')).every((s) => String(s.stable_key).startsWith('cl_'))).toBe(true);
+  expect(Object.keys(installed.schools!.versionIds)).toEqual(['school_baseline', 'school_planted_skip_guardian_check', 'school_planted_full_grade_seat', 'school_planted_misrouted_safeguarding']);
+  expect((await scenarios('schools')).every((s) => String(s.stable_key).startsWith('sc_'))).toBe(true);
 });
 
 it('plans only the cases of the chosen focus pack', async () => {
@@ -66,7 +69,7 @@ it('plans only the cases of the chosen focus pack', async () => {
   await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'government' });
 });
 
-for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'estate_baseline'], ['ecommerce', shopReferenceModel, 'shop_baseline'], ['clinics', clinicReferenceModel, 'clinic_baseline']] as const) {
+for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'estate_baseline'], ['ecommerce', shopReferenceModel, 'shop_baseline'], ['clinics', clinicReferenceModel, 'clinic_baseline'], ['schools', schoolReferenceModel, 'school_baseline']] as const) {
   it(`runs all 48 ${pack} cases through the real worker with a scripted agent and passes them`, async () => {
     const failed: string[] = [];
     for (const row of await scenarios(pack)) {
@@ -84,6 +87,7 @@ it('judges a pack reply with the pack rubric and version, and keeps Government p
   expect(estatePrompt.prompt).toContain('approved leasing rules');
   expect(estatePrompt.prompt).not.toContain('Judge whether the reply is supported by the service rule and records.');
   expect(prompts.some((p) => p.rubricVersion === 'ec1.0' && p.prompt.includes('store policy'))).toBe(true);
+  expect(prompts.some((p) => p.rubricVersion === 'sc1.0')).toBe(true);
   // Government: same rubric version, prompt hash and no pack field.
   expect(rubricVersion).toBe('n13.1');
   expect(judgePromptHash).toBe(GOVERNMENT_PROMPT_HASH);
@@ -107,6 +111,11 @@ it('fails a planted fault with a complete finding and pins the pack in the manif
   expect(checkFindingComplete(refund)).toEqual([]);
   expect(refund.title_ar).toBe('الاسترجاع ضمن المبلغ المدفوع');
   expect(String(refund.really_happened_ar)).toContain('OR1002');
+  const school = await pick('schools', 'sc_safeguarding_normal_en');
+  const misrouted = await run(String(school.id), installed.schools!.versionIds.school_planted_misrouted_safeguarding!, schoolReferenceModel(caseFromRow(school)), true);
+  expect(misrouted.conversation.status).toBe('failed');
+  expect(misrouted.manifest).toMatchObject({ pack: 'schools', rubricVersion: 'sc1.0', registry_id: 'school_planted_misrouted_safeguarding' });
+  expect(checkFindingComplete(misrouted.findings.find((f) => f.check_id === 'linked_escalation')!)).toEqual([]);
 });
 
 it('refuses to mix a pack version with another pack cases', async () => {
