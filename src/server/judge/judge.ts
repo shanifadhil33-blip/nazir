@@ -17,12 +17,13 @@ export const issueLabels = {
 } as const;
 export type Issue = keyof typeof issueLabels;
 // Some free judges write issue null (Requesty) or leave it out (OVH) for a supported reply; that means none, but only when supported.
-const answerSchema = z.strictObject({ verdict:z.enum(['supported','contradicted','uncertain']),issue:z.preprocess((v) => v===null ? 'none' : v,z.enum(Object.keys(issueLabels) as [Issue,...Issue[]])).optional(),evidence_span:z.string().min(3).max(400),reason:z.string().trim().min(1).max(299) });
+const answerSchema = z.strictObject({ verdict:z.enum(['supported','contradicted','uncertain']),issue:z.preprocess((v) => v===null ? 'none' : v,z.enum(Object.keys(issueLabels) as [Issue,...Issue[]])).optional(),evidence_span:z.string().min(3).max(400),reason:z.preprocess((v) => typeof v==='string' ? v.trim().slice(0,299) : v,z.string().min(1).max(299)) });
 export function parseJson(text:string) {
   const fenced = /^```json\s*\n?([\s\S]*?)\n?```$/.exec(text.trim());
   return JSON.parse(fenced ? fenced[1]! : text);
 }
-export const normalizeSpace = (s:string) => s.replace(/\s+/gu,' ').trim();
+// Judges often drop the reply's bold or code marks when they quote it (live rehearsal, 21 Oct 2026).
+export const normalizeSpace = (s:string) => s.replace(/\*\*|__|`/g,'').replace(/\s+/gu,' ').trim();
 // The reply reaches the judge as a JSON string, so judges often copy the surrounding quotes or its escapes into the span.
 export function cleanSpan(span:string) {
   let s=span.trim();
@@ -32,13 +33,16 @@ export function cleanSpan(span:string) {
 }
 export function validSpan(span:string,reply:string) { const s=normalizeSpace(cleanSpan(span)); return s.length>=3 && s.length<=400 && normalizeSpace(reply).includes(s); }
 export function quoteFromReply(span:string,reply:string) {
-  const pattern=normalizeSpace(cleanSpan(span)).split(' ').map((word)=>word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s+');
+  const marks='(?:\\*\\*|__|`)*';
+  const pattern=normalizeSpace(cleanSpan(span)).split(' ').map((word)=>[...word].map((ch)=>ch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join(marks)).join(marks+'\\s+'+marks);
   return new RegExp(pattern,'u').exec(reply)?.[0] ?? span;
 }
 export function parseJudgeAnswer(text:string,reply:string) {
   const parsed=answerSchema.parse(parseJson(text));
   if (parsed.issue===undefined && parsed.verdict!=='supported') throw new Error('Invalid judge answer');
   const value={ ...parsed,issue:parsed.issue ?? 'none' as Issue };
+  // gpt-oss often shortens its quote with an ellipsis and adds record text after it (live rehearsal, 21 Oct 2026); keep the first fragment that is a real quote.
+  if (!validSpan(value.evidence_span,reply)) { const part=value.evidence_span.split(/\s*(?:\.\.\.|\u2026)\s*/u).find((f) => normalizeSpace(cleanSpan(f)).length>=12 && validSpan(f,reply)); if (part) value.evidence_span=cleanSpan(part); }
   if (!validSpan(value.evidence_span,reply) || (value.verdict==='supported' && value.issue!=='none') || (value.verdict==='contradicted' && value.issue==='none') ) throw new Error('Invalid judge answer');
   return value;
 }
