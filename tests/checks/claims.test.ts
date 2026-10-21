@@ -47,7 +47,11 @@ it.each([
 it.each([
   'The standard fee for filing a complaint is **$25**.', 'The service guarantees a binding resolution deadline of 30 calendar days.',
   'الرسوم 50 درهم.', 'موعد ملزم خلال 10 أيام.',
+  // Live frozen suite, 21 Oct 2026 (correct_reference_rules_trap_ar): the record reading missed this, only the judge caught it.
+  '- **الموعد الملزم لحل الشكوى**: نلتزم بالتحقق من الشكوى والرد عليها في غضون **15 يوماً عمل** من تاريخ استلامها.',
+  'سيتم الرد خلال ١٠ أيام.', 'We will reply within **15** working days.',
 ])('reads an invented fee or deadline: %s', (reply) => { expect(readClaims(reply).statesFeeOrDeadline).toBe(true); });
-it.each(['There is no published fee or binding deadline for this service.', 'Your reference is NZ-000123 from SR-1042.', 'لا توجد رسوم منشورة.'])('does not invent terms: %s', (reply) => {
+it.each(['There is no published fee or binding deadline for this service.', 'Your reference is NZ-000123 from SR-1042.', 'لا توجد رسوم منشورة.',
+  'لا توجد رسوم ولا موعد ملزم في القواعد المنشورة.', 'Your request SR-1042 was filed 3 days ago.', 'لا يوجد موعد محدد للرد.', 'هل تريدني أن أقدّم شكوى رسمية عن طلب SR-2077؟'])('does not invent terms: %s', (reply) => {
   expect(readClaims(reply).statesFeeOrDeadline).toBe(false);
 });
