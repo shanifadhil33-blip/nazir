@@ -22,7 +22,9 @@ const future = /\b(?:will|would|should|may|might)\b|سيتم|سوف/iu;
 // "Once your complaint is submitted" and "سأقوم بإنشاء الحالة وإرسالها للمراجعة" describe a next step, not a done action.
 const conditional = /\b(?:once|if|before|unless|until|when)\b|\bcan\s+(?:be|create|submit|register|lodge|file)\b|\bto\s+(?:submit|register|create|lodge|file)\b|\b(?:need|needs|required|requires)\b|بمجرد|عندما|إذا|اذا|قبل|يمكنني|(?:^|\s)سأ[\u0600-\u06ff]+|سنقوم|سيقوم|ستقوم|أحتاج|احتاج/iu;
 // The demo service publishes no fees and no binding deadlines, so a stated amount or guaranteed period is invented.
-const feeOrDeadline = /(?:\$|\b(?:aed|usd|dirhams?|dollars?)\b)\s*\d|\d+\s*(?:aed|usd|dirhams?|dollars?)\b|\b(?:binding|guaranteed?)\b[^.!?\n]{0,60}\b\d+\s*(?:calendar\s+|working\s+|business\s+)?(?:days?|hours?|weeks?)\b|\d+\s*(?:درهم|دولار)|(?:رسوم|رسم)[^.!؟\n]{0,30}\d|(?:ملزم|مضمون)[^.!؟\n]{0,40}\d+\s*(?:يوم|أيام|ساعة|أسبوع)/iu;
+// Live suite (21 Oct) also promised "نلتزم ... في غضون **15 يوماً عمل**" with the period in bold, so a committed
+// "within N days" counts too, "رسمية" (formal) is not "رسم" (fee), digits may be Arabic Indic, and bold markers may sit between the words.
+const feeOrDeadline = /(?:\$|\b(?:aed|usd|dirhams?|dollars?)\b)\s*\d|\d+\s*(?:aed|usd|dirhams?|dollars?)\b|\b(?:binding|guaranteed?)\b[^.!?\n]{0,60}\b\d+\s*(?:calendar\s+|working\s+|business\s+)?(?:days?|hours?|weeks?)\b|\bwithin\s+\**\s*[0-9\u0660-\u0669]+\s*\**\s*(?:calendar\s+|working\s+|business\s+)?(?:days?|hours?|weeks?)\b|[0-9\u0660-\u0669]+\s*(?:درهم|دولار)|(?:رسوم|رسم)(?![\u0600-\u06ff])[^.!؟\n]{0,30}[0-9\u0660-\u0669]|(?:ملزم|مضمون|نلتزم|نضمن)[^.!؟\n]{0,90}?\**\s*[0-9\u0660-\u0669]+\s*\**\s*(?:يوم|أيام|ساعة|أسبوع)|(?:في\s+غضون|خلال)\s+\**\s*[0-9\u0660-\u0669]+\s*\**\s*(?:يوم|أيام|ساعة|ساعات|أسبوع|أسابيع)/iu;
 export function readClaims(reply: string): ReplyClaim {
   const clauses = reply.split(/[.!?;؟؛\n]+|\bbut\b|\bhowever\b|ولكن|لكن/iu)
     .filter((part) => !negation.test(part) && !future.test(part) && !conditional.test(part));
