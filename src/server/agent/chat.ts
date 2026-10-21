@@ -11,6 +11,9 @@ import { correctionFrom } from '../memory/phrases';
 import { agentTools, asksImpersonation, budgetFrom, claimsDone, pickTool, replyFor, successReply, type ActionError, type AgentToolName } from './intent';
 import { runAgentTool } from './loop';
 import { instructionsBlock } from '../settings/own-model';
+import { citedReply, searchKnowledge, type KnowledgeHit } from '../knowledge/knowledge';
+
+const asksKnowledge = (message: string) => /knowledge base|\bour (?:policy|policies|fees?|prices?|faq)\b|قاعدة المعرفة|سياستنا|رسومنا|أسعارنا/i.test(message);
 
 export type ChatChain = { chat(request: ChatRequest): Promise<ChatResponse & { meta: CallMeta }> };
 const intentSchema = z.object({ tool: z.enum([...agentTools, 'none']) }).strict();
@@ -75,7 +78,7 @@ export async function agentChat(driver: TransactionDriver, memberId: string, val
       modelTool = null;
     }
   }
-  const tool = pickTool(input.message, modelTool);
+  const tool = asksKnowledge(input.message) && !/approve|أوافق|أرفض|reject/i.test(input.message) ? 'none' : pickTool(input.message, modelTool);
   if (source === 'model' && tool !== modelTool) source = 'fallback';
   // Refuse acting as someone else before anything is saved.
   if (asksImpersonation(input.message)) throw new Coded(403, 'impersonation', errorLines.impersonation.en);
@@ -95,6 +98,15 @@ export async function agentChat(driver: TransactionDriver, memberId: string, val
     }
   }
   if (tool === 'none') {
+    // Free full text search over the owner's knowledge for the chosen pack. A search failure never stops the chat.
+    let found: KnowledgeHit[] = [];
+    try { found = await searchKnowledge(driver, memberId, input.message); } catch (error) { if (error instanceof Forbidden) throw error; found = []; }
+    if (found.length) {
+      const reply = citedReply(found);
+      const data = { knowledge: found };
+      const threadId = await remember(driver, memberId, input.thread_id ?? null, input.message, reply.en, 'none', data);
+      return { thread_id: threadId, tool, source, reply, data, done: false };
+    }
     const threadId = await remember(driver, memberId, input.thread_id ?? null, input.message, successReply.none.en, 'none', null);
     return { thread_id: threadId, tool, source, reply: successReply.none, data: null, done: false };
   }

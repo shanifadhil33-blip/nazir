@@ -5,6 +5,7 @@ import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, Forbidden } from '../http/errors';
 import { publicHttpsUrl, type Resolver } from './net-guard';
+import { livePackIds } from '../packs/catalog';
 
 export const avatarPresets = ['preset:1', 'preset:2', 'preset:3', 'preset:4', 'preset:5', 'preset:6'] as const;
 export const integrationIds = ['slack', 'gmail', 'google_drive', 'github', 'notion', 'microsoft_teams', 'whatsapp_business', 'zendesk'] as const;
@@ -50,6 +51,7 @@ export const settingsInput = z.object({
   instructions: z.string().max(2000).default(''),
   language: z.enum(['en', 'ar']),
   avatar: z.string().max(280000).refine(avatarOk, 'avatar'),
+  focus_pack: z.string().default('government').refine((p) => (livePackIds as string[]).includes(p), 'focus_pack'),
   mcp_servers: z.array(z.object({ name: z.string().trim().min(1).max(60), url: z.string().trim().max(300).refine(safeHttpsUrl, 'url') }).strict()).max(10).default([]),
   integrations: z.array(z.enum(integrationIds)).max(integrationIds.length).default([]).transform((list) => [...new Set(list)]),
   llm: z.object({
@@ -82,7 +84,7 @@ export function openKey(sealed: string, secret?: string) {
 }
 
 export type AgentSettings = {
-  name: string | null; instructions: string; language: 'en' | 'ar'; avatar: string;
+  name: string | null; instructions: string; language: 'en' | 'ar'; avatar: string; focus_pack: string;
   mcp_servers: { name: string; url?: string; host?: string | null }[]; integrations: string[];
   llm: { provider: LlmProvider; model: string; base_url?: string | null; key_last4?: string | null } | null; can_edit: boolean;
 };
@@ -103,7 +105,7 @@ export async function saveAgentSettings(driver: TransactionDriver, memberId: str
   const llm = input.llm;
   const sealed = llm?.api_key ? sealKey(llm.api_key, secret) : null;
   const payload = {
-    name: input.name, instructions: input.instructions, language: input.language, avatar: input.avatar,
+    name: input.name, instructions: input.instructions, language: input.language, avatar: input.avatar, focus_pack: input.focus_pack,
     mcp_servers: input.mcp_servers, integrations: input.integrations,
     llm_provider: llm?.provider ?? '', llm_model: llm?.model ?? '',
     llm_base_url: llm ? (llm.provider === 'custom' ? llm.base_url! : providerBaseUrl[llm.provider]) : '',

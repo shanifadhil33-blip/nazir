@@ -1,7 +1,8 @@
 import 'server-only';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { createRunnerFixture } from './fixture';
-import { loadLibrary } from '../library/load';
+import type { loadLibrary } from '../library/load';
+import { loadPackCases } from '../packs/load';
 import { importLibrary, approveScenario } from '../library/import';
 async function prepare(db:SqlConnection) {
   const fixture=await createRunnerFixture(db,'Nazir library fixture',{ includeComplaintScenarios:false });
@@ -39,7 +40,7 @@ async function finish(db:SqlConnection,prep:Awaited<ReturnType<typeof prepare>>,
 // One owner transaction. Nested member operations use the same reserved connection (tests, local owner with every role).
 export async function createLibraryFixture(db:SqlConnection) {
   const prep=await prepare(db);
-  const library=await loadLibrary();
+  const library=await loadPackCases('government');
   const nested:TransactionDriver={ transaction:async (fn) => { try { return await fn(db); } finally { await db.query('RESET ROLE'); } } };
   if(await libraryStale(db,prep.wid,library)) await importLibrary(nested,prep.author,library);
   for(const id of await draftIds(db,prep.wid)) await approveScenario(nested,prep.reviewer,id);
@@ -49,7 +50,7 @@ export async function createLibraryFixture(db:SqlConnection) {
 // (real withMember checks), between two committed owner transactions.
 export async function createLibraryFixtureStaged(owner:TransactionDriver,member:TransactionDriver) {
   const prep=await owner.transaction(prepare);
-  const library=await loadLibrary();
+  const library=await loadPackCases('government');
   if(await owner.transaction((db) => libraryStale(db,prep.wid,library))) await importLibrary(member,prep.author,library);
   for(const id of await owner.transaction((db) => draftIds(db,prep.wid))) await approveScenario(member,prep.reviewer,id);
   return owner.transaction((db) => finish(db,prep,library.map((item)=>item.family)));

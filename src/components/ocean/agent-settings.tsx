@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { fill, type Lang, type Messages } from './copy';
+import { KnowledgeCard } from './knowledge';
 
 export type SettingsView = {
-  name: string | null; instructions: string; language: Lang; avatar: string;
+  name: string | null; instructions: string; language: Lang; avatar: string; focus_pack?: string;
   mcp_servers: { name: string; url?: string; host?: string | null }[]; integrations: string[];
   llm: { provider: Provider; model: string; base_url?: string | null; key_last4?: string | null; has_key?: boolean } | null; can_edit: boolean;
 };
@@ -37,7 +38,11 @@ export function AgentAvatar({ value, size = 40 }: { value: string; size?: number
 
 export const defaultSettings = (name: string): SettingsView => ({ name, instructions: '', language: 'en', avatar: 'preset:1', mcp_servers: [], integrations: [], llm: null, can_edit: false });
 
-export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSave }: {
+export type PackView = { id: string; cases: number; record_checks: number; refusal_policies: number; compliance: number };
+const fallbackPacks: PackView[] = [{ id: 'government', cases: 48, record_checks: 7, refusal_policies: 3, compliance: 5 }];
+
+export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSave, workspaceId, packs = fallbackPacks }: {
+  workspaceId?: string; packs?: PackView[];
   copy: Messages; lang: Lang; settings: SettingsView; sample: boolean; onClose: () => void;
   onSave: (body: unknown) => Promise<SettingsView | null>;
 }) {
@@ -47,6 +52,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
   const [instructions, setInstructions] = useState(settings.instructions);
   const [language, setLanguage] = useState<Lang>(settings.language);
   const [avatar, setAvatar] = useState(settings.avatar);
+  const [pack, setPack] = useState(settings.focus_pack ?? 'government');
   const [servers, setServers] = useState(settings.mcp_servers.map((s) => ({ name: s.name, url: s.url ?? '' })));
   const [serverName, setServerName] = useState('');
   const [serverUrl, setServerUrl] = useState('');
@@ -79,7 +85,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
     if (!edit) return;
     setState('saving');
     const body = {
-      name: name.trim() || settings.name || 'Nazir', instructions, language, avatar, mcp_servers: servers, integrations: chosen,
+      name: name.trim() || settings.name || 'Nazir', instructions, language, avatar, focus_pack: pack, mcp_servers: servers, integrations: chosen,
       llm: provider ? { provider, model: modelId.trim(), ...(provider === 'custom' ? { base_url: baseUrl.trim() } : {}), ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}), ...(clearKey ? { clear_key: true } : {}) } : null,
     };
     const result = await onSave(body);
@@ -115,6 +121,16 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
           <label className="nz-upload">{t.upload}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => upload(e.target.files?.[0])} /></label>
           <p className="nz-hint">{state === 'image' ? t.uploadTooBig : t.uploadHint}</p>
         </fieldset>
+        <fieldset disabled={!edit} className="nz-settings-card" data-card="focus-pack">
+          <legend>{t.pack}</legend>
+          <p className="nz-hint">{t.packHint}</p>
+          <div className="nz-packs" role="radiogroup" aria-label={t.pack}>
+            {packs.map((p) => <button type="button" key={p.id} role="radio" aria-checked={pack === p.id} data-pack={p.id} onClick={() => setPack(p.id)}>
+              <strong>{t.packNames[p.id as keyof typeof t.packNames] ?? p.id}</strong>
+              <small>{fill(t.packCounts, { cases: String(p.cases), checks: String(p.record_checks), policies: String(p.refusal_policies), compliance: String(p.compliance) })}</small>
+            </button>)}
+          </div>
+        </fieldset>
         <fieldset disabled={!edit} className="nz-settings-card">
           <legend>{t.apps}</legend>
           <h3>{t.mcp}</h3>
@@ -146,6 +162,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
           <button type="submit" className="nz-btn nz-btn-rust" data-action="save-settings" disabled={state === 'saving' || (provider !== '' && !modelId.trim())}>{state === 'saving' ? t.saving : t.save}</button>
         </div> : null}
       </form>
+      <KnowledgeCard copy={copy} lang={lang} workspaceId={workspaceId} pack={pack} sample={sample} />
     </div>
   </div>;
 }

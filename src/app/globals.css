@@ -526,6 +526,21 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: rgba(255, 255
 .nz-avatars button:hover { transform: translateY(-2px); }
 .nz-avatars button[aria-checked=true] { border-color: var(--coral); }
 .nz-upload input { font-size: 13px; }
+.nz-packs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.nz-packs button { display: grid; gap: 4px; text-align: start; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; transition: transform 180ms var(--ease), border-color 180ms var(--ease); }
+.nz-packs button:hover { transform: translateY(-2px); }
+.nz-packs button[aria-checked=true] { border-color: var(--coral); }
+.nz-packs small { color: var(--ink-muted); font-size: 12px; }
+.nz-kb { margin-top: 14px; display: grid; gap: 10px; }
+.nz-kb h3 { margin: 0; }
+.nz-kb-list, .nz-kb-hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.nz-kb-list li, .nz-kb-hits li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 12px; background: var(--mint); }
+.nz-kb-list li > div { display: grid; gap: 2px; }
+.nz-kb-list small { color: var(--ink-muted); font-size: 12px; }
+.nz-kb-hits li { display: grid; }
+.nz-kb-hits p { margin: 2px 0 0; font-size: 13px; color: var(--ink-muted); white-space: pre-wrap; }
+.nz-kb-form { display: grid; gap: 10px; }
+.nz-kb-search input { flex: 1; }
 .nz-servers { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .nz-servers li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--mint); }
 .nz-servers span { color: var(--ink-muted); font-size: 13px; overflow-wrap: anywhere; flex: 1; }

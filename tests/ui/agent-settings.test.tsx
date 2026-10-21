@@ -52,3 +52,19 @@ it('has no dashes in settings copy', () => {
   const all = JSON.stringify([en.settings, ar.settings, en.ui.noFixToApprove, ar.ui.noFixToApprove]);
   expect(all).not.toMatch(/[\u2013\u2014]| - /);
 });
+
+it('shows the focus pack picker and the knowledge base card in EN and AR, with matching keys', () => {
+  for (const lang of ['en', 'ar'] as const) {
+    const copy = messagesFor(lang);
+    const html = renderToStaticMarkup(<AgentSettingsPanel copy={copy} lang={lang} settings={{ ...owner, focus_pack: 'government' }} sample={false} onClose={noop} onSave={save} workspaceId="00000000-0000-4000-8000-000000000001" />);
+    expect(html).toContain('data-card="focus-pack"');
+    expect(html).toContain('data-pack="government"');
+    expect(html).toContain('aria-checked="true" data-pack="government"');
+    expect(html).toContain(copy.settings.packNames.government);
+    expect(html).toContain('data-card="knowledge"');
+    expect(html).toContain(copy.settings.kb);
+    expect(html).not.toMatch(/optional|اختياري/i);
+  }
+  expect(Object.keys(en.settings).sort()).toEqual(Object.keys(ar.settings).sort());
+  expect(Object.keys(en.settings.kbKinds)).toEqual(Object.keys(ar.settings.kbKinds));
+});

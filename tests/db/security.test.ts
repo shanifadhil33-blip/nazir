@@ -10,12 +10,12 @@ beforeAll(async () => {
   db = await testDatabase();
   a = await seed(db, 'A'); b = await seed(db, 'B');
   // AI state has no direct role grants; tests/ai/store.test.ts checks its function-only access.
-  tables = (await db.owner.query<{ tablename: string }>("SELECT tablename FROM pg_tables WHERE schemaname='nazir' AND tablename NOT IN ('ai_usage','ai_cooldowns','ai_calls','auth_accounts','auth_sessions','library_fix_usage','agent_settings','mcp_calls') ORDER BY tablename")).rows.map((r) => r.tablename);
+  tables = (await db.owner.query<{ tablename: string }>("SELECT tablename FROM pg_tables WHERE schemaname='nazir' AND tablename NOT IN ('ai_usage','ai_cooldowns','ai_calls','auth_accounts','auth_sessions','library_fix_usage','agent_settings','mcp_calls','knowledge_docs','knowledge_chunks') ORDER BY tablename")).rows.map((r) => r.tablename);
 });
 afterAll(async () => { await db?.close(); });
 it('enables and forces RLS with workspace policies on every table', async () => {
   const rows = (await db.owner.query("SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='nazir' AND c.relkind='r'")).rows;
-  expect(rows).toHaveLength(38);
+  expect(rows).toHaveLength(40);
   expect(tables).toHaveLength(30);
   for (const row of rows) { expect(row.relrowsecurity).toBe(true); expect(row.relforcerowsecurity).toBe(true); }
   expect((await db.owner.query("SELECT * FROM pg_policies WHERE schemaname='nazir' AND policyname='workspace'")).rows).toHaveLength(tables.length);
