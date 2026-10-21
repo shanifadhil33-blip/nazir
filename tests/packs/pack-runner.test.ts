@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { estateReferenceModel } from '../helpers/estate-reference';
+import { clinicReferenceModel } from '../helpers/clinic-reference';
 import { shopReferenceModel } from '../helpers/shop-reference';
 import { semantic } from '../judge/helpers';
 import { installPack, approvePackCases } from '../../src/server/packs/install';
@@ -24,7 +25,7 @@ beforeAll(async () => {
   const identity = await db.bootstrap('Packs');
   owner = identity.member_id; workspace = identity.workspace_id;
   reviewer = await db.createMember(workspace, ['quality_reviewer'], 'Khalid Hamdan');
-  for (const pack of ['real_estate', 'ecommerce']) { installed[pack] = await installPack(db.driver, owner, pack); expect(await approvePackCases(db.driver, owner, pack)).toEqual([]); expect(await approvePackCases(db.driver, reviewer, pack)).toHaveLength(48); }
+  for (const pack of ['real_estate', 'ecommerce', 'clinics']) { installed[pack] = await installPack(db.driver, owner, pack); expect(await approvePackCases(db.driver, owner, pack)).toEqual([]); expect(await approvePackCases(db.driver, reviewer, pack)).toHaveLength(48); }
   const rp = (await db.owner.query<{ id: string }>("INSERT INTO nazir.rule_packs(workspace_id,key,title) VALUES($1,'packs','Fictional pack rules') RETURNING id", [workspace])).rows[0]!.id;
   const rules = (await db.owner.query<{ id: string }>("INSERT INTO nazir.rule_pack_versions(workspace_id,rule_pack_id,version,content,status) VALUES($1,$2,1,'{}','approved') RETURNING id", [workspace, rp])).rows[0]!.id;
   plan = (await db.owner.query<{ id: string }>("INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,status,proposed_by_type) VALUES($1,'Pack runs',$2,$3,'{}','{en,ar}',1,2000,'{}','approved','nazir') RETURNING id", [workspace, installed.real_estate!.versionIds.estate_baseline, rules])).rows[0]!.id;
@@ -49,6 +50,8 @@ it('installs each pack once, with prefixed keys that never meet Government', asy
   expect(Object.keys(installed.ecommerce!.versionIds)).toEqual(['shop_baseline', 'shop_planted_stale_status', 'shop_planted_refund_overpay', 'shop_planted_duplicate_request']);
   expect((await scenarios('real_estate')).every((s) => String(s.stable_key).startsWith('re_'))).toBe(true);
   expect((await scenarios('ecommerce')).every((s) => String(s.stable_key).startsWith('ec_'))).toBe(true);
+  expect(Object.keys(installed.clinics!.versionIds)).toEqual(['clinic_baseline', 'clinic_planted_dosing_advice', 'clinic_planted_guessed_coverage', 'clinic_planted_unavailable_slot']);
+  expect((await scenarios('clinics')).every((s) => String(s.stable_key).startsWith('cl_'))).toBe(true);
 });
 
 it('plans only the cases of the chosen focus pack', async () => {
@@ -63,7 +66,7 @@ it('plans only the cases of the chosen focus pack', async () => {
   await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'government' });
 });
 
-for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'estate_baseline'], ['ecommerce', shopReferenceModel, 'shop_baseline']] as const) {
+for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'estate_baseline'], ['ecommerce', shopReferenceModel, 'shop_baseline'], ['clinics', clinicReferenceModel, 'clinic_baseline']] as const) {
   it(`runs all 48 ${pack} cases through the real worker with a scripted agent and passes them`, async () => {
     const failed: string[] = [];
     for (const row of await scenarios(pack)) {

@@ -12,6 +12,11 @@ import { shopToolManifestHash, shopToolNames } from '../../sandbox/shop/tools';
 import { shopPolicy } from '../../sandbox/shop/policy';
 import { readShop, type ShopReading } from '../../sandbox/shop/inspect';
 import { runShopChecks } from '../checks/shop-checks';
+import { runClinicAgent, clinicSystemPrompt, clinicVersions, type ClinicVersion } from '../../sandbox/clinic/agent';
+import { clinicToolManifestHash, clinicToolNames } from '../../sandbox/clinic/tools';
+import { clinicPolicy } from '../../sandbox/clinic/policy';
+import { readClinic, type ClinicReading } from '../../sandbox/clinic/inspect';
+import { runClinicChecks } from '../checks/clinic-checks';
 import { packById } from './catalog';
 import type { FocusPack, InlineCase, PackId } from './schema';
 
@@ -76,7 +81,26 @@ const shop: PackRuntime = {
   },
   clause: clauseOf(shopPolicy.clauses),
 };
-export const packRuntimes: readonly PackRuntime[] = [estate, shop];
+const clinic: PackRuntime = {
+  pack: packById('clinics')!, id: 'clinics', seed: 'clinic_sandbox', prefix: 'cl_',
+  versions: Object.values(clinicVersions), systemPromptHash: hash(clinicSystemPrompt), toolManifestHash: clinicToolManifestHash(), rulesHash: hash(clinicPolicy), toolNames: clinicToolNames,
+  async prepare(db, tenant) { await db.query('SELECT sandbox.cl_seed_tenant($1)', [tenant]); },
+  run: ({ version, ...rest }) => runClinicAgent({ ...rest, version: version as ClinicVersion }),
+  read: readClinic,
+  clean(reading) { const r = reading as ClinicReading; return r.slots.length === 8 && !r.receipts.length && r.requests.every((x) => x.seeded); },
+  checks: ({ scenario, reply, reading }) => runClinicChecks({ scenario, reply, reading: reading as ClinicReading }),
+  facts(reading, c) {
+    const r = reading as ClinicReading; const me = c.persona.requester_key; const p = r.patients.find((x) => x.patient_key === me);
+    const mine = r.requests.filter((x) => x.patient_key === me);
+    const judge = { emergency_number: clinicPolicy.emergency_number, doctors: r.doctors.map((d) => ({ name: d.name, clinic: d.clinic, on_leave: d.on_leave })), slots: r.slots.map((s) => ({ slot: s.slot, doctor: s.doctor, day: s.day, time: s.time, status: s.on_leave ? 'blocked' : s.status })), fees: r.fees, coverage: r.coverage.filter((x) => x.insurer === p?.insurer), lab_released: p?.lab_released ?? false, requests: mine.map((x) => ({ reference: x.reference, kind: x.kind, slot: x.slot, queue: x.queue, status: x.status })), receipts: r.receipts };
+    const rec = receiptsText(r.receipts);
+    return { judge, text: {
+      en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}${x.slot ? ` for ${x.slot}` : ''}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this patient.') + ' ' + rec.en,
+      ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}${x.slot ? ` للموعد ${x.slot}` : ''}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لهذا المريض.') + ' ' + rec.ar } };
+  },
+  clause: clauseOf(clinicPolicy.clauses),
+};
+export const packRuntimes: readonly PackRuntime[] = [estate, shop, clinic];
 export const runtimeForSeed = (state: unknown) => { const seed = (state as { seed?: unknown } | null)?.seed; return packRuntimes.find((r) => r.seed === seed) ?? null; };
 export const runtimeForPack = (id: string) => packRuntimes.find((r) => r.id === id) ?? null;
 /** A pack agent version is referenced by registry id plus its pinned hash, so a changed prompt or tool list reads as drift. */
