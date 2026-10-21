@@ -40,7 +40,9 @@ export async function approveScenario(driver: TransactionDriver, memberId: strin
     if (!row) throw new NotFound();
     if (row.created_by === memberId || row.status !== 'draft') throw new Forbidden();
     const approved = (await sql.query("UPDATE nazir.scenarios SET status='approved',approved_by=nazir.current_member_id(),approved_at=now() WHERE id=$1 RETURNING *", [id])).rows[0]!;
-    await sql.query("SELECT nazir.append_audit('scenario.approve','scenario',$1,'{}')", [id]);
+    // A newer approved version replaces older ones, so plans never pick two versions of one scenario (21 Oct 2026).
+    const retired = (await sql.query<{ id: string }>("UPDATE nazir.scenarios SET status='retired' WHERE stable_key=$1 AND id<>$2 AND status='approved' AND version<$3 RETURNING id", [row.stable_key, id, row.version])).rows.map((r) => r.id);
+    await sql.query("SELECT nazir.append_audit('scenario.approve','scenario',$1,$2::jsonb)", [id, JSON.stringify(retired.length ? { retired } : {})]);
     return approved;
   });
 }
