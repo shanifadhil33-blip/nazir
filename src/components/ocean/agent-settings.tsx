@@ -38,7 +38,7 @@ export function AgentAvatar({ value, size = 40 }: { value: string; size?: number
 
 export const defaultSettings = (name: string): SettingsView => ({ name, instructions: '', language: 'en', avatar: 'preset:1', mcp_servers: [], integrations: [], llm: null, can_edit: false });
 
-export type PackView = { id: string; cases: number; record_checks: number; refusal_policies: number; compliance: number };
+export type PackView = { id: string; cases: number; record_checks: number; refusal_policies: number; compliance: number; runs?: boolean; installed?: number; approved?: number };
 const fallbackPacks: PackView[] = [{ id: 'government', cases: 48, record_checks: 7, refusal_policies: 3, compliance: 5 }];
 
 export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSave, workspaceId, packs = fallbackPacks }: {
@@ -131,6 +131,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
             </button>)}
           </div>
         </fieldset>
+        <PackCases copy={copy} workspaceId={workspaceId} pack={packs.find((p) => p.id === (settings.focus_pack ?? 'government'))} />
         <fieldset disabled={!edit} className="nz-settings-card">
           <legend>{t.apps}</legend>
           <h3>{t.mcp}</h3>
@@ -164,5 +165,27 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
       </form>
       <KnowledgeCard copy={copy} lang={lang} workspaceId={workspaceId} pack={pack} sample={sample} />
     </div>
+  </div>;
+}
+
+/** The saved pack's cases in this workspace, with approval for a second reviewer. Outside the owner only fieldset so reviewers can use it. */
+function PackCases({ copy, workspaceId, pack }: { copy: Messages; workspaceId?: string; pack?: PackView }) {
+  const t = copy.settings;
+  const [approved, setApproved] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
+  if (!pack || pack.installed === undefined || !workspaceId) return null;
+  const shown = approved === null ? pack.approved ?? 0 : (pack.approved ?? 0) + approved;
+  async function approve() {
+    setFailed(false);
+    const r = await fetch(`/api/workspaces/${workspaceId}/packs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pack: pack!.id, action: 'approve' }) }).catch(() => null);
+    const body = r?.ok ? await r.json().catch(() => null) as { approved?: number } | null : null;
+    if (!body || typeof body.approved !== 'number' || (body.approved === 0 && shown < (pack!.installed ?? 0))) { setFailed(true); return; }
+    setApproved(body.approved);
+  }
+  return <div className="nz-settings-card nz-pack-cases" data-card="pack-cases">
+    <p className="nz-hint" data-pack-state>{fill(t.packState, { installed: String(pack.installed), approved: String(shown) })}</p>
+    {approved !== null ? <p className="nz-hint" role="status">{fill(t.packApproved, { count: String(approved) })}</p> : null}
+    {failed ? <p className="nz-hint" role="alert">{t.packApproveFailed}</p> : null}
+    {shown < (pack.installed ?? 0) ? <button type="button" className="nz-btn" data-pack-approve onClick={() => void approve()}>{t.packApprove}</button> : null}
   </div>;
 }

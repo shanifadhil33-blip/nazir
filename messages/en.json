@@ -217,6 +217,10 @@
     "pack": "Focus pack",
     "packHint": "The test cases, judge rules, record checks and compliance list Nazir uses for this agent.",
     "packCounts": "{cases} cases, {checks} record checks, {policies} refusal rules, {compliance} compliance items",
+    "packState": "In this workspace: {installed} cases added, {approved} approved.",
+    "packApprove": "Approve these cases",
+    "packApproved": "{count} cases approved. Plans can use them now.",
+    "packApproveFailed": "A second reviewer, not the member who added the cases, approves them.",
     "packNames": {
       "government": "Government and citizen services",
       "real_estate": "Real estate",

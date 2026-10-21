@@ -11,6 +11,7 @@ import { approvePlan } from '../memory/planner';
 import { proposeBoundedPlan, startBoundedRun } from '../planner/bound';
 import { compareRuns, readComparisons } from '../compare/compare';
 import { RepairRefused, resolveExecutable } from '../repair/executable';
+import { resolvePackVersion, runtimeForPack } from '../packs/runtime';
 import { decideRepair, startRetest, submitRepair } from '../repair/proposals';
 import {
   actionErrors, agentTools, asksImpersonation, budgetFrom, causeCopy, exactPlan, exactRepair, identityOverride,
@@ -78,7 +79,11 @@ export async function listRuns(driver: TransactionDriver, memberId: string) {
 }
 async function versions(driver: TransactionDriver, memberId: string) {
   return withMember(driver, memberId, async (sql) => {
-    const agent = (await sql.query<{ id: string }>('SELECT id FROM nazir.agent_versions ORDER BY created_at DESC,id LIMIT 1')).rows[0];
+    // A pack with its own sandbox plans against its own baseline; Government keeps the latest version as before.
+    const runtime = runtimeForPack((await sql.query<{ p: string }>('SELECT nazir.current_focus_pack() AS p')).rows[0]?.p ?? 'government');
+    const agent = runtime
+      ? (await sql.query<{ id: string }>("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1 ORDER BY created_at DESC,id LIMIT 1", [runtime.versions[0]!.id])).rows[0]
+      : (await sql.query<{ id: string }>('SELECT id FROM nazir.agent_versions ORDER BY created_at DESC,id LIMIT 1')).rows[0];
     const rules = (await sql.query<{ id: string }>("SELECT id FROM nazir.rule_pack_versions WHERE status='approved' ORDER BY created_at DESC,id LIMIT 1")).rows[0];
     return agent?.id && rules?.id ? { agent_version_id: agent.id, rule_pack_version_id: rules.id } : null;
   });
@@ -89,8 +94,9 @@ async function planReady(driver: TransactionDriver, memberId: string, planId: st
     const plan = (await sql.query<{ status: string; agent_version_id: string; stop_rules: { set?: string; scenario_ids?: string[] } }>('SELECT status,agent_version_id,stop_rules FROM nazir.plans WHERE id=$1', [planId])).rows[0];
     if (!plan) return { status: 'missing' as const, ready: false };
     const version = (await sql.query<{ config: { registry_id?: string; parent_registry_id?: string; patch?: unknown; executable_hash?: string }; config_hash: string }>('SELECT config,config_hash FROM nazir.agent_versions WHERE id=$1', [plan.agent_version_id])).rows[0];
+    const packed = version ? resolvePackVersion(version.config as { registry_id?: string; pack_config_hash?: string }) : null;
     const executable = version ? resolveExecutable(version.config) : null;
-    const ready = !!executable && version?.config_hash === executable.configHash && plan.stop_rules.set === 'bounded' && (plan.stop_rules.scenario_ids?.length ?? 0) > 0;
+    const ready = (packed ? (version!.config as { pack_config_hash?: string }).pack_config_hash === packed.version.configHash : !!executable && version?.config_hash === executable.configHash) && plan.stop_rules.set === 'bounded' && (plan.stop_rules.scenario_ids?.length ?? 0) > 0;
     return { status: plan.status, ready };
   });
 }
@@ -101,12 +107,13 @@ function sentencesOf(value: unknown): Bilingual | undefined {
   return en && ar ? { en, ar } : undefined;
 }
 
-/** The test runner drives the government sandbox only; another focus pack refuses runs instead of testing the wrong cases. */
+/** A focus pack runs when it has a sandbox runner; a draft pack refuses runs instead of testing the wrong cases. */
 async function packRuns(driver: TransactionDriver, memberId: string) {
   const pack = await withMember(driver, memberId, async (sql) => {
     try { return (await sql.query<{ p: string | null }>("SELECT nazir.read_agent_settings()->>'focus_pack' AS p")).rows[0]?.p ?? 'government'; } catch { return 'government'; }
   }).catch(() => 'government');
-  return (packById(pack ?? 'government')?.runner ?? 'government_sandbox') === 'government_sandbox';
+  const found = packById(pack ?? 'government');
+  return found ? found.status === 'live' && found.runner !== 'none' : true;
 }
 async function propose(driver: TransactionDriver, memberId: string, args: unknown, origin: Origin): Promise<AgentResult> {
   await allow(driver, memberId, 'plan.propose');

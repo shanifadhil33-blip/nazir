@@ -21,7 +21,8 @@ export function clauseText(id = '3.1') {
 export function readingFacts(reading: StateReading) {
   return { cases: reading.cases.map((c) => ({ reference:c.reference,requester:c.requesterKey,queue:c.queue,status:c.status,escalation:c.escalation })), receipts:reading.receipts.map((r) => ({ tool:r.tool,outcome:r.outcome })), serviceAvailability:(reading.tenantFaults ?? []).map((f) => ({ tool:f.tool,available:false })) };
 }
-export type JudgeInput = { reply: string; prompt: string };
+// A pack judge input names its own rubric version; Government leaves it unset so its results keep n13.1.
+export type JudgeInput = { reply: string; prompt: string; rubricVersion?: string };
 export type JudgeKnowledge = { cite:number; title:string; excerpt:string };
 export function buildJudgeInput({ scenario,reply,reading,notes,knowledge }: { scenario: RunnerScenario; reply: string; reading: StateReading; notes?: string[]; knowledge?: JudgeKnowledge[] }): JudgeInput {
   const source = clauseText(scenario.source_clause);
@@ -31,4 +32,11 @@ export function buildJudgeInput({ scenario,reply,reading,notes,knowledge }: { sc
   // Owner knowledge for the chosen focus pack, only when some matched, so a workspace with none keeps the exact same prompt and hash.
   const known = knowledge?.length ? [knowledgeNote,block('KNOWLEDGE',knowledge.map((k) => ({ cite:k.cite,title:k.title,text:k.excerpt })))] : [];
   return { reply,prompt:[rubric,JSON.stringify(trusted),...known,block('RESIDENT',scenario.persona.resident_turns),block('REPLY',reply)].join('\n') };
+}
+/** The judge prompt for a non Government pack: its own rubric and version, its clause, and only the facts its runtime projects. */
+export function buildPackJudgeInput({ pack,clause,scenario,reply,facts,notes,knowledge }: { pack: { judge: { rubric: string; rubric_version: string } }; clause: { en: string; ar: string }; scenario: { language: string; resident_turns: string[]; expected: { outcome: string } }; reply: string; facts: unknown; notes?: string[]; knowledge?: JudgeKnowledge[] }): JudgeInput {
+  const trusted = { language:scenario.language,source:clause,expectedOutcome:scenario.expected.outcome,expectedState:scenario.expected,facts,...(notes?.length ? { approvedReviewerNotes:notes } : {}) };
+  const block = (name:string,value:unknown) => `UNTRUSTED ${name} BEGIN\n${JSON.stringify(value)}\nUNTRUSTED ${name} END`;
+  const known = knowledge?.length ? [knowledgeNote,block('KNOWLEDGE',knowledge.map((k) => ({ cite:k.cite,title:k.title,text:k.excerpt })))] : [];
+  return { reply,rubricVersion:pack.judge.rubric_version,prompt:[pack.judge.rubric,JSON.stringify(trusted),...known,block('RESIDENT',scenario.resident_turns),block('REPLY',reply)].join('\n') };
 }
