@@ -20,9 +20,9 @@ export class PdfValidation extends Coded {
   messageFor(language: CallerLanguage) { return lines[this.reason][language]; }
 }
 
-/** Whitespace only: preserve Unicode text and its original order, including Arabic. */
+/** Normalize Unicode and whitespace while preserving text order, including Arabic. */
 export function normalizePdfText(text: string) {
-  return text.replace(/\u0000/g, '').replace(/\r\n?/g, '\n').replace(/[^\S\n]+/gu, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return text.normalize('NFKC').replace(/\u0000/g, '').replace(/\r\n?/g, '\n').replace(/[^\S\n]+/gu, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export async function extractPdfText(bytes: Uint8Array) {

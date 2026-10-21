@@ -12,6 +12,10 @@ it('normalizes Arabic without reversing letters or removing glyphs', () => {
   expect(normalizePdfText(` \tسياسة  تجديد\u00a0الرخصة\tالتجارية\r\n\r\n\r\nرسوم  التجديد\u0000 `)).toBe(`${arabic}\n\nرسوم التجديد`);
 });
 
+it('normalizes Arabic presentation forms to base letters', () => {
+  expect(normalizePdfText('ﺭﺳﻮﻡ ﺗﺠﺪﻳﺪ')).toBe('رسوم تجديد');
+});
+
 it('times out extraction, releases the PDF and allows the next extraction to succeed', async () => {
   vi.useFakeTimers();
   const destroy = vi.fn().mockResolvedValue(undefined);
