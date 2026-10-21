@@ -126,7 +126,9 @@ it('pins the agent order and excludes agent families and unknown models from jud
   expect(chainOrder(providers,'agent').map((m) => `${m.provider.id}/${m.model}`)).toEqual([
     'kilo/nvidia/nemotron-3-ultra-550b-a55b:free','requesty/nvidia/nemotron-3-ultra-550b-a55b','openrouter/nvidia/nemotron-3-super-120b-a12b:free','ovh/gpt-oss-120b','ovh/Qwen3.5-397B-A17B','zai/glm-4.7-flash','cloudflare/@cf/openai/gpt-oss-120b','gemini/gemini-3.5-flash-lite','nvidia/nvidia/nemotron-3-super-120b-a12b','kilo/kilo-auto/free',
   ]);
-  const judge = chainOrder(providers,'judge','nvidia_nemotron'); expect(judge.map((m) => m.provider.id)).toEqual(['gemini','requesty','ovh','zai','cloudflare']);
+  const judge = chainOrder(providers,'judge','nvidia_nemotron'); expect(judge.map((m) => `${m.provider.id}/${m.model}`)).toEqual(['gemini/gemini-3.5-flash-lite','requesty/google/gemma-4-31b-it','ovh/gpt-oss-120b','ovh/Qwen3.5-397B-A17B','zai/glm-4.7-flash','cloudflare/@cf/openai/gpt-oss-120b']);
+  // A gpt-oss agent is judged by Nemotron fallbacks too.
+  expect(chainOrder(providers,'judge','openai_gpt_oss').map((m) => m.provider.id)).toEqual(['gemini','requesty','ovh','zai','openrouter','nvidia','kilo','requesty']);
   for (const family of ['google_gemini','google_gemma','openai_gpt_oss','zhipu_glm','nvidia_nemotron'] as const) expect(chainOrder(providers,'judge',family).every((m) => m.family !== family && m.family !== 'unknown')).toBe(true);
   const s = setup(); await expect(s.chain.chat({ ...input,purpose:'judge' })).rejects.toThrow('family'); expect(s.fetch).not.toHaveBeenCalled();
 });
@@ -202,5 +204,5 @@ it('does not tag failover when the only earlier models have no key configured', 
 it('keeps Kilo ultra before Requesty ultra while preserving the complete judge order',()=>{
   const providers=providerRegistry({});
   expect(chainOrder(providers,'agent').slice(0,2).map(e=>[e.provider.id,e.model])).toEqual([['kilo','nvidia/nemotron-3-ultra-550b-a55b:free'],['requesty','nvidia/nemotron-3-ultra-550b-a55b']]);
-  expect(chainOrder(providers,'judge',['nvidia_nemotron']).map(e=>e.provider.id)).toEqual(['gemini','requesty','ovh','zai','cloudflare']);
+  expect(chainOrder(providers,'judge',['nvidia_nemotron']).map(e=>e.provider.id)).toEqual(['gemini','requesty','ovh','ovh','zai','cloudflare']);
 });

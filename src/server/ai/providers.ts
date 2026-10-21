@@ -37,7 +37,8 @@ export function chainOrder(providers: Provider[], purpose: 'agent' | 'judge', ag
   if (purpose === 'judge' && (!families.length || families.some((f) => !['google_gemini','nvidia_nemotron','google_gemma','openai_gpt_oss','zhipu_glm','alibaba_qwen'].includes(f)))) throw new Error('Judge needs a known agent family');
   const order: [string, number][] = purpose === 'agent'
     ? [['kilo',0],['requesty',0],['openrouter',0],['ovh',0],['ovh',1],['zai',0],['cloudflare',0],['gemini',0],['nvidia',0],['kilo',1]]
-    : [['gemini',0],['requesty',1],['ovh',0],['zai',0],['cloudflare',0]];
+    // Judge fallbacks widened 21 Oct 2026 after 8 of 48 suite cases were judge_unavailable; the family rule still skips the agent's own family.
+    : [['gemini',0],['requesty',1],['ovh',0],['ovh',1],['zai',0],['cloudflare',0],['openrouter',0],['nvidia',0],['kilo',0],['requesty',0]];
   // Resolve fixed slots against the original list so removing a model never changes its purpose.
   const original = providerRegistry({});
   return order.flatMap(([id, index]) => {
