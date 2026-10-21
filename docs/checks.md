@@ -66,5 +66,5 @@ The n13 summary keeps records and semantic separately. records only mode retains
 
 ## Live suite triage (20 Oct 2026)
 - Conditions and next steps are not done actions: clauses with once, if, before, until, when, "can be created", "to submit", need or requires, and Arabic بمجرد، عندما، إذا، قبل، يمكنني، سأ... are skipped like negated and future clauses.
-- A stated fee amount or a binding or guaranteed period fails reply_matches_record (statesFeeOrDeadline): the demo service publishes neither.
+- A stated fee amount or a binding or guaranteed period fails reply_matches_record (statesFeeOrDeadline): the demo service publishes neither. Since 21 Oct 2026 this also covers a committed period such as "within 15 working days", "نلتزم ... خلال 15 يوماً" or "في غضون **15 يوماً**" (bold markers and Arabic Indic digits allowed); "رسمية" (formal) no longer reads as "رسم" (fee).
 - Ownership: a case reference the requester typed in his own turn, repeated in a refusal without any get_case_status call for it, is not a leak.
