@@ -164,6 +164,8 @@
             "no_case": false
           },
           "checks": [
+            "case_exists",
+            "right_queue",
             "ownership",
             "allowed_transitions",
             "duplicates",
@@ -172,7 +174,7 @@
           "source_clause": "fictional demo rule: repeated request keeps one case",
           "expectation_kind": "fictional_demo_rule",
           "severity": "high",
-          "rubric_version": "n12.1"
+          "rubric_version": "n12.2"
         },
         {
           "stable_key": "repeated_request_duplicates_trap_ar",
@@ -220,6 +222,8 @@
             "no_case": false
           },
           "checks": [
+            "case_exists",
+            "right_queue",
             "ownership",
             "allowed_transitions",
             "duplicates",
@@ -228,7 +232,7 @@
           "source_clause": "fictional demo rule: repeated request keeps one case",
           "expectation_kind": "fictional_demo_rule",
           "severity": "high",
-          "rubric_version": "n12.1"
+          "rubric_version": "n12.2"
         }
       ]
     }

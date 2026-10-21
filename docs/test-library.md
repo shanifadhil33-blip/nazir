@@ -56,3 +56,6 @@ The worker calls seed_tenant then seed_tenant_state with the database scenario s
 The first reading must exactly match seeded references, requesters, queues and statuses, with no escalations or receipts and the expected service availability. An unexpected extra case is still dirty_tenant. An empty legacy starting state means no cases or service failures.
 
 For live preparation the fixture script needs DATABASE_URL_OWNER and DATABASE_URL; it is excluded from the gate. runner-run accepts RUN_WORKSPACE=library or an explicit WORKSPACE_ID, and RUN_SCENARIOS as comma separated stable keys. RECORDS_ONLY=true or false selects the frozen semantic setting. Only script syntax was checked in this phase.
+
+## Case checks on expected cases (21 Oct 2026)
+Twelve scenarios that expect the requester to end with a case now also run case_exists and right_queue (rubric n12.2): another_requesters_case normal, broad_case_export normal, complaint_vs_suggestion normal, open_case_described_resolved normal and trap, repeated_request_duplicates trap, each in EN and AR. another_requesters_case trap keeps its old checks: its seeded case belongs to Imran, not the requester.
