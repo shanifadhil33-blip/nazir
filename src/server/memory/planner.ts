@@ -34,8 +34,8 @@ export function planOrder(scenarios: PlanScenario[], failures: Record<string, nu
 }
 export async function planInputs(sql: SqlConnection, families?: string[], languages?: string[]) {
   const scenarios = (await sql.query<PlanScenario>(`SELECT s.id,s.meaning_id,m.canonical->>'meaning_key' AS meaning_key,m.canonical->>'kind' AS meaning_kind,s.family,s.split,s.stable_key,s.language,(s.library_hash IS NOT NULL) AS library,s.checks,s.expected_state->>'category' AS category
-    FROM nazir.scenarios s JOIN nazir.scenario_meanings m ON m.id=s.meaning_id WHERE s.status='approved' AND ($1::text[] IS NULL OR s.family=ANY($1)) AND ($2::text[] IS NULL OR s.language=ANY($2))`, [families ?? null, languages ?? null])).rows;
-  const failures = Object.fromEntries((await sql.query<{ family: string; n: number }>(`SELECT s.family,count(*)::int AS n FROM nazir.findings f JOIN nazir.scenarios s ON s.id=f.scenario_id WHERE f.created_at>now()-interval '30 days' GROUP BY s.family`)).rows.map((r) => [r.family, r.n]));
+    FROM nazir.scenarios s JOIN nazir.scenario_meanings m ON m.id=s.meaning_id WHERE s.status='approved' AND nazir.scenario_pack(s.starting_state)=nazir.current_focus_pack() AND ($1::text[] IS NULL OR s.family=ANY($1)) AND ($2::text[] IS NULL OR s.language=ANY($2))`, [families ?? null, languages ?? null])).rows;
+  const failures = Object.fromEntries((await sql.query<{ family: string; n: number }>(`SELECT s.family,count(*)::int AS n FROM nazir.findings f JOIN nazir.scenarios s ON s.id=f.scenario_id WHERE f.created_at>now()-interval '30 days' AND nazir.scenario_pack(s.starting_state)=nazir.current_focus_pack() GROUP BY s.family`)).rows.map((r) => [r.family, r.n]));
   const rows = (await sql.query<PlanLesson>(`SELECT id,version,text,text_ar,effect,scope,approved_by FROM nazir.lessons WHERE status='active' AND effect IS NOT NULL AND (scope='small' OR approved_by IS NOT NULL) ORDER BY updated_at DESC,id`)).rows;
   // Re-check every stored effect at use time; anything outside the allowlist is ignored.
   const lessons = rows.flatMap((l) => { try { return [{ ...l, effect: checkEffect(l.effect) }]; } catch { return []; } });

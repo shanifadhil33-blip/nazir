@@ -139,9 +139,9 @@ const proposeInput = z.object({
 
 async function loadCandidates(sql: SqlConnection, families?: string[], languages?: string[]) {
   const scenarios = (await sql.query<{ id: string; family: string; language: string }>(`SELECT s.id,s.family,s.language FROM nazir.scenarios s
-    WHERE s.status='approved' AND ($1::text[] IS NULL OR s.family=ANY($1)) AND ($2::text[] IS NULL OR s.language=ANY($2))`, [families ?? null, languages ?? null])).rows;
+    WHERE s.status='approved' AND nazir.scenario_pack(s.starting_state)=nazir.current_focus_pack() AND ($1::text[] IS NULL OR s.family=ANY($1)) AND ($2::text[] IS NULL OR s.language=ANY($2))`, [families ?? null, languages ?? null])).rows;
   const failures = Object.fromEntries((await sql.query<{ family: string; n: number }>(`SELECT s.family,count(*)::int AS n FROM nazir.findings f
-    JOIN nazir.scenarios s ON s.id=f.scenario_id WHERE f.created_at>now()-interval '30 days' GROUP BY s.family`)).rows.map((row) => [row.family, row.n]));
+    JOIN nazir.scenarios s ON s.id=f.scenario_id WHERE f.created_at>now()-interval '30 days' AND nazir.scenario_pack(s.starting_state)=nazir.current_focus_pack() GROUP BY s.family`)).rows.map((row) => [row.family, row.n]));
   return { scenarios, failures };
 }
 

@@ -9,7 +9,7 @@ import { hash } from '../../sandbox/demo-rule-pack';
 import { AiChainExhausted, type CallMeta } from '../ai/chain';
 import { networkChatModel, type RunnerModel } from './network-model';
 import type { RunnerScenario } from './demo-scenarios';
-import { buildJudgeInput } from '../judge/rubric';
+import { buildJudgeInput, buildPackJudgeInput } from '../judge/rubric';
 import { searchKnowledgeForWorker } from '../knowledge/knowledge';
 import { judgeNotes, type FrozenLesson } from '../memory/frozen';
 import { unavailable, type SemanticResult } from '../judge/judge';
@@ -17,6 +17,8 @@ import type { Family } from '../ai/providers';
 import { combineVerdicts } from '../judge/evaluate';
 import { networkJudge } from './network-judge';
 import { buildFindings } from '../findings/build';
+import { buildPackFindings, packRecord } from '../findings/pack';
+import { caseFromRow, resolvePackVersion, runtimeForSeed } from '../packs/runtime';
 import { applyBoundedStop } from '../planner/stop';
 import type { RecordCheck } from '../checks/record-checks';
 import { runRecordChecks, recordChecksEvaluator } from '../checks/record-checks';
@@ -77,7 +79,69 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   let verdict: Verdict = { status:'inconclusive',reason:'reading_missing',results:[] };
   const deadline = new Promise<never>((_,reject) => { timer=setTimeout(() => { if(!judging) { reason='timeout'; stopped=true; } reject(new Error('Attempt timeout')); },conversationTimeoutMs); });
   const bounded = <T>(p: Promise<T>) => Promise.race([p,deadline]);
+  const runtime = runtimeForSeed(data.scenario.starting_state);
+  let packReading: unknown;
+  let packFindings: ReturnType<typeof buildPackFindings> = [];
+  const packAttempt = async (rt: NonNullable<typeof runtime>) => {
+    const resolved = resolvePackVersion({ registry_id:data.manifest.registry_id });
+    if (!resolved || resolved.runtime!==rt || resolved.version.configHash!==data.manifest.configHash || data.scenario.content_hash!==data.scenario_hash) { reason='version_drifted'; return; }
+    const c = caseFromRow(data.scenario as unknown as Record<string, unknown>);
+    await bounded(work(async (db) => { await fence(db); await rt.prepare(db,tenant,c); }));
+    if (!rt.clean(await bounded(rt.read(inspectionDriver,tenant)),c)) { reason='dirty_tenant'; return; }
+    const reserveCall = async () => {
+      active();
+      const reserved = await work(async (db) => {
+        await db.query('SELECT id FROM nazir.runs WHERE id=$1 FOR UPDATE',[rid]);
+        await fence(db);
+        active();
+        return (await db.query("UPDATE nazir.runs SET calls_used=calls_used+1 WHERE id=$1 AND status='running' AND calls_used<calls_budget RETURNING id",[rid])).rows.length>0;
+      });
+      if (!reserved) { reason='budget_reached'; throw new Error('Budget reached'); }
+    };
+    const context: ModelContext = { workspaceId:wid,conversationId:cid,onCall:(meta) => { metas.push(meta); },reserveCall,remainingMs:() => Math.max(1,end-now()) };
+    const supplied = await bounded(Promise.resolve(chatModelFactory ? chatModelFactory(context) : networkChatModel(driver,context)));
+    const base = typeof supplied==='function' ? supplied : supplied.model;
+    const model: ChatModel = async (request) => {
+      active();
+      if (typeof supplied==='function') await reserveCall();
+      try { const response=await bounded(base(request)); active(); return response; }
+      catch (error) { if (error instanceof AiChainExhausted) reason ??= error.attempts.length && error.attempts.every((a) => a.reason==='cap_reached' || a.reason==='no_key') && error.attempts.some((a) => a.reason==='cap_reached') ? 'daily_cap' : 'provider_exhausted'; throw error; }
+    };
+    for (const content of c.resident_turns) {
+      if (reason || lost) break;
+      active();
+      transcript.push({ role:'user',content });
+      const result=await rt.run({ model,version:resolved.version,messages:transcript,sandbox:{ driver:fencedDriver,tenant,requesterKey:c.persona.requester_key },conversationKey:cid });
+      transcript=result.transcript.filter((m) => m.role!=='system'); reply=result.reply; toolCalls.push(...(result.toolCalls as ToolEvents));
+    }
+    if (lost) return;
+    try { packReading=await bounded(rt.read(inspectionDriver,tenant)); } catch { reason ??= 'reading_failed'; return; }
+    if (reason) return;
+    try {
+      records=rt.checks({ scenario:c,reply,reading:packReading }).map((k) => packRecord(rt,c,k));
+      verdict={ ...combineVerdicts(records,null),results:{ records } };
+      if (!data.manifest.recordsOnly) {
+        judging=true;
+        const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
+        const knowledge=await searchKnowledgeForWorker(driver,wid,c.resident_turns.join(' '),agentId);
+        const input=buildPackJudgeInput({ pack:rt.pack,clause:rt.clause(c.source_clause),scenario:c,reply,facts:rt.facts(packReading,c).judge,notes:judgeNotes(data.manifest.lessons,c.family),knowledge }),seed=`${cid}:${attempt}`;
+        const prior=(await work(async (db) => (await db.query<{model_calls:{family?:Family}[]}>('SELECT model_calls FROM nazir.conversations WHERE id=$1',[cid])).rows[0]!.model_calls));
+        const agentFamilies=[...new Set([...prior.map((m) => m.family ?? 'unknown'),...metas.map((m) => m.family)])];
+        try {
+          const judge=judgeFactory?judgeFactory(context):networkJudge(driver,context);
+          semantic=await bounded(judge({ input:input as ReturnType<typeof buildJudgeInput>,agentFamilies,seed }));
+        } catch { semantic=unavailable(input,seed); }
+        if(reason==='budget_reached' || reason==='timeout') reason=undefined;
+        judging=false;
+        verdict={ ...combineVerdicts(records,semantic),results:{ records,semantic } };
+      }
+      packFindings=buildPackFindings({ runtime:rt,scenarioRow:data.scenario as unknown as { id:string; stable_key:string; content_hash:string; language:string; family:string },scenario:c,reply,transcript,toolCalls,reading:packReading,records,semantic,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,version:resolved.version,lessons:data.manifest.lessons });
+    } catch { reason ??= 'bad_evaluator'; }
+  };
   try {
+    // A non Government pack drives its own sandbox, checks and judge; Government keeps the exact path below.
+    if (runtime) await packAttempt(runtime);
+    else {
     const version = resolveExecutable({ registry_id:data.manifest.registry_id,...(data.manifest.repair ?? {}) });
     if (!version || version.configHash!==data.manifest.configHash || data.scenario.content_hash!==data.scenario_hash) { reason='version_drifted'; }
     else {
@@ -147,14 +211,16 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
         }
       }
     }
+    }
   } catch { reason ??= 'reading_failed'; }
   finally { clearTimeout(timer); clearInterval(beat); stopped=true; }
   if (lost) return { ...claim,lost:true };
   if (!verdict || !['passed','failed','inconclusive'].includes(verdict.status)) { reason='bad_evaluator'; verdict={ status:'inconclusive',reason:'bad_evaluator',results:[] }; }
-  if(!evaluationInput) records=runRecordChecks({scenario:data.scenario,reply,toolCalls,reading,expectedTenant:tenant});
+  if(!evaluationInput && !runtime) records=runRecordChecks({scenario:data.scenario,reply,toolCalls,reading,expectedTenant:tenant});
   const missingReadingResults = () => evaluate===recordChecksEvaluator ? recordChecksEvaluator({ scenario:data.scenario,reply,toolCalls,reading:undefined,expectedTenant:tenant }).results : {};
-  if (reason) verdict={ status:'inconclusive',reason,results:reading ? {} : missingReadingResults() };
-  if (!reading && !reason) verdict={ status:'inconclusive',reason:'reading_failed',results:missingReadingResults() };
+  if (reason) verdict={ status:'inconclusive',reason,results:reading || runtime ? {} : missingReadingResults() };
+  if (!runtime && !reading && !reason) verdict={ status:'inconclusive',reason:'reading_failed',results:missingReadingResults() };
+  if (runtime && !packReading && !reason) verdict={ status:'inconclusive',reason:'reading_failed',results:{} };
   const status=verdict.status, resultReason=status==='inconclusive' ? code(verdict.reason) : verdict.reason ? code(verdict.reason) : null;
   const retry=status==='inconclusive' && infrastructure.has(resultReason!) && attempt<data.max_attempts;
   return work(async (db) => {
@@ -167,11 +233,12 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     let toolSeq=Number((await db.query<{ n: number }>('SELECT coalesce(max(seq),0) AS n FROM nazir.tool_events WHERE conversation_id=$1',[cid])).rows[0]!.n);
     for (const t of toolCalls) await db.query('INSERT INTO nazir.tool_events(workspace_id,conversation_id,seq,tool_name,request,response,outcome,idempotency_key,attempt,tool_idempotency_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[wid,cid,++toolSeq,t.name,JSON.stringify(t.arguments),JSON.stringify(t.result),t.result.ok?'ok':'error',`${cid}:${t.name}:${hash(t.arguments)}:attempt_${attempt}:event_${toolSeq}`,attempt,`${cid}:${t.name}:${hash(t.arguments)}`]);
     if (reading) await db.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading,attempt) VALUES($1,$2,'inspection_channel',$3,$4)",[wid,cid,JSON.stringify(reading),attempt]);
+    if (packReading) await db.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading,attempt) VALUES($1,$2,'inspection_channel',$3,$4)",[wid,cid,JSON.stringify({ pack:runtime!.id,...(packReading as object) }),attempt]);
     const meta=metas.at(-1);
     const summary={ results:data.manifest.recordsOnly?verdict.results ?? {}:{ records,semantic },records,semantic,calls:metas.map((m) => ({ provider:m.provider,model:m.model,failover:m.failover })) };
     await db.query(`UPDATE nazir.conversations SET status=$4,inconclusive_reason=CASE WHEN $4 IN ('inconclusive','queued') THEN $5 ELSE NULL END,last_error=$5,available_at=$6,finished_at=CASE WHEN $7 THEN NULL ELSE clock_timestamp() END,result_summary=$8,model_provider=$9,model_id=$10,failover=$11,model_calls=model_calls || $12::jsonb,lease_owner=NULL,lease_expires_at=NULL WHERE id=$1 AND lease_owner=$2 AND attempt=$3 AND status='running'`,[cid,workerId,attempt,retry?'queued':status,resultReason,new Date(now()+30000*attempt),retry,retry?null:JSON.stringify(summary),meta?.provider ?? null,meta?.model ?? null,metas.some((m) => m.failover),JSON.stringify(metas.map((m) => ({ attempt,provider:m.provider,model:m.model,family:m.family,failover:m.failover })))]);
-    if(!retry && evaluationInput && reading && status!=='inconclusive') {
-      const findings=buildFindings({ ...evaluationInput,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
+    if(!retry && (packReading || (evaluationInput && reading)) && status!=='inconclusive') {
+      const findings=runtime?packFindings:buildFindings({ ...evaluationInput!,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
       for(const finding of findings) {
         const fields=Object.keys(finding),values=Object.values(finding).map((v) => typeof v==='object'?JSON.stringify(v):v);
         const inserted=(await db.query<{id:string}>(`INSERT INTO nazir.findings(${fields.join(',')}) VALUES(${values.map((_,i) => '$'+(i+1)).join(',')}) ON CONFLICT(workspace_id,conversation_id,check_id) DO NOTHING RETURNING id`,values)).rows[0];

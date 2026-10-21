@@ -12,7 +12,7 @@ export const packSchema = z.strictObject({
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
   status: z.enum(['live', 'draft']),
   /** Which sandbox runs its cases. A draft with no sandbox says none. */
-  runner: z.enum(['government_sandbox', 'estate_sandbox', 'none']),
+  runner: z.enum(['government_sandbox', 'estate_sandbox', 'shop_sandbox', 'none']),
   name: both, summary: both,
   synthetic_data: z.literal(true),
   cases: z.union([

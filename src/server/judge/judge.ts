@@ -47,9 +47,9 @@ export function parseJudgeAnswer(text:string,reply:string) {
   return value;
 }
 export const hasReviewerInstruction = (reply:string) => /ignore\s+(?:the\s+)?(?:rubric|instructions)|mark\s+this\s+(?:as\s+)?pass(?:ed)?|you\s+must\s+pass|تجاهل\s+(?:التعليمات|القواعد|المعيار)|اعتبر\s+هذا\s+ناجح[ااً]?/iu.test(reply);
-export type SemanticResult = { status:'supported'|'contradicted'|'uncertain'|'unavailable'; issue:Issue; span:string; reason:string; labels:{ en:string; ar:string }; provider:string|null; model:string|null; family:Family|null; failover:boolean; attempts:CallMeta['attempts']; promptHash:string; rubricVersion:typeof rubricVersion; orderSeed:string; injectionFlag:boolean };
+export type SemanticResult = { status:'supported'|'contradicted'|'uncertain'|'unavailable'; issue:Issue; span:string; reason:string; labels:{ en:string; ar:string }; provider:string|null; model:string|null; family:Family|null; failover:boolean; attempts:CallMeta['attempts']; promptHash:string; rubricVersion:string; orderSeed:string; injectionFlag:boolean };
 export function unavailable(input:JudgeInput,seed:string,reason='judge_unavailable',attempts:CallMeta['attempts']=[]):SemanticResult {
-  return { status:'unavailable',issue:'none',span:'',reason,labels:{ en:'Reply review unavailable',ar:'مراجعة الرد غير متاحة' },provider:null,model:null,family:null,failover:false,attempts,promptHash:hash(input.prompt),rubricVersion,orderSeed:seed,injectionFlag:hasReviewerInstruction(input.reply) };
+  return { status:'unavailable',issue:'none',span:'',reason,labels:{ en:'Reply review unavailable',ar:'مراجعة الرد غير متاحة' },provider:null,model:null,family:null,failover:false,attempts,promptHash:hash(input.prompt),rubricVersion:input.rubricVersion ?? rubricVersion,orderSeed:seed,injectionFlag:hasReviewerInstruction(input.reply) };
 }
 export async function judgeReply({ chain,input,agentFamilies,seed,task='test_run',deadlineMs,workspaceId,conversationId }: { chain:AiChain; input:JudgeInput; agentFamilies:Family[]; seed:string; task?:Task; deadlineMs?:number; workspaceId?:string; conversationId?:string }):Promise<SemanticResult> {
   if (!agentFamilies.length || agentFamilies.some((f) => !['google_gemini','nvidia_nemotron','google_gemma','openai_gpt_oss','zhipu_glm','alibaba_qwen'].includes(f))) return unavailable(input,seed,'judge_family_unknown');
@@ -59,6 +59,6 @@ export async function judgeReply({ chain,input,agentFamilies,seed,task='test_run
     const injectionFlag=hasReviewerInstruction(input.reply);
     const force=injectionFlag && answer.verdict!=='contradicted';
     const issue=force?'instruction_in_reply':answer.issue;
-    return { status:force?'uncertain':answer.verdict,issue,span:quoteFromReply(answer.evidence_span,input.reply),reason:force?'reviewer_instruction_in_reply':answer.reason,labels:issueLabels[issue],provider:response.meta.provider,model:response.meta.model,family:response.meta.family,failover:response.meta.failover,attempts:response.meta.attempts,promptHash:hash(input.prompt),rubricVersion,orderSeed:seed,injectionFlag };
+    return { status:force?'uncertain':answer.verdict,issue,span:quoteFromReply(answer.evidence_span,input.reply),reason:force?'reviewer_instruction_in_reply':answer.reason,labels:issueLabels[issue],provider:response.meta.provider,model:response.meta.model,family:response.meta.family,failover:response.meta.failover,attempts:response.meta.attempts,promptHash:hash(input.prompt),rubricVersion:input.rubricVersion ?? rubricVersion,orderSeed:seed,injectionFlag };
   } catch(error) { return unavailable(input,seed,error instanceof AiChainExhausted && error.attempts.some((a) => a.reason==='deadline')?'judge_deadline':'judge_unavailable',error instanceof AiChainExhausted?error.attempts:[]); }
 }

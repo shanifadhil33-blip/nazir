@@ -37,7 +37,7 @@ export async function startLiveTest(driver: TransactionDriver, memberId: string,
     if (!w) throw new NotFound();
     if (w.kind !== 'demo') throw new Coded(403, 'live_test_demo_only', 'The live test runs in demo workspaces only.');
     const pack = (await sql.query<{ p: string | null }>("SELECT nazir.read_agent_settings()->>'focus_pack' AS p")).rows[0]?.p ?? 'government';
-    if ((packById(pack)?.runner ?? 'government_sandbox') !== 'government_sandbox') throw new Coded(409, 'pack_not_running', errorLines.pack_not_running.en);
+    if ((packById(pack)?.runner ?? 'government_sandbox') !== 'government_sandbox') throw new Coded(409, 'live_test_government_only', errorLines.live_test_government_only.en);
     if (!liveTestReady(env)) throw new Coded(503, 'live_test_unavailable', 'The live test is not connected here yet. Nothing was queued.');
 
     return { workspaceId: w.id };

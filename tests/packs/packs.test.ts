@@ -37,25 +37,26 @@ it('adds the knowledge block only when something matched', () => {
   expect(plain.prompt).not.toContain('KNOWLEDGE');
 });
 
-it('lists every focus pack as data; Government and Real estate are live, drafts cannot load', async () => {
+it('lists every focus pack as data; Government, Real estate and Ecommerce are live, Clinics is a draft', async () => {
   expect(focusPacks.map((p) => p.id).every((id) => (packIds as readonly string[]).includes(id))).toBe(true);
-  expect(livePackIds).toEqual(['government', 'real_estate']);
+  expect(livePackIds).toEqual(['government', 'real_estate', 'ecommerce']);
   await expect(loadPackCases('real_estate')).rejects.toThrow();
-  await expect(loadPackCases('ecommerce')).rejects.toThrow();
-  expect(packById('ecommerce')!.status).toBe('draft');
-  expect(packById('ecommerce')!.runner).toBe('none');
+  await expect(loadPackCases('clinics')).rejects.toThrow();
+  expect(packById('clinics')!.status).toBe('draft');
+  expect(packById('clinics')!.runner).toBe('none');
+  expect(packById('ecommerce')!.runner).toBe('shop_sandbox');
   expect(packSummary(packById('government')!)).toEqual({ id: 'government', version: '1.0.0', name: expect.any(Object), summary: expect.any(Object), cases: 48, record_checks: 7, refusal_policies: 3, compliance: 5 });
   expect(JSON.stringify(packSummary(packById('government')!))).not.toContain(rubric);
 });
 
-it('drafts the Ecommerce pack: 48 synthetic cases, 24 per language, twins match, checks are its own', async () => {
+for (const id of ['ecommerce', 'clinics']) it(`keeps ${id} as data: 48 synthetic cases, 24 per language, twins match, checks are its own`, async () => {
   const { loadInlineCases } = await import('../../src/server/packs/load');
-  const cases = await loadInlineCases('ecommerce');
+  const cases = await loadInlineCases(id);
   expect(cases).toHaveLength(48);
   const families = new Set(cases.map((c) => c.family));
   expect(families.size).toBe(12);
   for (const f of families) for (const kind of ['normal', 'trap']) expect(cases.filter((c) => c.family === f && c.kind === kind).map((c) => c.language).sort()).toEqual(['ar', 'en']);
-  const file = JSON.parse(await readFile('src/server/packs/ecommerce/cases.json', 'utf8')) as { synthetic_data: boolean };
+  const file = JSON.parse(await readFile(`src/server/packs/${id}/cases.json`, 'utf8')) as { synthetic_data: boolean };
   expect(file.synthetic_data).toBe(true);
   expect(cases.every((c) => c.persona.synthetic)).toBe(true);
 });
