@@ -245,3 +245,14 @@ it('shows repeat outcomes and flaky tags in the score and failure view in both l
     expect(html).toContain(copy.ui.flaky);
   }
 });
+
+it('offers the identical quick and full choices to existing roles in demo and signed in workspaces', () => {
+  for (const lang of ['en', 'ar'] as const) for (const seat of ['owner', 'editor', 'supplier', 'viewer'] as const) {
+    for (const demo of [true, false]) {
+      const html = screen(lang, seat, demo);
+      expect(html.includes('data-action="quick"')).toBe(seat !== 'viewer');
+      expect(html.includes('data-action="replay"')).toBe(seat !== 'viewer');
+      if (seat !== 'viewer') expect(html).toContain(messagesFor(lang).ui.quickCheck);
+    }
+  }
+});

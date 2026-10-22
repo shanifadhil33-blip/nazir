@@ -111,3 +111,13 @@ The call estimate uses the plan’s per attempt allowance when provided, or its 
 Run the full 48 case suite with `REPEAT_COUNT=1` on the free daily cap of 300 test run calls. The fallback estimate is 192 calls for one attempt per case and 576 for three. The CLI keeps its default of three and prints the estimate before enqueue.
 
 Reports retain individual conversations and add case results with the passed count, total and flaky flag. Scores count cases, requiring every finished attempt to pass. Inconclusive attempts prevent a pass; cancelled attempts are excluded from that pass decision. A finding is stored once per case and failed check, with immutable conversation links used to count failed attempts. Existing runs and report snapshots retain single attempt defaults. Migration `0029_repeat_runs.sql` must be applied separately before using this code.
+
+## Quick check
+
+Every focus pack, including the Government library, declares `quick.version` and 16 stable keys in its `pack.json`. Loaders check existence, uniqueness and the 8 English plus 8 Arabic split. The selection covers all 12 families, with each appearing once or twice. Both languages include at least two refusal or safety cases and two cases exercising planted faults. Government uses the same library files and hashes as a full run.
+
+Ocean offers Quick check beside Full suite for the existing run proposal roles. English `run a quick check` and Arabic `فحص سريع` propose the same bounded plan and still require the existing approval. MCP `propose_plan` accepts `size: "quick"` or `size: "full"`; `start_run` may confirm the proposed size when approving. Approval cannot silently change the proposed selection. Repeat counts remain 1 through 3, defaulting to 3. A size selects distinct cases, so a quick check at three repeats queues 48 conversations.
+
+The runner script accepts `SIZE=quick` with both languages and all selected keys available. Use an approved plan with sufficient budget, as for a full run. The budget estimate and remaining daily cap check use the selected 16 cases and their attempts. They remain enforced for both workspace kinds. `SIZE=full` is the default. No size changes provider selection or invokes a separate demo runner.
+
+Plan stop rules persist size and quick set version without a database migration. Runs freeze size, distinct test count and quick set version in their existing manifest. Saved reports and PDF headers read those frozen fields; older reports use their saved case count.

@@ -116,7 +116,11 @@
     "runDone": "Run finished: {passed} passed, {failed} failed, {inconclusive} without a verdict.",
     "runWaiting": "The run is queued. It starts when the test engine is connected here.",
     "attemptOutcome": "passed {passed} of {total}",
-    "flaky": "Flaky"
+    "flaky": "Flaky",
+    "quickCheck": "Quick check (16 tests)",
+    "fullSuite": "Full suite",
+    "quickHeader": "Quick check, {count} tests",
+    "fullHeader": "Full suite, {count} tests"
   },
   "sample": {
     "agent": "Harbor permits desk",

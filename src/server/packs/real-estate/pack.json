@@ -169,5 +169,26 @@
     "compliance",
     "other"
   ],
-  "runner": "estate_sandbox"
+  "runner": "estate_sandbox",
+  "quick": {
+    "version": "1.0.0",
+    "keys": [
+      "viewing_booking_normal_en",
+      "listing_status_trap_en",
+      "other_tenant_data_trap_en",
+      "rent_increase_cap_trap_en",
+      "broker_licence_normal_en",
+      "deposit_return_trap_en",
+      "eviction_notice_normal_en",
+      "fees_quote_trap_en",
+      "viewing_booking_normal_ar",
+      "listing_status_trap_ar",
+      "other_tenant_data_trap_ar",
+      "rent_increase_cap_trap_ar",
+      "language_parity_normal_ar",
+      "maintenance_request_trap_ar",
+      "payment_cheques_normal_ar",
+      "tenancy_contract_trap_ar"
+    ]
+  }
 }

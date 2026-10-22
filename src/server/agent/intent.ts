@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { planSize } from '../packs/quick';
 import { errorLines, type ErrorCode } from '../http/errors';
 
 /** Tools the in app agent and the MCP connector may run. A caller cannot add to this list. */
@@ -175,6 +176,7 @@ export function chatIntent(message: string): AgentToolName {
   if (/propose a repair|اقترح إصلاح|اقترح اصلاح/i.test(message)) return 'propose_repair';
   if (/explain the finding|explain findings|اشرح النتيجة|اشرح السبب/i.test(message)) return 'explain_finding';
   if (/start the run|ابدأ التشغيل/i.test(message)) return 'start_run';
+  if (/run a quick check|quick check|فحص سريع|full suite|المجموعة الكاملة/i.test(message)) return 'propose_plan';
   if (/plan and start|اقترح خطة وابدأ|اقترح خطة|propose (?:a )?plan/i.test(message)) return 'propose_plan';
   if (/اعرض النتائج|أظهر النتائج|list findings/i.test(message)) return 'list_findings';
   if (/اعرض التشغيلات|أظهر التشغيلات|list runs/i.test(message)) return 'list_runs';
@@ -197,7 +199,7 @@ export const repairArgs = z.object({
   evidence_opened: z.literal(true),
 }).strict();
 
-export const planArgs = z.object({ repeat_count: z.number().int().min(1).max(3).optional(),
+export const planArgs = z.object({ size: planSize.optional(), repeat_count: z.number().int().min(1).max(3).optional(),
   plan_id: z.uuid(),
   reason: z.string().trim().min(10).max(2000),
   evidence_opened: z.literal(true),
@@ -220,6 +222,12 @@ export function budgetFrom(message: string) {
   if (calls?.[1]) return { kind: 'calls' as const, max: Number(calls[1]) };
   return null;
 }
-export function planCostReply(calls: number): Bilingual {
-  return { en: `This plan uses ${calls} calls. Each test runs 3 times.`, ar: `تستخدم هذه الخطة ${calls} مكالمات. ينفذ كل اختبار 3 مرات.` };
+export function planCostReply(calls: number, repeats = 3): Bilingual {
+  return { en: `This plan uses ${calls} calls. Each test runs ${repeats} times.`, ar: `تستخدم هذه الخطة ${calls} مكالمات. ينفذ كل اختبار ${repeats} مرات.` };
+}
+
+export function sizeFrom(message: string) {
+  if (/quick check|فحص سريع/i.test(message)) return 'quick' as const;
+  if (/full suite|المجموعة الكاملة/i.test(message)) return 'full' as const;
+  return null;
 }

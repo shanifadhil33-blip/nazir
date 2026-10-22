@@ -1,6 +1,6 @@
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
-import { caseResults, attemptOutcome, type ReportBody, type ReportCounts } from './build';
+import { caseResults, suiteLabel, attemptOutcome, type ReportBody, type ReportCounts } from './build';
 import { shapePdfLine, wrapPdfText } from './pdf-text';
 
 export type PdfExtras = {
@@ -117,6 +117,7 @@ export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promi
   };
   addPage();
   line(c.title, 22, true);
+  line(suiteLabel(body, extras.lang));
   line(`${c.agent}: ${extras.agentName}`);
   line(`${c.pack}: ${extras.focusPack}`);
   line(`${c.date}: ${extras.runDate}`);

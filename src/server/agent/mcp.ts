@@ -60,7 +60,7 @@ const descriptions: Record<AgentTool, string> = {
   rerun_tests: 'Queue the affected tests for an approved repair.',
   compare_runs: 'Compare two finished runs, or show a saved comparison.',
 };
-export const mcpTools = agentTools.map((name) => ({ name, description: descriptions[name], inputSchema: { type: 'object' as const } }));
+export const mcpTools = agentTools.map((name) => ({ name, description: descriptions[name], inputSchema: { type: 'object' as const, ...(['propose_plan', 'start_run'].includes(name) ? { properties: { size: { type: 'string', enum: ['quick', 'full'] }, repeat_count: { type: 'integer', minimum: 1, maximum: 3, default: 3 } } } : {}) } }));
 
 const rpc = z.object({ jsonrpc: z.literal('2.0'), id: z.union([z.string(), z.number(), z.null()]), method: z.string().min(1).max(80), params: z.unknown().optional() }).strict();
 type RpcId = string | number | null;

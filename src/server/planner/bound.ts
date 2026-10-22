@@ -1,5 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
+import { planSize } from '../packs/quick';
+import { packById } from '../packs/catalog';
 import { toolManifest } from '../../sandbox/tools';
 import { can, type Role } from '../auth/roles';
 import { requireRole } from '../auth/guard';
@@ -126,7 +128,9 @@ export function shouldStop(state: { callsUsed: number; callCeiling: number; fail
   return state.failureStreakLimit > 0 && state.failureStreak >= state.failureStreakLimit;
 }
 
-const proposeInput = z.object({
+export const proposeInput = z.object({
+  size: planSize.default('full'),
+  repeat_count: z.number().int().min(1).max(3).default(3),
   agent_version_id: z.uuid(),
   rule_pack_version_id: z.uuid(),
   budget: budgetInput.optional(),
@@ -165,33 +169,35 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     const allowedTools = toolNames(manifest) ?? sandboxToolNames;
     const roles = (await sql.query<{ role: Role }>('SELECT role FROM nazir.member_roles WHERE member_id=nazir.current_member_id()')).rows.map((row) => row.role);
     const held = plannerPermissions.filter((action) => can(roles, action));
-    const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages);
+    const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages, input.size);
     const ordered = planOrder(scenarios, failures, lessons);
     if (!ordered.scenarioIds.length) throw new Coded(409, 'no_tests', 'There is no approved test to plan.');
     const byId = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
     const candidates = ordered.scenarioIds.flatMap((id) => {
       const scenario = byId.get(id);
-      return scenario ? [{ id: scenario.id, family: scenario.family, language: scenario.language, calls: callsPerScenario * 3 }] : [];
+      return scenario ? [{ id: scenario.id, family: scenario.family, language: scenario.language, calls: callsPerScenario * input.repeat_count }] : [];
     });
     const boost = Object.fromEntries(ordered.order.map((family, index) => [family, ordered.order.length - index]));
     const ranked = rankFamilies([...new Set(candidates.map((scenario) => scenario.family))], failures, boost)
       .flatMap((family) => candidates.filter((scenario) => scenario.family === family).sort((a, b) => a.language.localeCompare(b.language) || a.id.localeCompare(b.id)));
-    const budget = input.budget ?? { kind: 'calls' as const, max: defaultCallBudget(ranked.map((scenario) => scenario.calls)) };
+    const budget = input.budget ?? { kind: 'calls' as const, max: ranked.reduce((n, scenario) => n + scenario.calls, 0) || defaultCallBudget([]) };
     const plan = boundPlan({
       scenarios: candidates, failures, budget, boost, failureStreak: input.failure_streak, allowedTools,
       ...(input.tools ? { requestedTools: input.tools } : {}),
       heldPermissions: held,
       ...(input.permissions ? { requestedPermissions: input.permissions } : {}),
     });
+    if (input.size === 'quick' && plan.scenarioIds.length !== 16) throw new Coded(400, 'budget_too_small', 'The budget is too small for a quick check.');
+    const packId = (await sql.query<{ pack: string }>('SELECT nazir.current_focus_pack() AS pack')).rows[0]!.pack;
     const repeatsFor = Object.fromEntries(Object.entries(ordered.repeatsFor).filter(([id]) => plan.scenarioIds.includes(id)));
     const languages = input.languages ?? [...new Set(scenarios.filter((scenario) => plan.scenarioIds.includes(scenario.id)).map((scenario) => scenario.language))];
-    const stopRules = { set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, calls_per_attempt: callsPerScenario, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling, repeats_for: repeatsFor };
+    const stopRules = { size: input.size, ...(input.size === 'quick' ? { quick_version: packById(packId)!.quick.version } : {}), set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, calls_per_attempt: callsPerScenario, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling, repeats_for: repeatsFor };
     const lessonsUsed = ordered.lessonsUsed;
-    const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used)
-      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,3,$5,$6::jsonb,'member',$7::jsonb) RETURNING id`,
-    [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules), lessonsUsed.length ? JSON.stringify(lessonsUsed) : null])).rows[0]!;
+    const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used,repeat_count)
+      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,$8,$5,$6::jsonb,'member',$7::jsonb,$8) RETURNING id`,
+    [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules), lessonsUsed.length ? JSON.stringify(lessonsUsed) : null, input.repeat_count])).rows[0]!;
     await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order, lessons: lessonsUsed.map((lesson) => lesson.lesson_id) })]);
-    return { id: row.id, ...plan, repeatCount: 3, lessonsUsed };
+    return { id: row.id, ...plan, size: input.size, repeatCount: input.repeat_count, lessonsUsed };
   });
 }
 

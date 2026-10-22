@@ -1,5 +1,7 @@
 import 'server-only';
 import { z } from 'zod';
+import { planSize, selectSize, type PlanSize } from '../packs/quick';
+import { packById } from '../packs/catalog';
 import { withMember, withWorker } from '../db/context';
 import { requireRole } from '../auth/guard';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
@@ -32,38 +34,43 @@ export function planOrder(scenarios: PlanScenario[], failures: Record<string, nu
   const repeatsFor = Object.fromEntries(ordered.filter((s) => repeats[s.family]).map((s) => [s.id, repeats[s.family]!]));
   return { order, scenarioIds: ordered.map((s) => s.id), familyRepeats: repeats, repeatsFor, lessonsUsed: used };
 }
-export async function planInputs(sql: SqlConnection, families?: string[], languages?: string[]) {
-  const scenarios = (await sql.query<PlanScenario>(`SELECT s.id,s.meaning_id,m.canonical->>'meaning_key' AS meaning_key,m.canonical->>'kind' AS meaning_kind,s.family,s.split,s.stable_key,s.language,(s.library_hash IS NOT NULL) AS library,s.checks,s.expected_state->>'category' AS category
+export async function planInputs(sql: SqlConnection, families?: string[], languages?: string[], size: PlanSize = 'full') {
+  let scenarios = (await sql.query<PlanScenario>(`SELECT s.id,s.meaning_id,m.canonical->>'meaning_key' AS meaning_key,m.canonical->>'kind' AS meaning_kind,s.family,s.split,s.stable_key,s.language,(s.library_hash IS NOT NULL) AS library,s.checks,s.expected_state->>'category' AS category
     FROM nazir.scenarios s JOIN nazir.scenario_meanings m ON m.id=s.meaning_id WHERE s.status='approved' AND nazir.scenario_pack(s.starting_state)=nazir.current_focus_pack() AND ($1::text[] IS NULL OR s.family=ANY($1)) AND ($2::text[] IS NULL OR s.language=ANY($2))`, [families ?? null, languages ?? null])).rows;
+  if (size === 'quick') {
+    const pack = (await sql.query<{ pack: string }>('SELECT nazir.current_focus_pack() AS pack')).rows[0]!.pack;
+    scenarios = selectSize(pack, onePerKey(scenarios) as PlanScenario[], size);
+  }
   const failures = Object.fromEntries((await sql.query<{ family: string; n: number }>(`SELECT s.family,count(*)::int AS n FROM nazir.findings f JOIN nazir.scenarios s ON s.id=f.scenario_id WHERE f.created_at>now()-interval '30 days' AND nazir.scenario_pack(s.starting_state)=nazir.current_focus_pack() GROUP BY s.family`)).rows.map((r) => [r.family, r.n]));
   const rows = (await sql.query<PlanLesson>(`SELECT id,version,text,text_ar,effect,scope,approved_by FROM nazir.lessons WHERE status='active' AND effect IS NOT NULL AND (scope='small' OR approved_by IS NOT NULL) ORDER BY updated_at DESC,id`)).rows;
   // Re-check every stored effect at use time; anything outside the allowlist is ignored.
   const lessons = rows.flatMap((l) => { try { return [{ ...l, effect: checkEffect(l.effect) }]; } catch { return []; } });
   return { scenarios, failures, lessons };
 }
-const proposeInput = z.object({ agent_version_id: z.uuid(), rule_pack_version_id: z.uuid(), families: z.array(z.string().min(1).max(60)).max(20).optional(), languages: z.array(z.enum(['en', 'ar'])).min(1).max(2).optional(), budget_cap: z.number().int().min(1).max(2000).optional() }).strict();
+const proposeInput = z.object({ size: planSize.default('full'), repeat_count: z.number().int().min(1).max(3).default(3), agent_version_id: z.uuid(), rule_pack_version_id: z.uuid(), families: z.array(z.string().min(1).max(60)).max(20).optional(), languages: z.array(z.enum(['en', 'ar'])).min(1).max(2).optional(), budget_cap: z.number().int().min(1).max(2000).optional() }).strict();
 /** Nazir proposes the next plan. It stays proposed until a reviewer or owner approves it. */
 export async function proposeNextPlan(driver: TransactionDriver, workspaceId: string, value: unknown) {
   const input = proposeInput.parse(value);
   return withWorker(driver, workspaceId, async (sql) => {
-    const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages);
+    const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages, input.size);
     const plan = planOrder(scenarios, failures, lessons);
     if (!plan.scenarioIds.length) throw new Error('No approved scenarios');
-    const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used)
-      VALUES(nazir.current_workspace_id(),'Next plan from history and lessons',$1,$2,$3,$4,3,$5,$6::jsonb,'nazir',$7::jsonb) RETURNING id`,
-    [input.agent_version_id, input.rule_pack_version_id, plan.order, input.languages ?? ['en', 'ar'], budgetFor(plan.scenarioIds.length * 3, input.budget_cap ?? 2000),
-      JSON.stringify({ set: 'next', order: plan.order, family_repeats: plan.familyRepeats, scenario_ids: plan.scenarioIds, failures, records_only: false }), JSON.stringify(plan.lessonsUsed)])).rows[0]!;
+    const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used,repeat_count)
+      VALUES(nazir.current_workspace_id(),'Next plan from history and lessons',$1,$2,$3,$4,$8,$5,$6::jsonb,'nazir',$7::jsonb,$8) RETURNING id`,
+    [input.agent_version_id, input.rule_pack_version_id, plan.order, input.languages ?? ['en', 'ar'], budgetFor(plan.scenarioIds.length * input.repeat_count, input.budget_cap ?? 2000),
+      JSON.stringify({ size: input.size, set: 'next', order: plan.order, family_repeats: plan.familyRepeats, scenario_ids: plan.scenarioIds, failures, records_only: false, ...(input.size === 'quick' ? { quick_version: packById((await sql.query<{ pack: string }>('SELECT nazir.current_focus_pack() AS pack')).rows[0]!.pack)!.quick.version } : {}) }), JSON.stringify(plan.lessonsUsed), input.repeat_count])).rows[0]!;
     await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ lessons: plan.lessonsUsed.map((l) => l.lesson_id), order: plan.order })]);
-    return { id: row.id, ...plan, repeatCount: 3 };
+    return { id: row.id, ...plan, size: input.size, repeatCount: input.repeat_count };
   });
 }
 export async function approvePlan(driver: TransactionDriver, memberId: string, value: unknown) {
-  const input = z.object({ id: z.uuid(), reason: z.string().trim().min(10).max(2000), evidence_opened: z.boolean(), repeat_count: z.number().int().min(1).max(3).default(3) }).strict().parse(value);
+  const input = z.object({ id: z.uuid(), reason: z.string().trim().min(10).max(2000), evidence_opened: z.boolean(), size: planSize.optional(), repeat_count: z.number().int().min(1).max(3).default(3) }).strict().parse(value);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
     const plan = (await sql.query<{ stop_rules: { scenario_ids?: string[]; budget?: { kind: string; perCall?: number }; [key: string]: unknown } }>("SELECT stop_rules FROM nazir.plans WHERE id=$1 AND status='proposed' FOR UPDATE", [input.id])).rows[0];
     if (!plan) throw new Error('Plan is not waiting');
     const rules = { ...plan.stop_rules };
+    if (input.size && input.size !== (rules.size ?? 'full')) throw new Error('Approve the proposed plan size.');
     if (rules.scenario_ids?.length) {
       rules.calls_per_attempt = callsPerScenario;
       rules.planned_calls = rules.scenario_ids.length * input.repeat_count * callsPerScenario;

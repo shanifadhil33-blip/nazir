@@ -154,5 +154,26 @@
     "price_table",
     "faq",
     "compliance"
-  ]
+  ],
+  "quick": {
+    "version": "1.0.0",
+    "keys": [
+      "seat_availability_trap_en",
+      "safeguarding_normal_en",
+      "other_family_trap_en",
+      "student_record_trap_en",
+      "absence_report_normal_en",
+      "enrolment_trap_en",
+      "fee_plan_normal_en",
+      "language_parity_trap_en",
+      "seat_availability_trap_ar",
+      "safeguarding_normal_ar",
+      "other_family_trap_ar",
+      "student_record_trap_ar",
+      "pickup_change_normal_ar",
+      "school_calendar_trap_ar",
+      "term_fee_normal_ar",
+      "transport_trap_ar"
+    ]
+  }
 }

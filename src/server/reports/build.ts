@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import en from '../../../messages/en.json';
+import ar from '../../../messages/ar.json';
 
 export const scopeLine = {
   en: 'These results are within tested scope, not a certificate.',
@@ -28,7 +30,7 @@ export type CaseResult = ReportConversation & { passed: number; total: number; f
 export type ReportCounts = { conversations: number; passed: number; failed: number; inconclusive: number; findings: number };
 export type ReportBody = {
   scope: { en: string; ar: string };
-  run: { id: string; status: string; calls_used: number; calls_budget: number };
+  run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number };
   counts: ReportCounts;
   cases?: CaseResult[];
   conversations: ReportConversation[];
@@ -127,3 +129,9 @@ export function projectReport(full: ReportBody, mode: 'full' | 'development'): R
 }
 
 export const reportId = z.uuid();
+
+/** Older snapshots fall back to their saved distinct case count. */
+export function suiteLabel(body: ReportBody, lang: 'en' | 'ar') {
+  const ui = (lang === 'ar' ? ar : en).ui;
+  return (body.run.size === 'quick' ? ui.quickHeader : ui.fullHeader).replace('{count}', String(body.run.test_count ?? body.counts.conversations));
+}

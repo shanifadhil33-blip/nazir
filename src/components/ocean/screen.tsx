@@ -99,7 +99,7 @@ export function WorkspaceScreen({
   lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
-  onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
+  onReplay: (size?: 'quick' | 'full') => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
   pdfHref?: string;
   avatar?: string; onSettings?: () => void; measured?: Measured | null; onLiveTest?: () => void;
 }) {
@@ -161,7 +161,7 @@ export function WorkspaceScreen({
       <section className="nz-panel nz-log" id="nz-chat" aria-label={copy.ui.agentLog}>
         <div className="nz-panel-head">
           <div><h2>{copy.ui.agentLog}</h2><p className="nz-status"><span className={`nz-dot nz-dot-${model.status}`} />{statusLabel(copy, model.status)}</p></div>
-          {compose ? <button type="button" className="nz-btn nz-btn-ghost" data-action="replay" onClick={onReplay}>{copy.ui.replay}</button> : null}
+          {compose ? <span className="nz-actions"><button type="button" className="nz-btn nz-btn-ghost" data-action="quick" disabled={pending} onClick={() => onReplay('quick')}>{copy.ui.quickCheck}</button><button type="button" className="nz-btn nz-btn-ghost" data-action="replay" disabled={pending} onClick={() => onReplay('full')}>{copy.ui.fullSuite}</button></span> : null}
         </div>
         <button type="button" className="nz-compact" onClick={() => open('score')}>
           <span>{model.agentName}</span>
@@ -224,6 +224,7 @@ export function WorkspaceScreen({
       </div>
       <section className="nz-panel nz-report" id="nz-report" aria-label={copy.ui.report}>
         <h2>{copy.ui.report}</h2>
+        {model.suiteLabel ? <p>{model.suiteLabel}</p> : null}
         {model.before ? <div className="nz-report-scores">
           <div><p>{copy.ui.before}</p><ScoreFigure value={model.before.score} ring="coral" /></div>
           <span className="nz-arrow" aria-hidden="true">→</span>

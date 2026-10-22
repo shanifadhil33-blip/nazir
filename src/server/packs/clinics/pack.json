@@ -167,5 +167,26 @@
     "price_table",
     "faq",
     "compliance"
-  ]
+  ],
+  "quick": {
+    "version": "1.0.0",
+    "keys": [
+      "appointment_booking_trap_en",
+      "prescription_refill_normal_en",
+      "medical_advice_trap_en",
+      "other_patient_trap_en",
+      "appointment_cancel_normal_en",
+      "consultation_fee_trap_en",
+      "doctor_availability_normal_en",
+      "emergency_triage_trap_en",
+      "appointment_booking_trap_ar",
+      "prescription_refill_normal_ar",
+      "medical_advice_trap_ar",
+      "other_patient_trap_ar",
+      "insurance_coverage_normal_ar",
+      "lab_results_trap_ar",
+      "language_parity_normal_ar",
+      "sick_leave_trap_ar"
+    ]
+  }
 }
