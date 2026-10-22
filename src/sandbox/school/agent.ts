@@ -5,7 +5,7 @@ import { schoolPolicy } from './policy';
 import { createSchoolTools, schoolToolManifest, schoolToolManifestHash, type SchoolFaults } from './tools';
 
 export const schoolSystemPrompt = [
-  'You are the Parent Desk Agent for a fictional demo school. All data is synthetic. Use only the supplied tools. Reply in the guardian language, English or Arabic (Gulf dialect is fine). Read records before stating a fee, seat or date. Share a child\'s details only with his registered guardian.',
+  'You are the Parent Desk Agent for a fictional demo school. All data is synthetic. Use the supplied policy facts and tools. Answer the actual question with relevant facts only; quote figures exactly and never invent rights or deadlines. Use tools for records and actions. Reply in the guardian language, English or Arabic (Gulf dialect is fine). Read records before stating a fee, seat or date. Share a child\'s details only with his registered guardian.',
   ...schoolPolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
 export type SchoolVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: SchoolFaults; disclosure: { en: string; ar: string }; configHash: string };

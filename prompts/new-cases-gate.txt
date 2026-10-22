@@ -1,0 +1,263 @@
+
+> nazir@0.1.0 gate /workspace/nazir
+> node scripts/gate.mjs
+
+
+> nazir@0.1.0 lint /workspace/nazir
+> eslint .
+
+
+> nazir@0.1.0 typecheck /workspace/nazir
+> tsc --noEmit
+
+
+> nazir@0.1.0 test /workspace/nazir
+> vitest run
+
+
+ RUN  v4.1.12 /workspace/nazir
+
+
+ Test Files  89 passed (89)
+      Tests  1426 passed (1426)
+   Start at  16:35:49
+   Duration  94.48s (transform 2.26s, setup 0ms, import 13.24s, tests 166.23s, environment 7ms)
+
+
+> nazir@0.1.0 build /workspace/nazir
+> next build
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 29ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 400ms
+  Running TypeScript ...
+  Finished TypeScript in 5.3s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/8) ...
+  Generating static pages using 7 workers (2/8) 
+  Generating static pages using 7 workers (4/8) 
+  Generating static pages using 7 workers (6/8) 
+✓ Generating static pages using 7 workers (8/8) in 168ms
+Turbopack build encountered 6 warnings:
+./src/server/library/load.ts:44:55
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m42 |[0m ...ddir(root)).filter((n) => n.endsWith([32m'.json'[0m)).sort();
+  [90m43 |[0m ...[33mmise[0m.all(names.map([36masync[0m (n) => {
+[33m[1m>[0m [90m44 |[0m ...hema.parse([33mJSON[0m.parse([36mawait[0m readFile(join(root, n), [32m'utf8'[0m)));
+  [90m   |[0m                                [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m45 |[0m ... + [32m'.json'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'Library filename must match its family.'[0m);
+  [90m46 |[0m ...
+  [90m47 |[0m ...
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFile(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./src/server/library/load.ts
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+  #2 [App Route]:
+    ./src/server/library/load.ts
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+
+./src/server/library/load.ts:42:24
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m40 |[0m }
+  [90m41 |[0m [36mexport[0m [36masync[0m [36mfunction[0m loadLibrary(root = join(process.cwd(), [32m'src/server/library/scenarios.[0m..
+[33m[1m>[0m [90m42 |[0m   [36mconst[0m names = ([36mawait[0m readdir(root)).filter((n) => n.endsWith([32m'.json'[0m)).sort();
+  [90m   |[0m                        [33m[1m^^^^^^^^^^^^^[0m
+  [90m43 |[0m   [36mconst[0m values = [36mawait[0m [33mPromise[0m.all(names.map([36masync[0m (n) => {
+  [90m44 |[0m     [36mconst[0m value = familySchema.parse([33mJSON[0m.parse([36mawait[0m readFile(join(root, n), [32m'utf8'[0m)));
+  [90m45 |[0m     [36mif[0m (n !== value.family + [32m'.json'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'Library filename must match its fam...[0m
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readdir(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./src/server/library/load.ts
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+  #2 [App Route]:
+    ./src/server/library/load.ts
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+
+./src/server/library/load.ts:44:64
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m42 |[0m ...ddir(root)).filter((n) => n.endsWith([32m'.json'[0m)).sort();
+  [90m43 |[0m ...[33mmise[0m.all(names.map([36masync[0m (n) => {
+[33m[1m>[0m [90m44 |[0m ...hema.parse([33mJSON[0m.parse([36mawait[0m readFile(join(root, n), [32m'utf8'[0m)));
+  [90m   |[0m                                         [33m[1m^^^^^^^^^^^^^[0m
+  [90m45 |[0m ... + [32m'.json'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'Library filename must match its family.'[0m);
+  [90m46 |[0m ...
+  [90m47 |[0m ...
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./src/server/library/load.ts
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+  #2 [App Route]:
+    ./src/server/library/load.ts
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+
+./src/server/packs/load.ts:21:57
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m19 |[0m ...
+  [90m20 |[0m ...= [32m'inline'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'This focus pack has no inline cases.'[0m);
+[33m[1m>[0m [90m21 |[0m ...rse([33mJSON[0m.parse([36mawait[0m readFile(join(cwd, pack.cases.file), [32m'utf8'[0m)));
+  [90m   |[0m                         [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m22 |[0m ...[36mnew[0m [33mError[0m([32m'Cases belong to another pack.'[0m);
+  [90m23 |[0m ....map((c) => c.id);
+  [90m24 |[0m ...
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFile(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+
+./src/server/packs/load.ts:14:22
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m12 |[0m   [36mif[0m (!pack || pack.status !== [32m'live'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'This focus pack cannot run yet.'[0m);
+  [90m13 |[0m   [36mif[0m (pack.cases.source !== [32m'library'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'This focus pack cannot run yet.'[0m);
+[33m[1m>[0m [90m14 |[0m   [36mreturn[0m loadLibrary(join(cwd, pack.cases.directory));
+  [90m   |[0m                      [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m15 |[0m }
+  [90m16 |[0m
+  [90m17 |[0m [90m/** Inline cases checked against the pack counts, languages and record checks. */[0m
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+
+./src/server/packs/load.ts:21:66
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m19 |[0m ...
+  [90m20 |[0m ...= [32m'inline'[0m) [36mthrow[0m [36mnew[0m [33mError[0m([32m'This focus pack has no inline cases.'[0m);
+[33m[1m>[0m [90m21 |[0m ...rse([33mJSON[0m.parse([36mawait[0m readFile(join(cwd, pack.cases.file), [32m'utf8'[0m)));
+  [90m   |[0m                                  [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m22 |[0m ...[36mnew[0m [33mError[0m([32m'Cases belong to another pack.'[0m);
+  [90m23 |[0m ....map((c) => c.id);
+  [90m24 |[0m ...
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  App Route:
+    ./src/server/packs/load.ts
+    ./src/server/packs/install.ts
+    ./src/app/api/workspaces/[workspaceId]/settings/route.ts
+
+
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/cron/demo-reset
+├ ƒ /api/health
+├ ƒ /api/mcp
+├ ƒ /api/me
+├ ƒ /api/sandbox/agent
+├ ƒ /api/workspaces
+├ ƒ /api/workspaces/[workspaceId]/agent/chat
+├ ƒ /api/workspaces/[workspaceId]/demo-reset
+├ ƒ /api/workspaces/[workspaceId]/knowledge
+├ ƒ /api/workspaces/[workspaceId]/knowledge/[docId]
+├ ƒ /api/workspaces/[workspaceId]/knowledge/pdf
+├ ƒ /api/workspaces/[workspaceId]/knowledge/search
+├ ƒ /api/workspaces/[workspaceId]/live-test
+├ ƒ /api/workspaces/[workspaceId]/live-test/step
+├ ƒ /api/workspaces/[workspaceId]/mcp/tokens
+├ ƒ /api/workspaces/[workspaceId]/mcp/tokens/[tokenId]/revoke
+├ ƒ /api/workspaces/[workspaceId]/packs
+├ ƒ /api/workspaces/[workspaceId]/plans/[planId]/approve
+├ ƒ /api/workspaces/[workspaceId]/reports
+├ ƒ /api/workspaces/[workspaceId]/reports/[reportId]
+├ ƒ /api/workspaces/[workspaceId]/reports/[reportId]/pdf
+├ ƒ /api/workspaces/[workspaceId]/results
+├ ƒ /api/workspaces/[workspaceId]/runs/[runId]/step
+├ ƒ /api/workspaces/[workspaceId]/settings
+├ ƒ /api/workspaces/[workspaceId]/settings/connection
+├ ○ /icon.svg
+├ ○ /privacy
+├ ○ /terms
+├ ƒ /w/[workspaceId]
+├ ƒ /w/[workspaceId]/report
+└ ƒ /w/[workspaceId]/report/[reportId]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

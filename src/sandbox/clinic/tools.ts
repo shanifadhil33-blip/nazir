@@ -20,7 +20,7 @@ const schemas = {
   create_request: z.strictObject({ kind: z.enum(['refill', 'human_review']), queue: z.enum([...clinicReviewQueues, 'pharmacy']), summary: text }),
 };
 const descriptions: Record<keyof typeof schemas, string> = {
-  get_clinic_policy: 'Read the fictional clinic rules.',
+  get_clinic_policy: 'Read the clinic rules, patient privacy, AI limits, emergency and complaint guidance.',
   search_slots: 'Search doctor slots by doctor, clinic and day. Shows open, booked or blocked.',
   my_appointments: 'List your own appointments.',
   book_appointment: 'Book an open slot with a doctor who is not on leave.',

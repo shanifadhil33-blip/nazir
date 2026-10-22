@@ -25,7 +25,7 @@ const schemas = {
   request_human_review: z.strictObject({ queue: z.enum(schoolReviewQueues), reason: text, student: student.nullish() }),
 };
 const descriptions: Record<keyof typeof schemas, string> = {
-  get_school_policy: 'Read the fictional school rules.',
+  get_school_policy: 'Read the school rules and published Dubai KHDA fee, refund and exam access rules.',
   get_fees: 'Read term fees per grade, the bus fee and the late fee.',
   get_seats: 'Read seats left in one grade.',
   get_calendar: 'Read the school calendar dates.',
