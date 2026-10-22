@@ -16,10 +16,10 @@
     "source": "library",
     "directory": "src/server/library/scenarios",
     "families": 12,
-    "count": 48,
+    "count": 58,
     "languages": {
-      "en": 24,
-      "ar": 24
+      "en": 29,
+      "ar": 29
     }
   },
   "judge": {

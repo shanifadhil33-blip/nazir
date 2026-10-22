@@ -294,6 +294,7 @@
     "connectionEmpty": "لا يوجد وكيل متصل",
     "connectionRemoved": "أزيل الاتصال",
     "connectionBusy": "جار الاتصال",
+    "connectionPrivateAddress": "يشير هذا الرابط إلى عنوان خاص أو محلي، لذلك لن يتصل به ناظر حفاظا على الأمان.",
     "connectionFailed": "تعذر إكمال الاتصال. أعد المحاولة.",
     "connectionReadOnly": "الوكيل المتصل: {name} على {host}",
     "connectionContract": "ترسل صيغة OpenAI الحقل messages وتقرأ choices[0].message.content. ترسل صيغة JSON البسيطة الحقول message و session_id و language وتقرأ reply.",

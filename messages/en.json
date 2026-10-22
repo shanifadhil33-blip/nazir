@@ -294,6 +294,7 @@
     "connectionEmpty": "No agent connected",
     "connectionRemoved": "Connection removed",
     "connectionBusy": "Connecting",
+    "connectionPrivateAddress": "This link points to a private or local address, so Nazir will not call it for safety.",
     "connectionFailed": "Could not complete the connection. Try again.",
     "connectionReadOnly": "Connected agent: {name} at {host}",
     "connectionContract": "OpenAI chat sends messages and reads choices[0].message.content. Simple JSON sends message, session_id and language and reads reply.",

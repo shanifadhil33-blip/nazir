@@ -2,6 +2,7 @@ import { ZodError } from 'zod';
 
 /** One plain line per code, in English and Modern Standard Arabic. */
 export const errorLines = {
+  external_private_address: { en: 'This link points to a private or local address, so Nazir will not call it for safety.', ar: 'يشير هذا الرابط إلى عنوان خاص أو محلي، لذلك لن يتصل به ناظر حفاظا على الأمان.' },
   external_safety: { en: 'The connection was refused by the safety check. Use a public HTTPS address on port 443 without redirects.', ar: 'رفض فحص الأمان الاتصال. استخدم عنوان HTTPS عاما على المنفذ 443 دون إعادة توجيه.' },
   external_timeout: { en: 'The agent took too long to reply. Try again.', ar: 'استغرق الوكيل وقتا طويلا للرد. أعد المحاولة.' },
   external_unreachable: { en: 'The agent could not be reached. Check the link and access key.', ar: 'تعذر الوصول إلى الوكيل. تحقق من الرابط ومفتاح الوصول.' },
@@ -87,6 +88,8 @@ export function mapError(error: unknown, language: CallerLanguage = 'en') {
   if (error instanceof TooMany) return body(error.message.includes('workspaces') ? 'workspace_limit' : 'too_many', 429);
   if (error instanceof NotFound) return body('not_found', 404);
   if (error instanceof Coded) return body(error.code in errorLines ? error.code : 'failed', error.status);
+  if (error instanceof ZodError && error.issues.some((i) => i.message === 'external_private_address')) return body('external_private_address', 400);
+  if (error instanceof ZodError && error.issues.some((i) => i.message === 'external_safety')) return body('external_safety', 400);
   if (error instanceof ZodError || error instanceof SyntaxError) return body('validation', 400);
   return body('internal_error', 500);
 }

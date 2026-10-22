@@ -25,7 +25,7 @@ export type ReportFinding = {
   evidence?: unknown;
 };
 export type ReportMessage = { conversation_id: string; seq: number; speaker: string; body: string; split: string };
-export type ReportConversation = { id: string; status: string; split: string; language: string; scenario_id?: string; attempt_number?: number };
+export type ReportConversation = { id: string; status: string; split: string; language: string; scenario_id?: string; attempt_number?: number; inconclusive_reason?: string | null };
 export type CaseResult = ReportConversation & { passed: number; total: number; flaky: boolean; attempts: ReportConversation[]; outcome: { en: string; ar: string } };
 export type ReportCounts = { conversations: number; passed: number; failed: number; inconclusive: number; findings: number };
 export type ReportBody = {
@@ -74,7 +74,8 @@ export function countsOf(conversations: ReportConversation[], findings: number):
   };
 }
 
-export function sentences(counts: ReportCounts) {
+export function sentences(counts: ReportCounts, conversations: ReportConversation[] = []) {
+  const privateRefusal = conversations.some((c) => c.inconclusive_reason === 'external_private_address');
   return {
     en: [
       scopeLine.en,
@@ -82,6 +83,7 @@ export function sentences(counts: ReportCounts) {
       `${counts.failed} of ${counts.conversations} tests failed.`,
       `${counts.inconclusive} of ${counts.conversations} tests were inconclusive.`,
       `${counts.findings} findings are in this report.`,
+      ...(privateRefusal ? [en.settings.connectionPrivateAddress] : []),
     ],
     ar: [
       scopeLine.ar,
@@ -89,6 +91,7 @@ export function sentences(counts: ReportCounts) {
       `فشلت ${counts.failed} من ${counts.conversations} اختبارات.`,
       `كانت ${counts.inconclusive} من ${counts.conversations} اختبارات غير حاسمة.`,
       `يتضمن هذا التقرير ${counts.findings} نتائج.`,
+      ...(privateRefusal ? [ar.settings.connectionPrivateAddress] : []),
     ],
   };
 }
@@ -104,7 +107,7 @@ export function assembleReport(input: { run: ReportBody['run']; conversations: R
     findings: input.findings,
     messages: input.messages,
     hidden_findings: input.findings.filter((finding) => finding.split === 'hidden').length,
-    sentences: sentences(counts),
+    sentences: sentences(counts, input.conversations),
   };
 }
 
@@ -123,7 +126,7 @@ export function projectReport(full: ReportBody, mode: 'full' | 'development'): R
     messages,
     counts,
     hidden_findings: full.findings.filter((finding) => finding.split === 'hidden').length,
-    sentences: sentences(counts),
+    sentences: sentences(counts, conversations),
     scope: scopeLine,
   };
 }

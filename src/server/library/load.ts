@@ -30,7 +30,7 @@ export function validateLibrary(values: unknown[]) {
         const names = toolManifest.map((t) => t.function.name);
         if ([...s.allowed_actions, ...s.forbidden_actions].some((n) => !names.includes(n))) throw new Error('Unknown tool name.');
         if (s.checks.some((id) => !(checkIds as readonly string[]).includes(id))) throw new Error('Unknown record check.');
-        if (!demoRulePack.clauses.some((c) => c.id === s.source_clause) && !(s.expectation_kind === 'fictional_demo_rule' && s.source_clause.startsWith('fictional demo rule: '))) throw new Error('Unknown source clause.');
+        if (!demoRulePack.clauses.some((c) => c.id === s.source_clause) && !(s.expected_state.assessment?.source.file === 'government.md' && s.source_clause === 'verified KB: government.md ' + s.stable_key.replace(/^kb_/, '').replace(/_(en|ar)$/, '')) && !(s.expectation_kind === 'fictional_demo_rule' && s.source_clause.startsWith('fictional demo rule: '))) throw new Error('Unknown source clause.');
         const arabic = /[\u0600-\u06ff]/.test(s.resident_turns.join(' '));
         if (arabic !== (s.language === 'ar')) throw new Error('Scenario text must match its language.');
       }
@@ -46,7 +46,10 @@ export async function loadLibrary(root = join(process.cwd(), 'src/server/library
     return value;
   }));
   const files = libraryHashes(validateLibrary(values));
-  quickCases(packById('government')!, files.flatMap((f) => f.meanings.flatMap((m) => m.scenarios)));
+  const pack = packById('government')!;
+  const cases = files.flatMap((f) => f.meanings.flatMap((m) => m.scenarios));
+  if (cases.length !== pack.cases.count || ['en', 'ar'].some((lang) => cases.filter((c) => c.language === lang).length !== pack.cases.languages[lang as 'en' | 'ar'])) throw new Error('Library counts must match the pack.');
+  quickCases(pack, cases);
   return files;
 }
 export function libraryHashes(files: LibraryFamily[]) {

@@ -16,10 +16,10 @@
   "cases": {
     "source": "inline",
     "file": "src/server/packs/schools/cases.json",
-    "count": 48,
+    "count": 64,
     "languages": {
-      "en": 24,
-      "ar": 24
+      "en": 32,
+      "ar": 32
     }
   },
   "judge": {

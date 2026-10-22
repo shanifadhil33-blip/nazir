@@ -28,7 +28,7 @@ it('rejects unsafe protocols, ports, credentials, local names and literal addres
   expect(privateAddress('2606:4700:4700::1111')).toBe(false);
   for (const address of ['::ffff:7f00:1', '::ffff:127.0.0.1', '2002:7f00:1::', '192.0.0.8', '198.51.100.1', '203.0.113.1']) expect(privateAddress(address)).toBe(true);
   expect(await publicHttpsUrl(input.endpoint, async () => [{ address: '93.184.215.14' }, { address: '127.0.0.1' }])).toBe(false);
-  await expect(saveExternalAgent(db.driver, owner, input, secret, async () => [{ address: '::1' }])).rejects.toMatchObject({ code: 'external_safety' });
+  await expect(saveExternalAgent(db.driver, owner, input, secret, async () => [{ address: '::1' }])).rejects.toMatchObject({ code: 'external_private_address' });
 });
 it('seals the key, projects only safe fields and audits no submitted details', async () => {
   const saved = await saveExternalAgent(db.driver, owner, input, secret, resolve);
@@ -58,7 +58,7 @@ it('refuses dangerous auth headers and control characters', async () => {
 });
 it('rechecks DNS before calls, refuses redirects, bad JSON and excessive bytes', async () => {
   const fetcher = vi.fn(ok);
-  await expect(callExternalAgent(row, [], 's', 'en', { fetcher, resolve: async () => [{ address: '10.0.0.1' }], secret })).rejects.toMatchObject({ code: 'external_safety' });
+  await expect(callExternalAgent(row, [], 's', 'en', { fetcher, resolve: async () => [{ address: '10.0.0.1' }], secret })).rejects.toMatchObject({ code: 'external_private_address' });
   expect(fetcher).not.toHaveBeenCalled();
   for (const response of [new Response('', { status: 302, headers: { location: 'https://127.0.0.1' } }), new Response('', { status: 307 })]) {
     await expect(callExternalAgent(row, [], 's', 'en', { fetcher: (async (_u, init) => { expect(init?.redirect).toBe('manual'); return response; }) as typeof fetch, resolve, secret })).rejects.toMatchObject({ code: 'external_safety' });
@@ -90,4 +90,19 @@ it('limits test sends per workspace across owners and saves and localizes the re
   expect(mapError(new (await import('../../src/server/http/errors')).Coded(429, 'external_rate_limit', ''), 'ar').body.error.message).toContain('20');
   await removeExternalAgent(db.driver, owner);
   expect(await readExternalAgent(db.driver, owner)).toBeNull();
+});
+
+it.each(['en', 'ar'] as const)('shows the same private address message for DNS refusal on save and test send in %s', async (language) => {
+  const { errorLines } = await import('../../src/server/http/errors');
+  const privateDns = async () => [{ address: '10.0.0.1' }];
+  for (const endpoint of ['https://127.0.0.1/chat', input.endpoint]) {
+    const error = await saveExternalAgent(db.driver, owner, { ...input, endpoint }, secret, privateDns).catch((e: unknown) => e);
+    expect(mapError(error, language).body.error.message).toBe(errorLines.external_private_address[language]);
+  }
+  await db.owner.query('DELETE FROM nazir.external_agent_limits');
+  await saveExternalAgent(db.driver, owner, input, secret, resolve);
+  const fetcher = vi.fn(ok);
+  const error = await testExternalAgent(db.driver, owner, { message: 'Hello', language }, { fetcher, resolve: privateDns, secret }).catch((e: unknown) => e);
+  expect(mapError(error, language).body.error).toEqual({ code: 'external_private_address', message: errorLines.external_private_address[language] });
+  expect(fetcher).not.toHaveBeenCalled();
 });

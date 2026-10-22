@@ -6,7 +6,7 @@ import { inlineCasesSchema } from './schema';
 import { loadLibrary } from '../library/load';
 import { packById } from './catalog';
 import { quickCases } from './quick';
-/** The frozen cases of a live pack. Government reads the same 48 library files as before, so the import hashes do not change. */
+/** Government reads its versioned scenario library. */
 export async function loadPackCases(id = 'government', cwd = process.cwd()) {
   const pack = packById(id);
   if (!pack || pack.status !== 'live') throw new Error('This focus pack cannot run yet.');
@@ -14,7 +14,7 @@ export async function loadPackCases(id = 'government', cwd = process.cwd()) {
   return loadLibrary(join(cwd, pack.cases.directory));
 }
 
-/** The 48 cases of a live pack stored inline (Real estate), checked against the pack's own record checks and with content hashes. */
+/** Inline cases checked against the pack counts, languages and record checks. */
 export async function loadInlineCases(id: string, cwd = process.cwd()) {
   const pack = packById(id);
   if (!pack || pack.cases.source !== 'inline') throw new Error('This focus pack has no inline cases.');
@@ -24,10 +24,12 @@ export async function loadInlineCases(id: string, cwd = process.cwd()) {
   const keys = new Set<string>();
   for (const c of file.cases) {
     if (keys.has(c.stable_key)) throw new Error('Duplicate case key.'); keys.add(c.stable_key);
+    if (c.stable_key.startsWith('kb_') && (!c.expected.assessment || c.expected.assessment.source.file !== `${pack.id}.md` || c.source_clause !== `verified KB: ${pack.id}.md ${c.stable_key.replace(/^kb_/, '').replace(/_(en|ar)$/, '')}`)) throw new Error('Verified cases need their own pack evidence.');
     if (c.checks.some((x) => !checks.includes(x))) throw new Error('Unknown record check.');
     if (/[\u0600-\u06ff]/.test(c.resident_turns.join(' ')) !== (c.language === 'ar')) throw new Error('Case text must match its language.');
   }
-  for (const lang of ['en', 'ar']) if (file.cases.filter((c) => c.language === lang).length !== 24) throw new Error('Each language needs 24 cases.');
+  if (file.cases.length !== pack.cases.count) throw new Error('Case count must match the pack.');
+  for (const lang of ['en', 'ar'] as const) if (file.cases.filter((c) => c.language === lang).length !== pack.cases.languages[lang]) throw new Error('Language counts must match the pack.');
   quickCases(pack, file.cases);
   return file.cases.map((c) => ({ ...c, content_hash: hash(c) }));
 }

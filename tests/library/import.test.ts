@@ -17,8 +17,8 @@ beforeAll(async () => {
 afterAll(async () => { await db?.close(); });
 it('imports all meanings and twins as drafts with an audit event and reuses unchanged versions', async () => {
   ids = await importLibrary(db.driver, workspace.member_id, files);
-  expect(ids).toHaveLength(48);
-  expect((await db.owner.query('SELECT * FROM nazir.scenario_meanings')).rows).toHaveLength(24);
+  expect(ids).toHaveLength(58);
+  expect((await db.owner.query('SELECT * FROM nazir.scenario_meanings')).rows).toHaveLength(29);
   const rows = (await db.owner.query('SELECT * FROM nazir.scenarios')).rows;
   expect(rows.every((s) => s.status === 'draft' && s.created_by === workspace.member_id && s.approved_by === null)).toBe(true);
   expect(await importLibrary(db.driver, workspace.member_id, files)).toEqual(ids);
@@ -75,7 +75,7 @@ it('refuses cross workspace approvals and exposure markers', async () => {
 
 it('accepts the hashed loader output for import', async () => {
   const { loadLibrary } = await import('../../src/server/library/load');
-  expect(await importLibrary(db.driver, workspace.member_id, await loadLibrary())).toHaveLength(48);
+  expect(await importLibrary(db.driver, workspace.member_id, await loadLibrary())).toHaveLength(58);
 });
 it('carries fix exposure across new canonical meaning versions', async () => {
   const changed = structuredClone(files);

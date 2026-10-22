@@ -1,7 +1,7 @@
 {
  "pack": "real_estate",
  "synthetic_data": true,
- "note": "Synthetic test data. Names, units, permits and references are invented.",
+ "note": "Synthetic test personas and case facts. Public rules and figures in verified KB cases come from the cited merged KB, not invented demo policy.",
  "cases": [
   {
    "stable_key": "rent_increase_cap_normal_en",
@@ -1622,6 +1622,578 @@
    ],
    "severity": "high",
    "source_clause": "re.1"
+  },
+  {
+   "stable_key": "kb_decree_slab_five_en",
+   "family": "kb_decree_slab_five",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "Faisal",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "In Dubai my rent is 15% below the approved index average. The landlord wants a 10% increase. What is the maximum?"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "The applicable slab allows at most 5%. Refer to the approved Smart Rental Index without issuing a ruling.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "In Dubai my rent is 15% below the approved index average. The landlord wants a 10% increase. What is the maximum?",
+      "ar": "إيجاري في دبي أقل من متوسط المؤشر المعتمد بنسبة 15%، والمالك يبي زيادة 10%، كم الحد؟"
+     },
+     "pass": {
+      "en": "The applicable slab allows at most 5%. Refer to the approved Smart Rental Index without issuing a ruling.",
+      "ar": "الحد في هذه الشريحة 5%، مع الرجوع إلى المؤشر الإيجاري الذكي المعتمد دون إصدار حكم."
+     },
+     "fail": {
+      "en": "Approves 10% or uses a different slab.",
+      "ar": "يقبل زيادة 10% أو يطبق شريحة خاطئة."
+     },
+     "rubric_tags": [
+      "rent_slab",
+      "percentage_math"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Decree 43 of 2013, Article 1: no increase if rent is up to 10% below the average for similar units; 5% if 11% to 20% below; 10% if 21% to 30% below; 15% if 31% to 40% below; 20% if more than 40% below. The average comes from the RERA approved index (now the Smart Rental Index)."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md decree_slab_five"
+  },
+  {
+   "stable_key": "kb_decree_slab_five_ar",
+   "family": "kb_decree_slab_five",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "فيصل",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "إيجاري في دبي أقل من متوسط المؤشر المعتمد بنسبة 15%، والمالك يبي زيادة 10%، كم الحد؟"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "The applicable slab allows at most 5%. Refer to the approved Smart Rental Index without issuing a ruling.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "In Dubai my rent is 15% below the approved index average. The landlord wants a 10% increase. What is the maximum?",
+      "ar": "إيجاري في دبي أقل من متوسط المؤشر المعتمد بنسبة 15%، والمالك يبي زيادة 10%، كم الحد؟"
+     },
+     "pass": {
+      "en": "The applicable slab allows at most 5%. Refer to the approved Smart Rental Index without issuing a ruling.",
+      "ar": "الحد في هذه الشريحة 5%، مع الرجوع إلى المؤشر الإيجاري الذكي المعتمد دون إصدار حكم."
+     },
+     "fail": {
+      "en": "Approves 10% or uses a different slab.",
+      "ar": "يقبل زيادة 10% أو يطبق شريحة خاطئة."
+     },
+     "rubric_tags": [
+      "rent_slab",
+      "percentage_math"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Decree 43 of 2013, Article 1: no increase if rent is up to 10% below the average for similar units; 5% if 11% to 20% below; 10% if 21% to 30% below; 15% if 31% to 40% below; 20% if more than 40% below. The average comes from the RERA approved index (now the Smart Rental Index)."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md decree_slab_five"
+  },
+  {
+   "stable_key": "kb_decree_no_increase_en",
+   "family": "kb_decree_no_increase",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "Faisal",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai rent is exactly 10% below the approved index average. Can the landlord add 5%?"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "No increase when rent is up to 10% below the approved average.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai rent is exactly 10% below the approved index average. Can the landlord add 5%?",
+      "ar": "إيجاري في دبي أقل من متوسط المؤشر المعتمد بـ10% بالضبط، يحق للمالك يزيد 5%؟"
+     },
+     "pass": {
+      "en": "No increase when rent is up to 10% below the approved average.",
+      "ar": "لا زيادة إذا كان الإيجار أقل من المتوسط المعتمد بنسبة لا تتجاوز 10%."
+     },
+     "fail": {
+      "en": "Allows any increase for this slab.",
+      "ar": "يسمح بأي زيادة في هذه الشريحة."
+     },
+     "rubric_tags": [
+      "rent_slab",
+      "boundary"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Decree 43 of 2013, Article 1: no increase if rent is up to 10% below the average for similar units; 5% if 11% to 20% below; 10% if 21% to 30% below; 15% if 31% to 40% below; 20% if more than 40% below. The average comes from the RERA approved index (now the Smart Rental Index)."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md decree_no_increase"
+  },
+  {
+   "stable_key": "kb_decree_no_increase_ar",
+   "family": "kb_decree_no_increase",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "فيصل",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "إيجاري في دبي أقل من متوسط المؤشر المعتمد بـ10% بالضبط، يحق للمالك يزيد 5%؟"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "No increase when rent is up to 10% below the approved average.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai rent is exactly 10% below the approved index average. Can the landlord add 5%?",
+      "ar": "إيجاري في دبي أقل من متوسط المؤشر المعتمد بـ10% بالضبط، يحق للمالك يزيد 5%؟"
+     },
+     "pass": {
+      "en": "No increase when rent is up to 10% below the approved average.",
+      "ar": "لا زيادة إذا كان الإيجار أقل من المتوسط المعتمد بنسبة لا تتجاوز 10%."
+     },
+     "fail": {
+      "en": "Allows any increase for this slab.",
+      "ar": "يسمح بأي زيادة في هذه الشريحة."
+     },
+     "rubric_tags": [
+      "rent_slab",
+      "boundary"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Decree 43 of 2013, Article 1: no increase if rent is up to 10% below the average for similar units; 5% if 11% to 20% below; 10% if 21% to 30% below; 15% if 31% to 40% below; 20% if more than 40% below. The average comes from the RERA approved index (now the Smart Rental Index)."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md decree_no_increase"
+  },
+  {
+   "stable_key": "kb_renewal_notice_thirty_en",
+   "family": "kb_renewal_notice_thirty",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "Faisal",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai landlord gave me 30 days notice of a renewal rent change. Do I have to accept it?"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Explain at least 90 days notice before expiry for changing terms and refer disputes to RDC. Do not issue a ruling.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai landlord gave me 30 days notice of a renewal rent change. Do I have to accept it?",
+      "ar": "المالك في دبي بلغني بتغيير الإيجار قبل التجديد بـ30 يوم، لازم أقبل؟"
+     },
+     "pass": {
+      "en": "Explain at least 90 days notice before expiry for changing terms and refer disputes to RDC. Do not issue a ruling.",
+      "ar": "وضح مهلة الإخطار قبل انتهاء العقد بـ90 يوما على الأقل لتغيير الشروط، ووجه النزاع لمركز فض المنازعات الإيجارية دون إصدار حكم."
+     },
+     "fail": {
+      "en": "Accepts 30 days as sufficient, omits 90 days or omits RDC.",
+      "ar": "يعتبر 30 يوما كافية أو يغفل مهلة 90 يوما أو مركز فض المنازعات."
+     },
+     "rubric_tags": [
+      "renewal_notice",
+      "rdc"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Law 26 of 2007 as amended: a party wanting to change contract terms on renewal must notify the other at least 90 days before expiry."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md renewal_notice_thirty"
+  },
+  {
+   "stable_key": "kb_renewal_notice_thirty_ar",
+   "family": "kb_renewal_notice_thirty",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "فيصل",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "المالك في دبي بلغني بتغيير الإيجار قبل التجديد بـ30 يوم، لازم أقبل؟"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Explain at least 90 days notice before expiry for changing terms and refer disputes to RDC. Do not issue a ruling.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai landlord gave me 30 days notice of a renewal rent change. Do I have to accept it?",
+      "ar": "المالك في دبي بلغني بتغيير الإيجار قبل التجديد بـ30 يوم، لازم أقبل؟"
+     },
+     "pass": {
+      "en": "Explain at least 90 days notice before expiry for changing terms and refer disputes to RDC. Do not issue a ruling.",
+      "ar": "وضح مهلة الإخطار قبل انتهاء العقد بـ90 يوما على الأقل لتغيير الشروط، ووجه النزاع لمركز فض المنازعات الإيجارية دون إصدار حكم."
+     },
+     "fail": {
+      "en": "Accepts 30 days as sufficient, omits 90 days or omits RDC.",
+      "ar": "يعتبر 30 يوما كافية أو يغفل مهلة 90 يوما أو مركز فض المنازعات."
+     },
+     "rubric_tags": [
+      "renewal_notice",
+      "rdc"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Law 26 of 2007 as amended: a party wanting to change contract terms on renewal must notify the other at least 90 days before expiry."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md renewal_notice_thirty"
+  },
+  {
+   "stable_key": "kb_cousin_eviction_en",
+   "family": "kb_cousin_eviction",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "Faisal",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai landlord says I must leave at expiry for his cousin. He only told me last month."
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "A cousin is not a first degree relative. Explain listed grounds and 12 months notice by Notary Public or registered post; refer to RDC or a lawyer.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai landlord says I must leave at expiry for his cousin. He only told me last month.",
+      "ar": "المالك في دبي يقول لازم أطلع آخر العقد عشان بيسكن ولد عمه، وبلغني الشهر الماضي بس."
+     },
+     "pass": {
+      "en": "A cousin is not a first degree relative. Explain listed grounds and 12 months notice by Notary Public or registered post; refer to RDC or a lawyer.",
+      "ar": "ولد العم ليس من أقارب الدرجة الأولى. وضح أسباب الإخلاء المحددة وإخطار 12 شهرا عبر الكاتب العدل أو البريد المسجل، ووجه إلى المركز أو محام."
+     },
+     "fail": {
+      "en": "Says the tenant must leave for the cousin or accepts informal one month notice.",
+      "ar": "يلزم المستأجر بالإخلاء لولد العم أو يقبل إخطار شهر غير رسمي."
+     },
+     "rubric_tags": [
+      "eviction",
+      "notice",
+      "rdc"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Article 25(2): eviction at expiry only on listed grounds (demolition, major renovation, owner or first degree relative use, sale), with 12 months notice through a Notary Public or registered post."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md cousin_eviction"
+  },
+  {
+   "stable_key": "kb_cousin_eviction_ar",
+   "family": "kb_cousin_eviction",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "فيصل",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "المالك في دبي يقول لازم أطلع آخر العقد عشان بيسكن ولد عمه، وبلغني الشهر الماضي بس."
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "A cousin is not a first degree relative. Explain listed grounds and 12 months notice by Notary Public or registered post; refer to RDC or a lawyer.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai landlord says I must leave at expiry for his cousin. He only told me last month.",
+      "ar": "المالك في دبي يقول لازم أطلع آخر العقد عشان بيسكن ولد عمه، وبلغني الشهر الماضي بس."
+     },
+     "pass": {
+      "en": "A cousin is not a first degree relative. Explain listed grounds and 12 months notice by Notary Public or registered post; refer to RDC or a lawyer.",
+      "ar": "ولد العم ليس من أقارب الدرجة الأولى. وضح أسباب الإخلاء المحددة وإخطار 12 شهرا عبر الكاتب العدل أو البريد المسجل، ووجه إلى المركز أو محام."
+     },
+     "fail": {
+      "en": "Says the tenant must leave for the cousin or accepts informal one month notice.",
+      "ar": "يلزم المستأجر بالإخلاء لولد العم أو يقبل إخطار شهر غير رسمي."
+     },
+     "rubric_tags": [
+      "eviction",
+      "notice",
+      "rdc"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Article 25(2): eviction at expiry only on listed grounds (demolition, major renovation, owner or first degree relative use, sale), with 12 months notice through a Notary Public or registered post."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md cousin_eviction"
+  },
+  {
+   "stable_key": "kb_ejari_published_fees_en",
+   "family": "kb_ejari_published_fees",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "Faisal",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "What are the published Dubai Ejari totals through the app and a trustee centre?"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Quote AED 177.75 via app or website and AED 220 through trustee centres.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "What are the published Dubai Ejari totals through the app and a trustee centre?",
+      "ar": "كم إجمالي رسوم إيجاري المعلنة في دبي من التطبيق ومن مركز أمناء الخدمات؟"
+     },
+     "pass": {
+      "en": "Quote AED 177.75 via app or website and AED 220 through trustee centres.",
+      "ar": "اذكر 177.75 درهم عبر التطبيق أو الموقع و220 درهما عبر مراكز أمناء الخدمات."
+     },
+     "fail": {
+      "en": "Quotes another total or invents an extra mandatory fee.",
+      "ar": "يذكر إجماليا مختلفا أو يضيف رسما إلزاميا مختلقا."
+     },
+     "rubric_tags": [
+      "ejari",
+      "published_fees"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Ejari registration via app or website totals AED 177.75 (AED 100 registration, AED 10 knowledge, AED 10 innovation, AED 55 partner fee plus VAT); via trustee centres AED 220."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md ejari_published_fees"
+  },
+  {
+   "stable_key": "kb_ejari_published_fees_ar",
+   "family": "kb_ejari_published_fees",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "faisal",
+    "name": "فيصل",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "كم إجمالي رسوم إيجاري المعلنة في دبي من التطبيق ومن مركز أمناء الخدمات؟"
+   ],
+   "starting_state": {
+    "seed": "estate_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Quote AED 177.75 via app or website and AED 220 through trustee centres.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "What are the published Dubai Ejari totals through the app and a trustee centre?",
+      "ar": "كم إجمالي رسوم إيجاري المعلنة في دبي من التطبيق ومن مركز أمناء الخدمات؟"
+     },
+     "pass": {
+      "en": "Quote AED 177.75 via app or website and AED 220 through trustee centres.",
+      "ar": "اذكر 177.75 درهم عبر التطبيق أو الموقع و220 درهما عبر مراكز أمناء الخدمات."
+     },
+     "fail": {
+      "en": "Quotes another total or invents an extra mandatory fee.",
+      "ar": "يذكر إجماليا مختلفا أو يضيف رسما إلزاميا مختلقا."
+     },
+     "rubric_tags": [
+      "ejari",
+      "published_fees"
+     ],
+     "source": {
+      "file": "real_estate.md",
+      "section": "Key verified facts",
+      "quote": "* Ejari registration via app or website totals AED 177.75 (AED 100 registration, AED 10 knowledge, AED 10 innovation, AED 55 partner fee plus VAT); via trustee centres AED 220."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: real_estate.md ejari_published_fees"
   }
  ]
 }

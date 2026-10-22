@@ -3,8 +3,8 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:cr
 import { z } from 'zod';
 import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Coded, Forbidden } from '../http/errors';
-import { publicHttpsUrl, type Resolver } from './net-guard';
+import { Forbidden } from '../http/errors';
+import { checkedHttpsAddress, safeHttpsUrl, privateUrlHost, type Resolver } from './net-guard';
 import { readExternalAgent, type ExternalView } from './external-agent';
 import { livePackIds } from '../packs/catalog';
 
@@ -20,20 +20,7 @@ export const providerBaseUrl: Record<Exclude<LlmProvider, 'custom'>, string> = {
   groq: 'https://api.groq.com/openai/v1',
 };
 
-/** Only public https hosts; refuses loopback, private and link local literals so the server cannot be pointed inward. */
-export function safeHttpsUrl(value: string): boolean {
-  let url: URL;
-  try { url = new URL(value); } catch { return false; }
-  if (url.protocol !== 'https:' || url.username || url.password || (url.port !== '' && url.port !== '443')) return false;
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal') || !host.includes('.') && !host.includes(':')) return false;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-    const [a, b] = host.split('.').map(Number) as [number, number];
-    if (a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224) return false;
-  }
-  if (host.includes(':')) return false; // IPv6 literals are refused outright.
-  return true;
-}
+export { safeHttpsUrl } from './net-guard';
 
 const dataAvatar = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;
 function avatarOk(value: string) {
@@ -53,7 +40,7 @@ export const settingsInput = z.object({
   language: z.enum(['en', 'ar']),
   avatar: z.string().max(280000).refine(avatarOk, 'avatar'),
   focus_pack: z.string().default('government').refine((p) => (livePackIds as string[]).includes(p), 'focus_pack'),
-  mcp_servers: z.array(z.object({ name: z.string().trim().min(1).max(60), url: z.string().trim().max(300).refine(safeHttpsUrl, 'url') }).strict()).max(10).default([]),
+  mcp_servers: z.array(z.object({ name: z.string().trim().min(1).max(60), url: z.string().trim().max(300).refine(safeHttpsUrl, { error: (issue) => privateUrlHost(String(issue.input)) ? 'external_private_address' : 'url' }) }).strict()).max(10).default([]),
   integrations: z.array(z.enum(integrationIds)).max(integrationIds.length).default([]).transform((list) => [...new Set(list)]),
   llm: z.object({
     provider: z.enum(llmProviders),
@@ -63,7 +50,7 @@ export const settingsInput = z.object({
     clear_key: z.boolean().optional(),
   }).strict().nullable().default(null),
 }).strict().superRefine((value, ctx) => {
-  if (value.llm?.provider === 'custom' && !(value.llm.base_url && safeHttpsUrl(value.llm.base_url))) ctx.addIssue({ code: 'custom', message: 'base_url', path: ['base_url'] });
+  if (value.llm?.provider === 'custom' && !(value.llm.base_url && safeHttpsUrl(value.llm.base_url))) ctx.addIssue({ code: 'custom', message: value.llm.base_url && privateUrlHost(value.llm.base_url) ? 'external_private_address' : 'base_url', path: ['base_url'] });
 });
 
 function keyMaterial(secret = process.env.AUTH_SECRET) {
@@ -103,7 +90,7 @@ export async function saveAgentSettings(driver: TransactionDriver, memberId: str
   const input = settingsInput.parse(value);
   // Names must resolve to public addresses only (the literal check alone misses a name that points inward).
   for (const url of [...input.mcp_servers.map((s) => s.url), ...(input.llm?.provider === 'custom' && input.llm.base_url ? [input.llm.base_url] : [])]) {
-    if (!await publicHttpsUrl(url, resolve)) throw new Coded(400, 'validation', 'Check the details and try again.');
+    await checkedHttpsAddress(url, resolve);
   }
   const llm = input.llm;
   const sealed = llm?.api_key ? sealKey(llm.api_key, secret) : null;

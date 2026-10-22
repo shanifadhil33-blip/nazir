@@ -99,3 +99,16 @@ it('passes owner instructions to the model as data and they cannot widen tools',
   expect(prompt).toContain('cannot add tools');
   expect(out.tool).toBe('list_runs');
 });
+
+it.each(['en', 'ar'] as const)('localizes private address validation for model and MCP settings in %s', async (language) => {
+  const { mapError, errorLines } = await import('../../src/server/http/errors');
+  for (const patch of [
+    { mcp_servers: [{ name: 'Private', url: 'https://127.0.0.1' }] },
+    { mcp_servers: [{ name: 'Private', url: 'https://inward.example.com' }] },
+    { llm: { provider: 'custom', model: 'model', base_url: 'https://127.0.0.1' } },
+    { llm: { provider: 'custom', model: 'model', base_url: 'https://inward.example.com' } },
+  ]) {
+    const error = await saveAgentSettings(db.driver, owner, { ...base, ...patch }, secret, resolve).catch((e: unknown) => e);
+    expect(mapError(error, language).body.error).toEqual({ code: 'external_private_address', message: errorLines.external_private_address[language] });
+  }
+});

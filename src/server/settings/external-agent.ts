@@ -4,13 +4,13 @@ import type { TransactionDriver } from '../db/driver';
 import { withMember, withWorker } from '../db/context';
 import { Coded, Forbidden, NotFound, errorLines } from '../http/errors';
 import { openKey, sealKey, safeHttpsUrl } from './agent-settings';
-import { publicHttpsUrl, type Resolver } from './net-guard';
+import { checkedHttpsAddress, privateUrlHost, pinnedHttpsFetch, pinnedLookup, type PinnedRequestInit, type Resolver } from './net-guard';
 
 export type ExternalView = { name: string; host: string; ready: boolean; endpoint?: string; format?: 'openai_chat' | 'simple_json'; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
 export type ExternalRow = { revision: string; endpoint: string; format: 'openai_chat' | 'simple_json'; header_name: string | null; key_cipher: string | null; tested_at: string | null };
 export const externalInput = z.object({
   name: z.string().trim().min(1).max(60),
-  endpoint: z.string().trim().max(2000).refine(safeHttpsUrl),
+  endpoint: z.string().trim().max(2000).refine(safeHttpsUrl, { error: (issue) => privateUrlHost(String(issue.input)) ? 'external_private_address' : 'external_safety' }),
   format: z.enum(['openai_chat', 'simple_json']),
   header_name: z.string().trim().max(100).regex(/^[A-Za-z][A-Za-z0-9_-]*$/).refine((v) => !/^(host|content-type|content-length|connection|transfer-encoding|cookie|proxy-.*|sec-.*|accept-encoding)$/i.test(v)).optional(),
   secret: z.string().min(8).max(400).regex(/^[\x20-\x7e]+$/).optional(),
@@ -32,7 +32,7 @@ export async function saveExternalAgent(driver: TransactionDriver, id: string, v
   const settings = await member(driver, id, async (db) => (await db.query<{ ok: boolean }>("SELECT nazir.member_has_role('service_owner') AS ok")).rows[0]!.ok);
   if (!settings) throw new Forbidden();
   const input = externalInput.parse(value);
-  if (!await publicHttpsUrl(input.endpoint, resolve)) throw failure('external_safety');
+  await checkedHttpsAddress(input.endpoint, resolve);
   const { secret: key, ...payload } = input;
   await member(driver, id, (db) => db.query('SELECT nazir.save_external_agent($1::jsonb,$2,$3)', [JSON.stringify(payload), key ? sealKey(key, secret) : null, key?.slice(-4) ?? null]));
   return readExternalAgent(driver, id);
@@ -45,7 +45,7 @@ export function externalAgentForWorker(driver: TransactionDriver, workspaceId: s
   return withWorker(driver, workspaceId, async (db) => (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_worker()')).rows[0] ?? null);
 }
 export type ExternalMessage = { role: 'user' | 'assistant'; content: string };
-export type ExternalTransport = { fetcher?: typeof fetch; resolve?: Resolver; secret?: string; timeoutMs?: number };
+export type ExternalTransport = { fetcher?: (url: string, init: PinnedRequestInit) => Promise<Response>; resolve?: Resolver; secret?: string; timeoutMs?: number };
 /** The only outbound path. Never include transport errors, response bodies, or credentials in errors. */
 export async function callExternalAgent(row: ExternalRow, messages: ExternalMessage[], sessionId: string, language: 'en' | 'ar', options: ExternalTransport = {}): Promise<string> {
   const controller = new AbortController();
@@ -54,7 +54,7 @@ export async function callExternalAgent(row: ExternalRow, messages: ExternalMess
   });
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 10000);
   const request = async () => {
-    if (!await publicHttpsUrl(row.endpoint, options.resolve)) throw failure('external_safety');
+    const address = await checkedHttpsAddress(row.endpoint, options.resolve);
     controller.signal.throwIfAborted();
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     let key: string | undefined;
@@ -63,7 +63,7 @@ export async function callExternalAgent(row: ExternalRow, messages: ExternalMess
       catch { throw failure('external_unreachable', 502); }
     }
     const body = row.format === 'openai_chat' ? { messages } : { message: messages.at(-1)?.content ?? '', session_id: sessionId, language };
-    const response = await (options.fetcher ?? fetch)(row.endpoint, { method: 'POST', headers, body: JSON.stringify(body), redirect: 'manual', signal: controller.signal });
+    const response = await (options.fetcher ?? pinnedHttpsFetch)(row.endpoint, { method: 'POST', headers, body: JSON.stringify(body), redirect: 'manual', signal: controller.signal, lookup: pinnedLookup(address), servername: new URL(row.endpoint).hostname, rejectUnauthorized: true });
     if (response.status >= 300 && response.status < 400) { await response.body?.cancel(); throw failure('external_safety'); }
     if (!response.ok) { await response.body?.cancel(); throw failure('external_unreachable', 502); }
     if (Number(response.headers.get('content-length')) > 65536) { await response.body?.cancel(); throw failure('external_format', 502); }

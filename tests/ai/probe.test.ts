@@ -1,9 +1,11 @@
-import { execFileSync } from 'node:child_process';
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFile = promisify(execFileCallback);
 import { expect, it, vi } from 'vitest';
 import { probeOptions, runProbe } from '../../scripts/ai-chain-probe.mjs';
 import { createAiChain } from '../../src/server/ai/chain';
 import { memoryAiStore } from '../../src/server/ai/store';
-it('parses the script without making network calls', () => { expect(() => execFileSync(process.execPath,['--check','scripts/ai-chain-probe.mjs'])).not.toThrow(); });
+it('parses the script without making network calls', async () => { await expect(execFile(process.execPath,['--check','scripts/ai-chain-probe.mjs'])).resolves.toHaveProperty('stderr', ''); });
 it('bounds probe calls and requires a judge family', () => {
   expect(probeOptions({ MAX_CALLS:'99' }).maxCalls).toBe(20); expect(probeOptions({}).maxCalls).toBe(6);
   expect(() => probeOptions({ MAX_CALLS:'NaN' })).toThrow(); expect(() => probeOptions({ PROBE_PURPOSE:'judge' })).toThrow('family');

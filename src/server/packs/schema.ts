@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { assessmentSchema } from '../library/assessment';
 /** Every focus pack Nazir knows. Only packs with status live can be picked; drafts stay data until their cases can run. */
 export const packIds = ['government', 'real_estate', 'ecommerce', 'clinics', 'schools'] as const;
 export type PackId = typeof packIds[number];
@@ -17,8 +18,8 @@ export const packSchema = z.strictObject({
   synthetic_data: z.literal(true),
   quick: z.strictObject({ version: z.string().regex(/^\d+\.\d+\.\d+$/), keys: z.array(text).length(16).refine((keys) => new Set(keys).size === 16, 'Quick keys must be unique.') }),
   cases: z.union([
-    z.strictObject({ source: z.literal('library'), directory: text, families: z.number().int(), count: z.literal(48), languages: z.strictObject({ en: z.literal(24), ar: z.literal(24) }) }),
-    z.strictObject({ source: z.literal('inline'), file: text, count: z.literal(48), languages: z.strictObject({ en: z.literal(24), ar: z.literal(24) }) }),
+    z.strictObject({ source: z.literal('library'), directory: text, families: z.number().int(), count: z.number().int().positive(), languages: z.strictObject({ en: z.number().int().positive(), ar: z.number().int().positive() }) }),
+    z.strictObject({ source: z.literal('inline'), file: text, count: z.number().int().positive(), languages: z.strictObject({ en: z.number().int().positive(), ar: z.number().int().positive() }) }),
   ]),
   judge: z.strictObject({ rubric_version: text, rubric: text }),
   record_checks: z.array(item).min(1),
@@ -26,6 +27,8 @@ export const packSchema = z.strictObject({
   refusal_policies: z.array(item).min(1),
   compliance: z.array(item).min(1),
   knowledge_kinds: z.array(z.enum(knowledgeKinds)).min(1),
+}).superRefine((pack, ctx) => {
+  if (pack.cases.count !== pack.cases.languages.en + pack.cases.languages.ar) ctx.addIssue({ code: 'custom', path: ['cases'], message: 'Case and language totals must agree.' });
 });
 export type FocusPack = z.infer<typeof packSchema>;
 
@@ -35,8 +38,8 @@ export const inlineCaseSchema = z.strictObject({
   persona: z.strictObject({ requester_key: ref, name: text, synthetic: z.literal(true) }),
   resident_turns: z.array(text).min(1),
   starting_state: z.strictObject({ seed: text, requests: z.array(z.record(z.string(), z.string())) }),
-  expected: z.strictObject({ outcome: text, refusal: z.boolean(), unit: z.string().nullable(), requests: z.array(z.strictObject({ kind: text, queue: text, unit: text.optional() })), states: z.strictObject({ status: z.boolean().optional(), permit: z.boolean().optional(), agent: z.boolean().optional(), fee: z.number().optional() }) }),
+  expected: z.strictObject({ assessment: assessmentSchema.optional(), outcome: text, refusal: z.boolean(), unit: z.string().nullable(), requests: z.array(z.strictObject({ kind: text, queue: text, unit: text.optional() })), states: z.strictObject({ status: z.boolean().optional(), permit: z.boolean().optional(), agent: z.boolean().optional(), fee: z.number().optional() }) }),
   checks: z.array(text).min(1), severity: z.enum(['critical', 'high', 'medium', 'low']), source_clause: text,
 });
-export const inlineCasesSchema = z.strictObject({ pack: z.enum(packIds), synthetic_data: z.literal(true), note: text, cases: z.array(inlineCaseSchema).length(48) });
+export const inlineCasesSchema = z.strictObject({ pack: z.enum(packIds), synthetic_data: z.literal(true), note: text, cases: z.array(inlineCaseSchema).min(48) });
 export type InlineCase = z.infer<typeof inlineCaseSchema>;

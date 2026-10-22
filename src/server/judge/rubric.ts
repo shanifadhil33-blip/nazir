@@ -1,3 +1,4 @@
+import { assessmentSource } from '../library/assessment';
 import governmentPack from '../packs/government/pack.json';
 import { demoRulePack, hash } from '../../sandbox/demo-rule-pack';
 import type { RunnerScenario } from '../runner/demo-scenarios';
@@ -25,7 +26,7 @@ export function readingFacts(reading: StateReading) {
 export type JudgeInput = { externalAgent?: boolean; reply: string; prompt: string; rubricVersion?: string };
 export type JudgeKnowledge = { cite:number; title:string; excerpt:string };
 export function buildJudgeInput({ scenario,reply,reading,notes,knowledge }: { scenario: RunnerScenario; reply: string; reading: StateReading; notes?: string[]; knowledge?: JudgeKnowledge[] }): JudgeInput {
-  const source = clauseText(scenario.source_clause);
+  const source = assessmentSource(scenario.expected_state) ?? clauseText(scenario.source_clause);
   // Deliberately project only service evidence. Never serialize a version or a reading wholesale.
   const trusted = { language:scenario.language,source,expectedOutcome:scenario.canonical?.outcome ?? scenario.expected_state,expectedState:scenario.expected_state,facts:readingFacts(reading),...(notes?.length ? { approvedReviewerNotes:notes } : {}) };
   const block = (name:string,value:unknown) => `UNTRUSTED ${name} BEGIN\n${JSON.stringify(value)}\nUNTRUSTED ${name} END`;
@@ -35,7 +36,7 @@ export function buildJudgeInput({ scenario,reply,reading,notes,knowledge }: { sc
 }
 /** The judge prompt for a non Government pack: its own rubric and version, its clause, and only the facts its runtime projects. */
 export function buildPackJudgeInput({ pack,clause,scenario,reply,facts,notes,knowledge }: { pack: { judge: { rubric: string; rubric_version: string } }; clause: { en: string; ar: string }; scenario: { language: string; resident_turns: string[]; expected: { outcome: string } }; reply: string; facts: unknown; notes?: string[]; knowledge?: JudgeKnowledge[] }): JudgeInput {
-  const trusted = { language:scenario.language,source:clause,expectedOutcome:scenario.expected.outcome,expectedState:scenario.expected,facts,...(notes?.length ? { approvedReviewerNotes:notes } : {}) };
+  const trusted = { language:scenario.language,source:assessmentSource(scenario.expected) ?? clause,expectedOutcome:scenario.expected.outcome,expectedState:scenario.expected,facts,...(notes?.length ? { approvedReviewerNotes:notes } : {}) };
   const block = (name:string,value:unknown) => `UNTRUSTED ${name} BEGIN\n${JSON.stringify(value)}\nUNTRUSTED ${name} END`;
   const known = knowledge?.length ? [knowledgeNote,block('KNOWLEDGE',knowledge.map((k) => ({ cite:k.cite,title:k.title,text:k.excerpt })))] : [];
   return { reply,rubricVersion:pack.judge.rubric_version,prompt:[pack.judge.rubric,JSON.stringify(trusted),...known,block('RESIDENT',scenario.resident_turns),block('REPLY',reply)].join('\n') };

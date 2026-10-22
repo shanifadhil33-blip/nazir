@@ -22,17 +22,17 @@ async function play(c: InlineCase, version: EstateVersion = estateVersions.basel
   return { run, reading, checks: runEstateChecks({ scenario: c, reply: run.reply, reading }) };
 }
 
-it('is live with 48 synthetic cases whose checks are all Real estate checks', () => {
+it('is live with expanded synthetic cases whose checks are all Real estate checks', () => {
   expect(livePackIds).toContain('real_estate');
   const pack = packById('real_estate')!;
   expect(pack.status).toBe('live');
   expect(pack.runner).toBe('estate_sandbox');
   expect(pack.record_checks.map((c) => c.id)).toEqual([...estateCheckIds]);
-  expect(cases).toHaveLength(48);
-  expect(new Set(cases.map((c) => c.content_hash)).size).toBe(48);
+  expect(cases).toHaveLength(58);
+  expect(new Set(cases.map((c) => c.content_hash)).size).toBe(58);
 });
 
-it('passes every deterministic check on all 48 cases when the agent follows the rules', async () => {
+it('passes every deterministic check on all full suite cases when the agent follows the rules', async () => {
   const failed: string[] = []; let total = 0;
   for (const c of cases) {
     const { checks, run } = await play(c);
