@@ -95,7 +95,7 @@ it('uses the selected pack rubric and owner knowledge for an external OpenAI for
   // The queued run keeps the store knowledge even when the workspace changes focus.
   await saveAgentSettings(db.driver,id,{name:'Desk',instructions:'',language:'en',avatar:'preset:1',focus_pack:'government'});
   const judge=vi.fn(async ({input}:{input:{reply:string;prompt:string;rubricVersion?:string}})=>{
-    expect(input.rubricVersion).toBe('ec1.0');
+    expect(input.rubricVersion).toBe('ec1.1');
     expect(input.prompt).toContain('store policy');
     expect(input.prompt).toContain('UNTRUSTED KNOWLEDGE BEGIN');
     return semantic('supported',input.reply);

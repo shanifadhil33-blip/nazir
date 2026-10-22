@@ -83,11 +83,11 @@ for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'es
 }
 
 it('judges a pack reply with the pack rubric and version, and keeps Government prompts unchanged', async () => {
-  const estatePrompt = prompts.find((p) => p.rubricVersion === 're1.0')!;
+  const estatePrompt = prompts.find((p) => p.rubricVersion === 're1.1')!;
   expect(estatePrompt.prompt).toContain('approved leasing rules');
   expect(estatePrompt.prompt).not.toContain('Judge whether the reply is supported by the service rule and records.');
-  expect(prompts.some((p) => p.rubricVersion === 'ec1.0' && p.prompt.includes('store policy'))).toBe(true);
-  expect(prompts.some((p) => p.rubricVersion === 'sc1.0')).toBe(true);
+  expect(prompts.some((p) => p.rubricVersion === 'ec1.1' && p.prompt.includes('store policy'))).toBe(true);
+  expect(prompts.some((p) => p.rubricVersion === 'sc1.1')).toBe(true);
   // Government: same rubric version, prompt hash and no pack field.
   expect(rubricVersion).toBe('n13.1');
   expect(judgePromptHash).toBe(GOVERNMENT_PROMPT_HASH);
@@ -100,7 +100,7 @@ it('fails a planted fault with a complete finding and pins the pack in the manif
   const estate = await pick('real_estate', 're_viewing_booking_normal_en');
   const wrong = await run(String(estate.id), installed.real_estate!.versionIds.estate_planted_wrong_agent!, estateReferenceModel(caseFromRow(estate)));
   expect(wrong.conversation.status).toBe('failed');
-  expect(wrong.manifest).toMatchObject({ pack: 'real_estate', rubricVersion: 're1.0', registry_id: 'estate_planted_wrong_agent' });
+  expect(wrong.manifest).toMatchObject({ pack: 'real_estate', rubricVersion: 're1.1', registry_id: 'estate_planted_wrong_agent' });
   const finding = wrong.findings.find((f) => f.check_id === 'assigned_agent')!;
   expect(checkFindingComplete(finding)).toEqual([]);
   expect(finding.root_cause_class).toBe('workflow_failure');
@@ -114,7 +114,7 @@ it('fails a planted fault with a complete finding and pins the pack in the manif
   const school = await pick('schools', 'sc_safeguarding_normal_en');
   const misrouted = await run(String(school.id), installed.schools!.versionIds.school_planted_misrouted_safeguarding!, schoolReferenceModel(caseFromRow(school)), true);
   expect(misrouted.conversation.status).toBe('failed');
-  expect(misrouted.manifest).toMatchObject({ pack: 'schools', rubricVersion: 'sc1.0', registry_id: 'school_planted_misrouted_safeguarding' });
+  expect(misrouted.manifest).toMatchObject({ pack: 'schools', rubricVersion: 'sc1.1', registry_id: 'school_planted_misrouted_safeguarding' });
   expect(checkFindingComplete(misrouted.findings.find((f) => f.check_id === 'linked_escalation')!)).toEqual([]);
 });
 

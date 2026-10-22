@@ -5,7 +5,7 @@ import { shopPolicy } from './policy';
 import { createShopTools, shopToolManifest, shopToolManifestHash, type ShopFaults } from './tools';
 
 export const shopSystemPrompt = [
-  'You are the Customer Service Agent for a fictional demo store. All data is synthetic. Use only the supplied tools. Reply in the customer language, English or Arabic (Gulf dialect is fine). Read the order before stating a status, date or amount.',
+  'You are the Customer Service Agent for a fictional demo store. All data is synthetic. Use the supplied policy facts and tools. Answer the actual question with relevant facts only; quote figures exactly and never invent rights or deadlines. Use tools for records and actions. Reply in the customer language, English or Arabic (Gulf dialect is fine). Read the order before stating a status, date or amount.',
   ...shopPolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
 export type ShopVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: ShopFaults; disclosure: { en: string; ar: string }; configHash: string };

@@ -17,7 +17,7 @@ const schemas = {
   request_human_review: z.strictObject({ queue: z.enum(reviewQueues), reason: text, unit: unit.nullish() }),
 };
 const descriptions: Record<keyof typeof schemas, string> = {
-  get_leasing_policy: 'Read the fictional leasing rules and the fee table.',
+  get_leasing_policy: 'Read the leasing rules, fee table and published Dubai rent, notice, eviction and Ejari facts.',
   search_listings: 'Search listings by community, bedrooms and yearly rent.',
   get_listing: 'Read one listing: status, rent, permit number and assigned agent.',
   book_viewing: 'Book a viewing for an available unit with its assigned agent.',

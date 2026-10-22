@@ -17,7 +17,7 @@ const schemas = {
   request_human_review: z.strictObject({ queue: z.enum(reviewQueues), reason: text, order_reference: order.nullish() }),
 };
 const descriptions: Record<keyof typeof schemas, string> = {
-  get_store_policy: 'Read the fictional store rules: return window, warranty and refunds.',
+  get_store_policy: 'Read the fictional store policy and published Saudi consumer rights and UAE marketing rules. The store return window is not UAE law.',
   get_order: 'Read one of your own orders: status, total, shipment, return and warranty dates.',
   list_my_orders: 'List your own orders.',
   search_products: 'Search the catalogue by name, colour and price.',
