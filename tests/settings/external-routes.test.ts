@@ -31,3 +31,11 @@ it('allows owner reads and removal, validates input without sending a real reque
   expect((await POST(request(), context())).status).toBe(404);
   expect((await DELETE(request(), context())).status).toBe(200);
 });
+
+it.each(['en', 'ar'] as const)('shows a private literal refusal when saving in %s', async (language) => {
+  login(owner, ['service_owner']);
+  const response = await PUT(new Request('https://nazir.example/api', { method: 'PUT', headers: { 'accept-language': language }, body: JSON.stringify({ name: 'Desk', endpoint: 'https://127.0.0.1/chat', format: 'simple_json' }) }), context());
+  expect(response.status).toBe(400);
+  const { errorLines } = await import('../../src/server/http/errors');
+  expect(await response.json()).toEqual({ error: { code: 'external_private_address', message: errorLines.external_private_address[language] } });
+});

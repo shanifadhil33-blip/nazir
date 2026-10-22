@@ -23,17 +23,17 @@ async function play(c: InlineCase, version: ShopVersion = shopVersions.baseline)
 }
 const pick = (key: string) => cases.find((c) => c.stable_key === key)!;
 
-it('is live with 48 synthetic cases whose checks are all Ecommerce checks', () => {
+it('is live with expanded synthetic cases whose checks are all Ecommerce checks', () => {
   expect(livePackIds).toContain('ecommerce');
   const pack = packById('ecommerce')!;
   expect(pack.status).toBe('live');
   expect(pack.runner).toBe('shop_sandbox');
   expect(pack.record_checks.map((c) => c.id)).toEqual([...shopCheckIds]);
-  expect(cases).toHaveLength(48);
+  expect(cases).toHaveLength(58);
   expect(cases.every((c) => c.starting_state.seed === 'shop_sandbox')).toBe(true);
 });
 
-it('passes every deterministic check on all 48 cases when the agent follows the rules', async () => {
+it('passes every deterministic check on all full suite cases when the agent follows the rules', async () => {
   const failed: string[] = []; let total = 0;
   for (const c of cases) {
     const { checks, run } = await play(c);

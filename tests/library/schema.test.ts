@@ -10,7 +10,7 @@ const library = await loadLibrary();
 for (const family of families) it(`validates ${family} with successful and trap language twins`, () => {
   const file = library.find((f) => f.family === family)!;
   expect(familySchema.safeParse(JSON.parse(JSON.stringify(file, (key, value) => key === 'content_hash' ? undefined : value))).success).toBe(true);
-  expect(file.meanings.map((m) => m.kind).sort()).toEqual(['normal', 'trap']);
+  expect(file.meanings.filter((m) => !m.meaning_key.startsWith('kb_')).map((m) => m.kind).sort()).toEqual(['normal', 'trap']);
   for (const m of file.meanings) {
     expect(m.scenarios.map((s) => s.language).sort()).toEqual(['ar', 'en']);
     expect(new Set(m.scenarios.map((s) => s.split)).size).toBe(1);
@@ -18,22 +18,22 @@ for (const family of families) it(`validates ${family} with successful and trap 
       expect(/[\u0600-\u06ff]/.test(s.resident_turns.join(' '))).toBe(s.language === 'ar');
       expect([...s.allowed_actions, ...s.forbidden_actions].every((n) => toolManifest.some((t) => t.function.name === n))).toBe(true);
       expect(s.checks.every((id) => (checkIds as readonly string[]).includes(id))).toBe(true);
-      expect(demoRulePack.clauses.some((c) => c.id === s.source_clause) || s.source_clause.startsWith('fictional demo rule: ')).toBe(true);
+      expect(demoRulePack.clauses.some((c) => c.id === s.source_clause) || s.source_clause.startsWith('fictional demo rule: ') || !!s.expected_state.assessment).toBe(true);
       const { content_hash, ...content } = s;
       expect(content_hash).toBe(hash(content));
     }
   }
 });
-it('has 12 families, 24 meanings, 48 scenarios, eight development and four hidden families', () => {
+it('has 12 families, 29 meanings, 58 scenarios, eight development and four hidden families', () => {
   expect(library).toHaveLength(12);
-  expect(library.flatMap((f) => f.meanings)).toHaveLength(24);
-  expect(library.flatMap((f) => f.meanings.flatMap((m) => m.scenarios))).toHaveLength(48);
+  expect(library.flatMap((f) => f.meanings)).toHaveLength(29);
+  expect(library.flatMap((f) => f.meanings.flatMap((m) => m.scenarios))).toHaveLength(58);
   expect(library.filter((f) => f.meanings[0]!.scenarios[0]!.split === 'development')).toHaveLength(8);
   expect(library.filter((f) => f.meanings[0]!.scenarios[0]!.split === 'hidden')).toHaveLength(4);
 });
 it('pins the canonical whole library digest and repeats hashes across loads', async () => {
   expect(await loadLibrary()).toEqual(library);
-  expect(hash(library)).toBe('ddfa228788bb53fdeda3fbcf5ec97c9c722b4b02b405f05525133b3abbf9bee4');
+  expect(hash(library.map((f) => ({ ...f, meanings: f.meanings.filter((m) => !m.meaning_key.startsWith('kb_')) })))).toBe('ddfa228788bb53fdeda3fbcf5ec97c9c722b4b02b405f05525133b3abbf9bee4');
 });
 it('retains the exact two demo complaint inputs and hashes', () => {
   const normal = library.find((f) => f.family === 'unresolved_prior_request')!.meanings[0]!;

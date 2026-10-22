@@ -26,7 +26,7 @@ beforeAll(async () => {
   const identity = await db.bootstrap('Packs');
   owner = identity.member_id; workspace = identity.workspace_id;
   reviewer = await db.createMember(workspace, ['quality_reviewer'], 'Khalid Hamdan');
-  for (const pack of ['real_estate', 'ecommerce', 'clinics', 'schools']) { installed[pack] = await installPack(db.driver, owner, pack); expect(await approvePackCases(db.driver, owner, pack)).toEqual([]); expect(await approvePackCases(db.driver, reviewer, pack)).toHaveLength(48); }
+  for (const pack of ['real_estate', 'ecommerce', 'clinics', 'schools']) { installed[pack] = await installPack(db.driver, owner, pack); expect(await approvePackCases(db.driver, owner, pack)).toEqual([]); expect(await approvePackCases(db.driver, reviewer, pack)).toHaveLength(pack === 'schools' ? 64 : 58); }
   const rp = (await db.owner.query<{ id: string }>("INSERT INTO nazir.rule_packs(workspace_id,key,title) VALUES($1,'packs','Fictional pack rules') RETURNING id", [workspace])).rows[0]!.id;
   const rules = (await db.owner.query<{ id: string }>("INSERT INTO nazir.rule_pack_versions(workspace_id,rule_pack_id,version,content,status) VALUES($1,$2,1,'{}','approved') RETURNING id", [workspace, rp])).rows[0]!.id;
   plan = (await db.owner.query<{ id: string }>("INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,status,proposed_by_type) VALUES($1,'Pack runs',$2,$3,'{}','{en,ar}',1,2000,'{}','approved','nazir') RETURNING id", [workspace, installed.real_estate!.versionIds.estate_baseline, rules])).rows[0]!.id;
@@ -62,7 +62,7 @@ it('plans only the cases of the chosen focus pack', async () => {
   expect(await count()).toEqual([]);
   await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'real_estate' });
   const estate = await count();
-  expect(estate).toHaveLength(48);
+  expect(estate).toHaveLength(58);
   expect(estate.every((k) => k.startsWith('re_'))).toBe(true);
   await saveAgentSettings(db.driver, owner, { ...base, focus_pack: 'ecommerce' });
   expect((await count()).every((k) => k.startsWith('ec_'))).toBe(true);
@@ -70,7 +70,7 @@ it('plans only the cases of the chosen focus pack', async () => {
 });
 
 for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'estate_baseline'], ['ecommerce', shopReferenceModel, 'shop_baseline'], ['clinics', clinicReferenceModel, 'clinic_baseline'], ['schools', schoolReferenceModel, 'school_baseline']] as const) {
-  it(`runs all 48 ${pack} cases through the real worker with a scripted agent and passes them`, async () => {
+  it(`runs all ${pack} full suite cases through the real worker with a scripted agent and passes them`, async () => {
     const failed: string[] = [];
     for (const row of await scenarios(pack)) {
       const c: InlineCase = caseFromRow(row);

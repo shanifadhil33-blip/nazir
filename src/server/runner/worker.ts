@@ -260,7 +260,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   } catch (e) { reason ??= external ? e instanceof Coded ? e.code : 'external_unreachable' : 'reading_failed'; }
   finally { clearTimeout(timer); clearInterval(beat); stopped=true; }
   if (lost) return { ...claim,lost:true };
-  if (!verdict || !['passed','failed','inconclusive'].includes(verdict.status)) { reason='bad_evaluator'; verdict={ status:'inconclusive',reason:'bad_evaluator',results:[] }; }
+  if (!verdict || !['passed','failed','inconclusive'].includes(verdict.status)) { reason ??= 'bad_evaluator'; verdict={ status:'inconclusive',reason,results:[] }; }
   if(!external && !evaluationInput && !runtime) records=runRecordChecks({scenario:data.scenario,reply,toolCalls,reading,expectedTenant:tenant});
   const missingReadingResults = () => evaluate===recordChecksEvaluator ? recordChecksEvaluator({ scenario:data.scenario,reply,toolCalls,reading:undefined,expectedTenant:tenant }).results : {};
   if (reason) verdict={ status:'inconclusive',reason,results:reading || runtime ? {} : missingReadingResults() };

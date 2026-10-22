@@ -125,3 +125,27 @@ it('never sends an echoed auth secret to the judge or saves it in run evidence',
     expect(JSON.stringify(rows)).not.toContain(key);
   }
 });
+
+it('preserves the private address refusal in runner results and shows it in EN and AR reports', async () => {
+  await ready(); const run = await enqueue();
+  const neverCall = vi.fn(fetcher);
+  expect(await runNextConversation({ driver: db.driver, inspectionDriver: db.driver, runId: run.id, workerId: 'private_address', externalTransport: { fetcher: neverCall, resolve: async () => [{ address: '10.0.0.1' }] } })).toMatchObject({ status: 'inconclusive', reason: 'external_private_address' });
+  expect(neverCall).not.toHaveBeenCalled();
+  const { createReport, readFullReport } = await import('../../src/server/reports/read');
+  const { errorLines } = await import('../../src/server/http/errors');
+  const id = await owner();
+  const report = await createReport(db.driver, id, { run_id: run.id });
+  const body = await readFullReport(db.driver, id, report.id);
+  for (const language of ['en', 'ar'] as const) expect(body.sentences[language]).toContain(errorLines.external_private_address[language]);
+});
+
+it('passes the pinned checked address through the runner conversation transport', async () => {
+  const row: ExternalRow = { revision: 'r', endpoint: 'https://agent.example.com/chat', format: 'simple_json', header_name: null, key_cipher: null, tested_at: 'today' };
+  const dns = vi.fn().mockResolvedValueOnce([{ address: '93.184.215.14' }]).mockResolvedValue([{ address: '127.0.0.1' }]);
+  await externalConversation(row, ['Hello'], 'session', 'en', async () => {}, { resolve: dns, fetcher: async (_url, init) => {
+    init.lookup('agent.example.com', {}, (error, address) => { expect(error).toBeNull(); expect(address).toBe('93.184.215.14'); });
+    expect(init.servername).toBe('agent.example.com'); expect(init.rejectUnauthorized).toBe(true);
+    return Response.json({ reply: 'Hello' });
+  } });
+  expect(dns).toHaveBeenCalledTimes(1);
+});

@@ -8,13 +8,13 @@ import { checkIds } from '../../src/server/checks/record-checks';
 import { buildJudgeInput, judgePromptHash, rubric, rubricVersion } from '../../src/server/judge/rubric';
 import { hash } from '../../src/sandbox/demo-rule-pack';
 
-it('ports Government with no change: the same 48 frozen cases and hashes as the library', async () => {
+it('loads the expanded Government cases with the same hashes as the library', async () => {
   const before = await loadLibrary();
   const after = await loadPackCases('government');
   expect(after).toEqual(before);
   const scenarios = after.flatMap((f) => f.meanings.flatMap((m) => m.scenarios));
-  expect(scenarios).toHaveLength(48);
-  expect(scenarios.filter((s) => s.language === 'en')).toHaveLength(24);
+  expect(scenarios).toHaveLength(58);
+  expect(scenarios.filter((s) => s.language === 'en')).toHaveLength(29);
   expect(hash(after)).toBe(hash(before));
 });
 
@@ -45,15 +45,15 @@ it('lists every focus pack as data; all five packs are live', async () => {
   expect(packById('unknown_pack')).toBeNull();
   expect(packById('schools')!.runner).toBe('school_sandbox');
   expect(packById('ecommerce')!.runner).toBe('shop_sandbox');
-  expect(packSummary(packById('government')!)).toEqual({ id: 'government', version: '1.0.0', name: expect.any(Object), summary: expect.any(Object), cases: 48, record_checks: 7, refusal_policies: 3, compliance: 5 });
+  expect(packSummary(packById('government')!)).toEqual({ id: 'government', version: '1.0.0', name: expect.any(Object), summary: expect.any(Object), cases: 58, record_checks: 7, refusal_policies: 3, compliance: 5 });
   expect(JSON.stringify(packSummary(packById('government')!))).not.toContain(rubric);
 });
 
-for (const id of ['ecommerce', 'clinics', 'schools']) it(`keeps ${id} as data: 48 synthetic cases, 24 per language, twins match, checks are its own`, async () => {
+for (const id of ['ecommerce', 'clinics', 'schools']) it(`keeps ${id} as data: expanded synthetic cases in both languages, twins match, checks are its own`, async () => {
   const { loadInlineCases } = await import('../../src/server/packs/load');
   const cases = await loadInlineCases(id);
-  expect(cases).toHaveLength(48);
-  const families = new Set(cases.map((c) => c.family));
+  expect(cases).toHaveLength(id === 'schools' ? 64 : 58);
+  const families = new Set(cases.filter((c) => !c.expected.assessment).map((c) => c.family));
   expect(families.size).toBe(12);
   for (const f of families) for (const kind of ['normal', 'trap']) expect(cases.filter((c) => c.family === f && c.kind === kind).map((c) => c.language).sort()).toEqual(['ar', 'en']);
   const file = JSON.parse(await readFile(`src/server/packs/${id}/cases.json`, 'utf8')) as { synthetic_data: boolean };

@@ -12,7 +12,7 @@ import { schoolToolManifest } from '../../sandbox/school/tools';
 
 const manifests: Record<string, unknown> = { real_estate: estateToolManifest, ecommerce: shopToolManifest, clinics: clinicToolManifest, schools: schoolToolManifest };
 /**
- * Adds a live pack to the workspace: its fictional agent with the baseline and planted versions, and its 48 cases as drafts.
+ * Adds a live pack to the workspace: its fictional agent with the baseline and planted versions, and its cases as drafts.
  * Stable keys carry the pack prefix so they never meet a Government key. Matching content is reused, never updated.
  */
 export async function installPack(driver: TransactionDriver, memberId: string, packId: string, cwd = process.cwd()) {
@@ -46,8 +46,8 @@ export async function installPack(driver: TransactionDriver, memberId: string, p
       let meaning = (await sql.query<{ id: string }>('SELECT id FROM nazir.scenario_meanings WHERE canonical=$1::jsonb AND family=$2', [JSON.stringify(canonical), c.family])).rows[0]?.id;
       if (!meaning) meaning = (await sql.query<{ id: string }>('INSERT INTO nazir.scenario_meanings(workspace_id,family,canonical) VALUES(nazir.current_workspace_id(),$1,$2::jsonb) RETURNING id', [c.family, JSON.stringify(canonical)])).rows[0]!.id;
       const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.scenarios(workspace_id,meaning_id,stable_key,version,family,language,split,persona,starting_state,allowed_actions,forbidden_actions,expected_state,source_clause,expectation_kind,severity,rubric_version,resident_turns,checks,source,library_hash)
-        VALUES(nazir.current_workspace_id(),$1,$2,$3,$4,$5,'development',$6::jsonb,$7::jsonb,$8,'{}',$9::jsonb,$10,'fictional_demo_rule',$11,$12,$13::jsonb,$14,'authored',$15) RETURNING id`,
-      [meaning, key, (previous?.version ?? 0) + 1, c.family, c.language, JSON.stringify({ ...c.persona, resident_turns: c.resident_turns }), JSON.stringify(c.starting_state), [...runtime.toolNames], JSON.stringify(c.expected), c.source_clause, c.severity, runtime.pack.judge.rubric_version, JSON.stringify(c.resident_turns), c.checks, c.content_hash])).rows[0]!;
+        VALUES(nazir.current_workspace_id(),$1,$2,$3,$4,$5,'development',$6::jsonb,$7::jsonb,$8,'{}',$9::jsonb,$10,$16,$11,$12,$13::jsonb,$14,'authored',$15) RETURNING id`,
+      [meaning, key, (previous?.version ?? 0) + 1, c.family, c.language, JSON.stringify({ ...c.persona, resident_turns: c.resident_turns }), JSON.stringify(c.starting_state), [...runtime.toolNames], JSON.stringify(c.expected), c.source_clause, c.severity, runtime.pack.judge.rubric_version, JSON.stringify(c.resident_turns), c.checks, c.content_hash, c.expected.assessment ? c.expected.assessment.rubric_tags.includes('practice') ? 'approved_internal_rule' : 'public_fact' : 'fictional_demo_rule'])).rows[0]!;
       scenarioIds.push(row.id);
     }
     await sql.query("SELECT nazir.append_audit('pack.install','scenario',null,$1::jsonb)", [JSON.stringify({ pack: packId, scenarios: scenarioIds.length, versions: Object.keys(versionIds).length })]);

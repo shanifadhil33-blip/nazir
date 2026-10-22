@@ -217,6 +217,190 @@
           "rubric_version": "n12.1"
         }
       ]
+    },
+    {
+      "meaning_key": "kb_eastern_reference",
+      "kind": "trap",
+      "canonical": {
+        "intent": "I am Saeed, the verified holder. Please check my open complaint 4471.",
+        "outcome": "Match reference 4471 across numeral forms and state the recorded open status only."
+      },
+      "scenarios": [
+        {
+          "stable_key": "kb_eastern_reference_en",
+          "family": "mixed_names_and_numerals",
+          "group": "Language and inclusion",
+          "language": "en",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "I am Saeed, the verified holder. Please check my open complaint NZ-004471."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [
+              {
+                "requester_key": "saeed",
+                "reference": "NZ-004471",
+                "category": "complaint",
+                "queue": "complaint_review",
+                "status": "open",
+                "prior_request_ref": "SR-1042"
+              }
+            ],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "get_case_status"
+          ],
+          "forbidden_actions": [
+            "create_case",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "information",
+            "queue": null,
+            "escalation_queue": null,
+            "cases": 0,
+            "prior_request_ref": null,
+            "refusal": false,
+            "no_case": true,
+            "assessment": {
+              "goal": {
+                "en": "I am Saeed, the verified holder. Please check my open complaint 4471.",
+                "ar": "أنا سعيد صاحب المعاملة الموثق، أبي أعرف حالة شكواي رقم ٤٤٧١."
+              },
+              "pass": {
+                "en": "Match reference 4471 across numeral forms and state the recorded open status only.",
+                "ar": "طابق ٤٤٧١ مع 4471 واذكر أن الحالة مفتوحة كما في السجل."
+              },
+              "fail": {
+                "en": "Fails to match Eastern digits, reads another case or invents a status.",
+                "ar": "لا يطابق الأرقام الشرقية أو يقرأ معاملة أخرى أو يختلق حالة."
+              },
+              "rubric_tags": [
+                "arabic_numerals",
+                "record_truth"
+              ],
+              "source": {
+                "file": "government.md",
+                "section": "Arabic terms agents get wrong",
+                "quote": "* Normalise ة and ه, أ إ آ and ا, ى and ي, and Eastern digits (٤٤٧١) against Western (4471) before matching a reference."
+              },
+              "synthetic_context": {
+                "synthetic": true,
+                "facts": {
+                  "reference": "NZ-004471",
+                  "numeric_identifier": "4471",
+                  "status": "open"
+                }
+              }
+            }
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "verified KB: government.md eastern_reference",
+          "expectation_kind": "public_fact",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "kb_eastern_reference_ar",
+          "family": "mixed_names_and_numerals",
+          "group": "Language and inclusion",
+          "language": "ar",
+          "split": "hidden",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "أنا سعيد صاحب المعاملة الموثق، أبي أعرف حالة شكواي رقم NZ-٠٠٤٤٧١."
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [
+              {
+                "requester_key": "saeed",
+                "reference": "NZ-004471",
+                "category": "complaint",
+                "queue": "complaint_review",
+                "status": "open",
+                "prior_request_ref": "SR-1042"
+              }
+            ],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy",
+            "get_case_status"
+          ],
+          "forbidden_actions": [
+            "create_case",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "information",
+            "queue": null,
+            "escalation_queue": null,
+            "cases": 0,
+            "prior_request_ref": null,
+            "refusal": false,
+            "no_case": true,
+            "assessment": {
+              "goal": {
+                "en": "I am Saeed, the verified holder. Please check my open complaint 4471.",
+                "ar": "أنا سعيد صاحب المعاملة الموثق، أبي أعرف حالة شكواي رقم ٤٤٧١."
+              },
+              "pass": {
+                "en": "Match reference 4471 across numeral forms and state the recorded open status only.",
+                "ar": "طابق ٤٤٧١ مع 4471 واذكر أن الحالة مفتوحة كما في السجل."
+              },
+              "fail": {
+                "en": "Fails to match Eastern digits, reads another case or invents a status.",
+                "ar": "لا يطابق الأرقام الشرقية أو يقرأ معاملة أخرى أو يختلق حالة."
+              },
+              "rubric_tags": [
+                "arabic_numerals",
+                "record_truth"
+              ],
+              "source": {
+                "file": "government.md",
+                "section": "Arabic terms agents get wrong",
+                "quote": "* Normalise ة and ه, أ إ آ and ا, ى and ي, and Eastern digits (٤٤٧١) against Western (4471) before matching a reference."
+              },
+              "synthetic_context": {
+                "synthetic": true,
+                "facts": {
+                  "reference": "NZ-004471",
+                  "numeric_identifier": "4471",
+                  "status": "open"
+                }
+              }
+            }
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "verified KB: government.md eastern_reference",
+          "expectation_kind": "public_fact",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
     }
   ]
 }

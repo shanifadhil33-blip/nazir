@@ -30,7 +30,7 @@ it('uses the same chat, planning, approval, provider manifest and enqueue path f
     const rulesId = (await db.owner.query<{ rule_pack_version_id: string }>('SELECT rule_pack_version_id FROM nazir.plans WHERE id=$1', [fixture.planId])).rows[0]!.rule_pack_version_id;
     const versionId = pack === 'government' ? fixture.versions[0]!.id : Object.values((await installPack(db.driver, members.author, pack)).versionIds)[0]!;
     const full = await proposeBoundedPlan(db.driver, members.author, { agent_version_id: versionId, rule_pack_version_id: rulesId, size: 'full' });
-    expect(full.scenarioIds).toHaveLength(48);
+    expect(full.scenarioIds).toHaveLength(pack === 'schools' ? 64 : 58);
     const manifests: Record<string, unknown>[] = [];
     for (const kind of ['demo', 'real']) {
       await db.owner.query('UPDATE nazir.workspaces SET kind=$2 WHERE id=$1', [workspaceId, kind]);

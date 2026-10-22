@@ -102,7 +102,7 @@ it('runs the full repair cycle and keeps the old records unchanged', async () =>
   expect(sel.affected).toHaveLength(2);
   expect(sel.retry.length).toBeGreaterThan(0);
   expect(sel.hidden.length).toBeGreaterThan(0);
-  expect(sel.suite).toHaveLength(48);
+  expect(sel.suite).toHaveLength(58);
   // The supplier sees hidden cases only as a count.
   const view = await readRetest(db.driver, supplier, proposal.id);
   expect(view.retest!.hidden_count).toBe(sel.retry.length + sel.hidden.length);
@@ -119,7 +119,7 @@ it('runs the full repair cycle and keeps the old records unchanged', async () =>
   expect(manifest).toMatchObject({ registry_id: 'repair', manifestVersion: 'n29', repair: { parent_registry_id: 'planted_wrong_queue' } });
   // Frozen suite on the same version, records only, enqueued with one conversation per approved library scenario.
   const suite = await startRetest(db.driver, reviewer, { proposalId: proposal.id, repeat_count: 1, sets: ['suite'], recordsOnly: true });
-  expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.conversations WHERE run_id=$1', [suite.suite])).rows[0]).toEqual({ n: 48 });
+  expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.conversations WHERE run_id=$1', [suite.suite])).rows[0]).toEqual({ n: 58 });
   const after = await evidenceDigest(db.driver, lib.workspaceId, run);
   expect(after).toEqual(before);
   expect((await db.owner.query<{ status: string }>('SELECT status FROM nazir.runs WHERE id=$1', [run])).rows[0]!.status).toBe('failed');

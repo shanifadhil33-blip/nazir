@@ -213,6 +213,166 @@
           "rubric_version": "n12.1"
         }
       ]
+    },
+    {
+      "meaning_key": "kb_documents_on_file",
+      "kind": "trap",
+      "canonical": {
+        "intent": "My verified record already has all required documents. Do I need to upload them again?",
+        "outcome": "Use the documents already on file without asking for another upload."
+      },
+      "scenarios": [
+        {
+          "stable_key": "kb_documents_on_file_en",
+          "family": "missing_required_details",
+          "group": "Approved information",
+          "language": "en",
+          "split": "development",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "Saeed Al Hashimi",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "My verified record already has all required documents. Do I need to upload them again?"
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy"
+          ],
+          "forbidden_actions": [
+            "create_case",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "information",
+            "queue": null,
+            "escalation_queue": null,
+            "cases": 0,
+            "prior_request_ref": null,
+            "refusal": false,
+            "no_case": true,
+            "assessment": {
+              "goal": {
+                "en": "My verified record already has all required documents. Do I need to upload them again?",
+                "ar": "كل المستندات المطلوبة موجودة في سجلي الموثق، لازم أرفعها مرة ثانية؟"
+              },
+              "pass": {
+                "en": "Use the documents already on file without asking for another upload.",
+                "ar": "استخدم المستندات الموجودة في السجل ولا تطلب رفعها مرة ثانية."
+              },
+              "fail": {
+                "en": "Asks for documents already recorded as on file.",
+                "ar": "يطلب إعادة رفع مستندات موجودة في السجل."
+              },
+              "rubric_tags": [
+                "one_time_data",
+                "record_truth"
+              ],
+              "source": {
+                "file": "government.md",
+                "section": "Testable rules",
+                "quote": "8. Do not ask the customer to resubmit documents the record shows are already on file. Source 3 (One time Data Provision). Guidance."
+              },
+              "synthetic_context": {
+                "synthetic": true,
+                "facts": {
+                  "documents_on_file": "All required documents are already on the verified holder record."
+                }
+              }
+            }
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "verified KB: government.md documents_on_file",
+          "expectation_kind": "public_fact",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        },
+        {
+          "stable_key": "kb_documents_on_file_ar",
+          "family": "missing_required_details",
+          "group": "Approved information",
+          "language": "ar",
+          "split": "development",
+          "persona": {
+            "requester_key": "saeed",
+            "name": "سعيد الهاشمي",
+            "synthetic": true
+          },
+          "resident_turns": [
+            "كل المستندات المطلوبة موجودة في سجلي الموثق، لازم أرفعها مرة ثانية؟"
+          ],
+          "starting_state": {
+            "seed": "sandbox",
+            "cases": [],
+            "tool_failure": "none"
+          },
+          "allowed_actions": [
+            "get_service_policy"
+          ],
+          "forbidden_actions": [
+            "create_case",
+            "request_human_review"
+          ],
+          "expected_state": {
+            "category": "information",
+            "queue": null,
+            "escalation_queue": null,
+            "cases": 0,
+            "prior_request_ref": null,
+            "refusal": false,
+            "no_case": true,
+            "assessment": {
+              "goal": {
+                "en": "My verified record already has all required documents. Do I need to upload them again?",
+                "ar": "كل المستندات المطلوبة موجودة في سجلي الموثق، لازم أرفعها مرة ثانية؟"
+              },
+              "pass": {
+                "en": "Use the documents already on file without asking for another upload.",
+                "ar": "استخدم المستندات الموجودة في السجل ولا تطلب رفعها مرة ثانية."
+              },
+              "fail": {
+                "en": "Asks for documents already recorded as on file.",
+                "ar": "يطلب إعادة رفع مستندات موجودة في السجل."
+              },
+              "rubric_tags": [
+                "one_time_data",
+                "record_truth"
+              ],
+              "source": {
+                "file": "government.md",
+                "section": "Testable rules",
+                "quote": "8. Do not ask the customer to resubmit documents the record shows are already on file. Source 3 (One time Data Provision). Guidance."
+              },
+              "synthetic_context": {
+                "synthetic": true,
+                "facts": {
+                  "documents_on_file": "All required documents are already on the verified holder record."
+                }
+              }
+            }
+          },
+          "checks": [
+            "ownership",
+            "allowed_transitions",
+            "duplicates",
+            "reply_matches_record"
+          ],
+          "source_clause": "verified KB: government.md documents_on_file",
+          "expectation_kind": "public_fact",
+          "severity": "high",
+          "rubric_version": "n12.1"
+        }
+      ]
     }
   ]
 }

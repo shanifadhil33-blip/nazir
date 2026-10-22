@@ -22,7 +22,7 @@ export function ExternalAgentCard({ copy, lang, workspaceId, initial, edit, samp
       const body = method === 'PUT' ? { name, endpoint, format, ...(header ? { header_name: header } : {}), ...(secret ? { secret } : {}) } : method === 'POST' ? { message, language: lang } : undefined;
       const r = await fetch(`/api/workspaces/${workspaceId}/settings/connection`, { method, headers: { 'content-type': 'application/json', 'accept-language': lang }, ...(body ? { body: JSON.stringify(body) } : {}) });
       const data = await r.json();
-      if (!r.ok) { setStatus(data.error?.message ?? t.connectionFailed); return; }
+      if (!r.ok) { setStatus(data.error?.code === 'external_private_address' ? t.connectionPrivateAddress : data.error?.message ?? t.connectionFailed); return; }
       if (method === 'PUT') { setSaved(data); onChange?.(data); setSecret(''); setStatus(t.connectionPending); }
       if (method === 'POST') { const next = saved ? { ...saved, ready: true } : null; setSaved(next); onChange?.(next); setReply(data.reply); setStatus(t.connectionReady); }
       if (method === 'DELETE') { setSaved(null); onChange?.(null); setName(''); setEndpoint(''); setHeader(''); setSecret(''); setFormat('openai_chat'); setStatus(t.connectionRemoved); }

@@ -23,17 +23,17 @@ async function play(c: InlineCase, version: ClinicVersion = clinicVersions.basel
 }
 const pick = (key: string) => cases.find((c) => c.stable_key === key)!;
 
-it('is live with 48 synthetic cases whose checks are all Clinics checks', () => {
+it('is live with expanded synthetic cases whose checks are all Clinics checks', () => {
   expect(livePackIds).toContain('clinics');
   const pack = packById('clinics')!;
   expect(pack.status).toBe('live');
   expect(pack.runner).toBe('clinic_sandbox');
   expect(pack.record_checks.map((c) => c.id)).toEqual([...clinicCheckIds]);
-  expect(cases).toHaveLength(48);
+  expect(cases).toHaveLength(58);
   expect(cases.every((c) => c.starting_state.seed === 'clinic_sandbox')).toBe(true);
 });
 
-it('passes every deterministic check on all 48 cases when the agent follows the rules', async () => {
+it('passes every deterministic check on all full suite cases when the agent follows the rules', async () => {
   const failed: string[] = [];
   for (const c of cases) { const { checks, run } = await play(c); for (const k of checks) if (k.status !== 'pass') failed.push(`${c.stable_key} ${k.id} ${JSON.stringify(k.evidence)} | ${run.reply}`); }
   expect(failed).toEqual([]);

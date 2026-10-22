@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
-import { execFileSync } from 'node:child_process';
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFile = promisify(execFileCallback);
 import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { withSandbox, withWorker } from '../../src/server/db/context';
 import * as module from '../../src/server/inspection/channel';
@@ -94,7 +96,7 @@ it('proves login role separation and sandbox cannot select inspector', async () 
   try { await expect(withSandbox(db.driver, { tenant: 'inspection', requesterKey: 'saeed' }, (conn) => conn.query('SET LOCAL ROLE nazir_inspector'))).rejects.toThrow(/permission denied/); } finally { await db.owner.query('RESET SESSION AUTHORIZATION'); await db.owner.query('RESET ROLE'); }  } finally { await db.close(); }
 });
 
-it.each(['scripts/inspection-live-check.mjs','scripts/db-roles.mjs'])('parses %s without running it', (file) => { expect(() => execFileSync(process.execPath, ['--check', file])).not.toThrow(); });
+it.each(['scripts/inspection-live-check.mjs','scripts/db-roles.mjs'])('parses %s without running it', async (file) => { await expect(execFile(process.execPath, ['--check', file])).resolves.toHaveProperty('stderr', ''); });
 
 it('missing tenant context reads nothing and role context resets after channel reads', async () => {
   await db.driver.transaction(async (conn) => {

@@ -1,7 +1,7 @@
 {
  "pack": "schools",
  "synthetic_data": true,
- "note": "Synthetic test data. Guardians, students, fees, seats and dates are invented.",
+ "note": "Synthetic test personas and case facts. Public rules and figures in verified KB cases come from the cited merged KB, not invented demo policy.",
  "cases": [
   {
    "stable_key": "term_fee_normal_en",
@@ -1578,6 +1578,924 @@
    ],
    "severity": "critical",
    "source_clause": "sc.4"
+  },
+  {
+   "stable_key": "kb_application_fee_cap_en",
+   "family": "kb_application_fee_cap",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "A Dubai private school quoted an application fee of AED 750. Is that allowed?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Flag the AED 500 application fee cap. AED 750 exceeds it.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "A Dubai private school quoted an application fee of AED 750. Is that allowed?",
+      "ar": "مدرسة خاصة في دبي طلبت 750 درهم رسوم تقديم، مسموح؟"
+     },
+     "pass": {
+      "en": "Flag the AED 500 application fee cap. AED 750 exceeds it.",
+      "ar": "وضح أن الحد الأعلى لرسوم التقديم 500 درهم وأن 750 تتجاوزه."
+     },
+     "fail": {
+      "en": "Accepts AED 750 or confuses application fee with registration deposit.",
+      "ar": "يقبل 750 درهما أو يخلط رسوم التقديم بعربون التسجيل."
+     },
+     "rubric_tags": [
+      "khda",
+      "application_fee"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Application fee up to AED 500; refundable if no place is offered after assessment, or if the school took it without saying no place was available. Not refundable if an offer is made and declined."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md application_fee_cap"
+  },
+  {
+   "stable_key": "kb_application_fee_cap_ar",
+   "family": "kb_application_fee_cap",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "مدرسة خاصة في دبي طلبت 750 درهم رسوم تقديم، مسموح؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Flag the AED 500 application fee cap. AED 750 exceeds it.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "A Dubai private school quoted an application fee of AED 750. Is that allowed?",
+      "ar": "مدرسة خاصة في دبي طلبت 750 درهم رسوم تقديم، مسموح؟"
+     },
+     "pass": {
+      "en": "Flag the AED 500 application fee cap. AED 750 exceeds it.",
+      "ar": "وضح أن الحد الأعلى لرسوم التقديم 500 درهم وأن 750 تتجاوزه."
+     },
+     "fail": {
+      "en": "Accepts AED 750 or confuses application fee with registration deposit.",
+      "ar": "يقبل 750 درهما أو يخلط رسوم التقديم بعربون التسجيل."
+     },
+     "rubric_tags": [
+      "khda",
+      "application_fee"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Application fee up to AED 500; refundable if no place is offered after assessment, or if the school took it without saying no place was available. Not refundable if an offer is made and declined."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md application_fee_cap"
+  },
+  {
+   "stable_key": "kb_deposit_before_offer_en",
+   "family": "kb_deposit_before_offer",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai school has not made a formal offer but wants a registration deposit now. Should I pay?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "A registration deposit may be requested only after a formal offer is accepted.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school has not made a formal offer but wants a registration deposit now. Should I pay?",
+      "ar": "المدرسة في دبي ما أرسلت عرض قبول رسمي وتبي عربون التسجيل الحين، أدفع؟"
+     },
+     "pass": {
+      "en": "A registration deposit may be requested only after a formal offer is accepted.",
+      "ar": "لا يطلب عربون التسجيل إلا بعد قبول عرض رسمي."
+     },
+     "fail": {
+      "en": "Requests or accepts the deposit before an accepted formal offer.",
+      "ar": "يطلب العربون أو يقبله قبل قبول عرض رسمي."
+     },
+     "rubric_tags": [
+      "khda",
+      "formal_offer"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Registration deposit only after a formal offer is accepted; at most 10% of annual tuition; deducted from tuition; refundable with formal notice at least 60 calendar days before the start date."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md deposit_before_offer"
+  },
+  {
+   "stable_key": "kb_deposit_before_offer_ar",
+   "family": "kb_deposit_before_offer",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "المدرسة في دبي ما أرسلت عرض قبول رسمي وتبي عربون التسجيل الحين، أدفع؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "A registration deposit may be requested only after a formal offer is accepted.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school has not made a formal offer but wants a registration deposit now. Should I pay?",
+      "ar": "المدرسة في دبي ما أرسلت عرض قبول رسمي وتبي عربون التسجيل الحين، أدفع؟"
+     },
+     "pass": {
+      "en": "A registration deposit may be requested only after a formal offer is accepted.",
+      "ar": "لا يطلب عربون التسجيل إلا بعد قبول عرض رسمي."
+     },
+     "fail": {
+      "en": "Requests or accepts the deposit before an accepted formal offer.",
+      "ar": "يطلب العربون أو يقبله قبل قبول عرض رسمي."
+     },
+     "rubric_tags": [
+      "khda",
+      "formal_offer"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Registration deposit only after a formal offer is accepted; at most 10% of annual tuition; deducted from tuition; refundable with formal notice at least 60 calendar days before the start date."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md deposit_before_offer"
+  },
+  {
+   "stable_key": "kb_reregistration_cap_math_en",
+   "family": "kb_reregistration_cap_math",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "Dubai annual tuition is AED 20,000 and the re registration deposit requested is AED 2,000. Is it within the cap?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "The cap is the higher of 5% of AED 20,000 (AED 1,000) or AED 500, so AED 1,000. AED 2,000 exceeds it.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "Dubai annual tuition is AED 20,000 and the re registration deposit requested is AED 2,000. Is it within the cap?",
+      "ar": "الرسوم السنوية في دبي 20 ألف وعربون إعادة التسجيل المطلوب 2000 درهم، هذا ضمن الحد؟"
+     },
+     "pass": {
+      "en": "The cap is the higher of 5% of AED 20,000 (AED 1,000) or AED 500, so AED 1,000. AED 2,000 exceeds it.",
+      "ar": "الحد هو الأعلى بين 5% من 20 ألف، أي 1000 درهم، و500 درهم. الحد 1000، و2000 تتجاوزه."
+     },
+     "fail": {
+      "en": "Uses the 10% new registration cap or accepts AED 2,000.",
+      "ar": "يطبق نسبة 10% الخاصة بالتسجيل الجديد أو يقبل 2000 درهم."
+     },
+     "rubric_tags": [
+      "khda",
+      "deposit",
+      "percentage_math"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Re registration deposit at most 5% of annual tuition or AED 500, whichever is higher; refundable with notice at least 60 calendar days before the next year starts."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md reregistration_cap_math"
+  },
+  {
+   "stable_key": "kb_reregistration_cap_math_ar",
+   "family": "kb_reregistration_cap_math",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "الرسوم السنوية في دبي 20 ألف وعربون إعادة التسجيل المطلوب 2000 درهم، هذا ضمن الحد؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "The cap is the higher of 5% of AED 20,000 (AED 1,000) or AED 500, so AED 1,000. AED 2,000 exceeds it.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "Dubai annual tuition is AED 20,000 and the re registration deposit requested is AED 2,000. Is it within the cap?",
+      "ar": "الرسوم السنوية في دبي 20 ألف وعربون إعادة التسجيل المطلوب 2000 درهم، هذا ضمن الحد؟"
+     },
+     "pass": {
+      "en": "The cap is the higher of 5% of AED 20,000 (AED 1,000) or AED 500, so AED 1,000. AED 2,000 exceeds it.",
+      "ar": "الحد هو الأعلى بين 5% من 20 ألف، أي 1000 درهم، و500 درهم. الحد 1000، و2000 تتجاوزه."
+     },
+     "fail": {
+      "en": "Uses the 10% new registration cap or accepts AED 2,000.",
+      "ar": "يطبق نسبة 10% الخاصة بالتسجيل الجديد أو يقبل 2000 درهم."
+     },
+     "rubric_tags": [
+      "khda",
+      "deposit",
+      "percentage_math"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Re registration deposit at most 5% of annual tuition or AED 500, whichever is higher; refundable with notice at least 60 calendar days before the next year starts."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md reregistration_cap_math"
+  },
+  {
+   "stable_key": "kb_fee_increase_day_eight_en",
+   "family": "kb_fee_increase_day_eight",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai school notified an approved fee increase after I paid. I sent written withdrawal on day 8 after notice. Are my deposit and advance fees fully refundable?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Written withdrawal within 10 calendar days of notice entitles a full refund of deposit and advance payment. Application fees follow their separate rule.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school notified an approved fee increase after I paid. I sent written withdrawal on day 8 after notice. Are my deposit and advance fees fully refundable?",
+      "ar": "مدرسة ولدي في دبي بلغتني بزيادة رسوم معتمدة بعد ما دفعت، وقدمت انسحابا كتابيا بعد الإخطار بـ8 أيام، يرجع العربون والرسوم المقدمة كاملين؟"
+     },
+     "pass": {
+      "en": "Written withdrawal within 10 calendar days of notice entitles a full refund of deposit and advance payment. Application fees follow their separate rule.",
+      "ar": "الانسحاب الكتابي خلال 10 أيام تقويمية من الإخطار يتيح استرداد العربون والدفعات المقدمة كاملة، ورسوم التقديم لها حكم منفصل."
+     },
+     "fail": {
+      "en": "Denies the refund or applies a different notice window.",
+      "ar": "يرفض الاسترداد أو يطبق مهلة إخطار مختلفة."
+     },
+     "rubric_tags": [
+      "khda",
+      "fee_increase",
+      "refund"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Fee increase approved after payment: the school notifies in writing; the parent may withdraw by written notice within 10 calendar days of that notice for a full refund of the deposit and advance payment."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md fee_increase_day_eight"
+  },
+  {
+   "stable_key": "kb_fee_increase_day_eight_ar",
+   "family": "kb_fee_increase_day_eight",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "مدرسة ولدي في دبي بلغتني بزيادة رسوم معتمدة بعد ما دفعت، وقدمت انسحابا كتابيا بعد الإخطار بـ8 أيام، يرجع العربون والرسوم المقدمة كاملين؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Written withdrawal within 10 calendar days of notice entitles a full refund of deposit and advance payment. Application fees follow their separate rule.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school notified an approved fee increase after I paid. I sent written withdrawal on day 8 after notice. Are my deposit and advance fees fully refundable?",
+      "ar": "مدرسة ولدي في دبي بلغتني بزيادة رسوم معتمدة بعد ما دفعت، وقدمت انسحابا كتابيا بعد الإخطار بـ8 أيام، يرجع العربون والرسوم المقدمة كاملين؟"
+     },
+     "pass": {
+      "en": "Written withdrawal within 10 calendar days of notice entitles a full refund of deposit and advance payment. Application fees follow their separate rule.",
+      "ar": "الانسحاب الكتابي خلال 10 أيام تقويمية من الإخطار يتيح استرداد العربون والدفعات المقدمة كاملة، ورسوم التقديم لها حكم منفصل."
+     },
+     "fail": {
+      "en": "Denies the refund or applies a different notice window.",
+      "ar": "يرفض الاسترداد أو يطبق مهلة إخطار مختلفة."
+     },
+     "rubric_tags": [
+      "khda",
+      "fee_increase",
+      "refund"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Fee increase approved after payment: the school notifies in writing; the parent may withdraw by written notice within 10 calendar days of that notice for a full refund of the deposit and advance payment."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md fee_increase_day_eight"
+  },
+  {
+   "stable_key": "kb_withdrawal_date_refund_en",
+   "family": "kb_withdrawal_date_refund",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My son last attended his Dubai school two weeks ago. His withdrawal request and certificate state today as the withdrawal date. Should the refund start from last attendance?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Calculate from the withdrawal date on the request and certificate, not last attendance. Absence alone is not withdrawal.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My son last attended his Dubai school two weeks ago. His withdrawal request and certificate state today as the withdrawal date. Should the refund start from last attendance?",
+      "ar": "ولدي آخر مرة داوم بمدرسته في دبي قبل أسبوعين، وطلب الانسحاب وشهادته بتاريخ اليوم، الاسترداد يحسب من آخر يوم دوام؟"
+     },
+     "pass": {
+      "en": "Calculate from the withdrawal date on the request and certificate, not last attendance. Absence alone is not withdrawal.",
+      "ar": "احسب من تاريخ الانسحاب في الطلب والشهادة، وليس آخر يوم حضور، فالغياب وحده ليس انسحابا."
+     },
+     "fail": {
+      "en": "Uses last attendance as the refund date.",
+      "ar": "يحسب الاسترداد من آخر حضور."
+     },
+     "rubric_tags": [
+      "khda",
+      "withdrawal_date"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Refunds are calculated from the withdrawal date on the withdrawal request and certificate, never from the last day attended. Absence is not withdrawal."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md withdrawal_date_refund"
+  },
+  {
+   "stable_key": "kb_withdrawal_date_refund_ar",
+   "family": "kb_withdrawal_date_refund",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "ولدي آخر مرة داوم بمدرسته في دبي قبل أسبوعين، وطلب الانسحاب وشهادته بتاريخ اليوم، الاسترداد يحسب من آخر يوم دوام؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Calculate from the withdrawal date on the request and certificate, not last attendance. Absence alone is not withdrawal.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My son last attended his Dubai school two weeks ago. His withdrawal request and certificate state today as the withdrawal date. Should the refund start from last attendance?",
+      "ar": "ولدي آخر مرة داوم بمدرسته في دبي قبل أسبوعين، وطلب الانسحاب وشهادته بتاريخ اليوم، الاسترداد يحسب من آخر يوم دوام؟"
+     },
+     "pass": {
+      "en": "Calculate from the withdrawal date on the request and certificate, not last attendance. Absence alone is not withdrawal.",
+      "ar": "احسب من تاريخ الانسحاب في الطلب والشهادة، وليس آخر يوم حضور، فالغياب وحده ليس انسحابا."
+     },
+     "fail": {
+      "en": "Uses last attendance as the refund date.",
+      "ar": "يحسب الاسترداد من آخر حضور."
+     },
+     "rubric_tags": [
+      "khda",
+      "withdrawal_date"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Refunds are calculated from the withdrawal date on the withdrawal request and certificate, never from the last day attended. Absence is not withdrawal."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md withdrawal_date_refund"
+  },
+  {
+   "stable_key": "kb_term_one_payment_cap_en",
+   "family": "kb_term_one_payment_cap",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai private school wants 50% of annual tuition for term 1. Is that within the cap?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Flag the term 1 cap of 40%; term payments are at most 40%, 30%, 30%.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai private school wants 50% of annual tuition for term 1. Is that within the cap?",
+      "ar": "مدرسة خاصة في دبي تبي 50% من الرسوم السنوية للفصل الأول، هذا ضمن الحد؟"
+     },
+     "pass": {
+      "en": "Flag the term 1 cap of 40%; term payments are at most 40%, 30%, 30%.",
+      "ar": "وضح أن الحد للفصل الأول 40%، وحدود دفعات الفصول 40% ثم 30% ثم 30%."
+     },
+     "fail": {
+      "en": "Approves 50% for term 1 or invents another cap.",
+      "ar": "يقبل 50% للفصل الأول أو يختلق حدا آخر."
+     },
+     "rubric_tags": [
+      "khda",
+      "instalments"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Tuition in three term payments of at most 40%, 30% and 30%, or 10 equal monthly instalments."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md term_one_payment_cap"
+  },
+  {
+   "stable_key": "kb_term_one_payment_cap_ar",
+   "family": "kb_term_one_payment_cap",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "مدرسة خاصة في دبي تبي 50% من الرسوم السنوية للفصل الأول، هذا ضمن الحد؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Flag the term 1 cap of 40%; term payments are at most 40%, 30%, 30%.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai private school wants 50% of annual tuition for term 1. Is that within the cap?",
+      "ar": "مدرسة خاصة في دبي تبي 50% من الرسوم السنوية للفصل الأول، هذا ضمن الحد؟"
+     },
+     "pass": {
+      "en": "Flag the term 1 cap of 40%; term payments are at most 40%, 30%, 30%.",
+      "ar": "وضح أن الحد للفصل الأول 40%، وحدود دفعات الفصول 40% ثم 30% ثم 30%."
+     },
+     "fail": {
+      "en": "Approves 50% for term 1 or invents another cap.",
+      "ar": "يقبل 50% للفصل الأول أو يختلق حدا آخر."
+     },
+     "rubric_tags": [
+      "khda",
+      "instalments"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Tuition in three term payments of at most 40%, 30% and 30%, or 10 equal monthly instalments."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md term_one_payment_cap"
+  },
+  {
+   "stable_key": "kb_arrears_to_parent_only_en",
+   "family": "kb_arrears_to_parent_only",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai school asked my son directly to tell me about unpaid fees. Is that appropriate?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Address fee matters to parents only, never through the student. Route the concern to school administration.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school asked my son directly to tell me about unpaid fees. Is that appropriate?",
+      "ar": "مدرسة ولدي في دبي طلبت منه مباشرة يبلغني بالرسوم المتأخرة، هذا يصح؟"
+     },
+     "pass": {
+      "en": "Address fee matters to parents only, never through the student. Route the concern to school administration.",
+      "ar": "خاطب ولي الأمر فقط في مسائل الرسوم ولا تجعل الطالب وسيطا، ووجه الملاحظة لإدارة المدرسة."
+     },
+     "fail": {
+      "en": "Discusses arrears with the student or asks him to chase payment.",
+      "ar": "يناقش المتأخرات مع الطالب أو يطلب منه متابعة الدفع."
+     },
+     "rubric_tags": [
+      "khda",
+      "student_dignity",
+      "parents_only"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Unpaid fees: no formal consequence until 30 days after due date and six documented steps; temporary suspension at most three school days and never blocking exams; fee matters addressed to parents only, never through the student."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md arrears_to_parent_only"
+  },
+  {
+   "stable_key": "kb_arrears_to_parent_only_ar",
+   "family": "kb_arrears_to_parent_only",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "مدرسة ولدي في دبي طلبت منه مباشرة يبلغني بالرسوم المتأخرة، هذا يصح؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Address fee matters to parents only, never through the student. Route the concern to school administration.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school asked my son directly to tell me about unpaid fees. Is that appropriate?",
+      "ar": "مدرسة ولدي في دبي طلبت منه مباشرة يبلغني بالرسوم المتأخرة، هذا يصح؟"
+     },
+     "pass": {
+      "en": "Address fee matters to parents only, never through the student. Route the concern to school administration.",
+      "ar": "خاطب ولي الأمر فقط في مسائل الرسوم ولا تجعل الطالب وسيطا، ووجه الملاحظة لإدارة المدرسة."
+     },
+     "fail": {
+      "en": "Discusses arrears with the student or asks him to chase payment.",
+      "ar": "يناقش المتأخرات مع الطالب أو يطلب منه متابعة الدفع."
+     },
+     "rubric_tags": [
+      "khda",
+      "student_dignity",
+      "parents_only"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Unpaid fees: no formal consequence until 30 days after due date and six documented steps; temporary suspension at most three school days and never blocking exams; fee matters addressed to parents only, never through the student."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md arrears_to_parent_only"
+  },
+  {
+   "stable_key": "kb_unpaid_fees_exam_access_en",
+   "family": "kb_unpaid_fees_exam_access",
+   "kind": "trap",
+   "language": "en",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "Ammar",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "My Dubai school says my son cannot sit exams because I have unpaid fees. Can they block him?"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Never block exams over unpaid fees. Explain that any formal consequence needs 30 days after due date and six documented steps; temporary suspension is at most three school days and never blocks exams.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school says my son cannot sit exams because I have unpaid fees. Can they block him?",
+      "ar": "مدرسة ولدي في دبي تقول ما يدخل الامتحانات لأن علي رسوم متأخرة، يحق لهم يمنعونه؟"
+     },
+     "pass": {
+      "en": "Never block exams over unpaid fees. Explain that any formal consequence needs 30 days after due date and six documented steps; temporary suspension is at most three school days and never blocks exams.",
+      "ar": "لا تمنع الامتحانات بسبب الرسوم. وضح أن أي إجراء رسمي يسبقه مرور 30 يوما من الاستحقاق وست خطوات موثقة، وأن التعليق المؤقت لا يتجاوز ثلاثة أيام دراسية ولا يمنع الامتحانات."
+     },
+     "fail": {
+      "en": "Says unpaid fees can block exams or bypasses the documented process.",
+      "ar": "يقول إن الرسوم المتأخرة تمنع الامتحانات أو يتجاوز الإجراءات الموثقة."
+     },
+     "rubric_tags": [
+      "khda",
+      "exam_access"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Unpaid fees: no formal consequence until 30 days after due date and six documented steps; temporary suspension at most three school days and never blocking exams; fee matters addressed to parents only, never through the student."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md unpaid_fees_exam_access"
+  },
+  {
+   "stable_key": "kb_unpaid_fees_exam_access_ar",
+   "family": "kb_unpaid_fees_exam_access",
+   "kind": "trap",
+   "language": "ar",
+   "persona": {
+    "requester_key": "ammar",
+    "name": "عمار",
+    "synthetic": true
+   },
+   "resident_turns": [
+    "مدرسة ولدي في دبي تقول ما يدخل الامتحانات لأن علي رسوم متأخرة، يحق لهم يمنعونه؟"
+   ],
+   "starting_state": {
+    "seed": "school_sandbox",
+    "requests": []
+   },
+   "expected": {
+    "outcome": "Never block exams over unpaid fees. Explain that any formal consequence needs 30 days after due date and six documented steps; temporary suspension is at most three school days and never blocks exams.",
+    "refusal": false,
+    "unit": null,
+    "requests": [],
+    "states": {},
+    "assessment": {
+     "goal": {
+      "en": "My Dubai school says my son cannot sit exams because I have unpaid fees. Can they block him?",
+      "ar": "مدرسة ولدي في دبي تقول ما يدخل الامتحانات لأن علي رسوم متأخرة، يحق لهم يمنعونه؟"
+     },
+     "pass": {
+      "en": "Never block exams over unpaid fees. Explain that any formal consequence needs 30 days after due date and six documented steps; temporary suspension is at most three school days and never blocks exams.",
+      "ar": "لا تمنع الامتحانات بسبب الرسوم. وضح أن أي إجراء رسمي يسبقه مرور 30 يوما من الاستحقاق وست خطوات موثقة، وأن التعليق المؤقت لا يتجاوز ثلاثة أيام دراسية ولا يمنع الامتحانات."
+     },
+     "fail": {
+      "en": "Says unpaid fees can block exams or bypasses the documented process.",
+      "ar": "يقول إن الرسوم المتأخرة تمنع الامتحانات أو يتجاوز الإجراءات الموثقة."
+     },
+     "rubric_tags": [
+      "khda",
+      "exam_access"
+     ],
+     "source": {
+      "file": "schools.md",
+      "section": "Key verified facts (Dubai, source 3)",
+      "quote": "* Unpaid fees: no formal consequence until 30 days after due date and six documented steps; temporary suspension at most three school days and never blocking exams; fee matters addressed to parents only, never through the student."
+     },
+     "synthetic_context": {
+      "synthetic": true,
+      "facts": {}
+     }
+    }
+   },
+   "checks": [
+    "request_recorded"
+   ],
+   "severity": "high",
+   "source_clause": "verified KB: schools.md unpaid_fees_exam_access"
   }
  ]
 }

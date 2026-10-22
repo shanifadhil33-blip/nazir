@@ -50,3 +50,12 @@ it('preserves legacy case existence when a duplicate is present while library co
  expect(runRecordChecks({scenario:legacy,reply:'Hello',reading:r,toolCalls:[]}).find(c=>c.id==='case_exists')?.status).toBe('pass');
  expect(runRecordChecks({scenario:{...legacy,checks:['case_exists']},reply:'Hello',reading:r,toolCalls:[]})[0]?.status).toBe('fail');
 });
+
+for (const language of ['en', 'ar']) it(`seeds and reads the verified Eastern numeral case through the real worker ${language}`, async () => {
+  const c = await run(`kb_eastern_reference_${language}`, async ({ messages }) => !messages.some((m) => m.role === 'tool')
+    ? call('get_case_status', { reference: 'NZ-004471' })
+    : { content: language === 'en' ? 'Your complaint NZ-004471 is open.' : 'شكواك رقم NZ-004471 مفتوحة.' });
+  expect(c.status).toBe('passed');
+  const events = (await db.owner.query<{ request: { reference: string }; outcome: string }>('SELECT request,outcome FROM nazir.tool_events WHERE conversation_id=$1', [c.id])).rows;
+  expect(events).toEqual([{ request: { reference: 'NZ-004471' }, outcome: 'ok' }]);
+});
