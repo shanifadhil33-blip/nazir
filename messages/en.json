@@ -275,7 +275,29 @@
     "kbSample": "Sample data. Documents are not saved here.",
     "kbPartsOne": "1 part",
     "kbPartsTwo": "2 parts",
-    "kbPartsFew": "{chunks} parts"
+    "kbPartsFew": "{chunks} parts",
+    "connect": "Connect your agent",
+    "connectHint": "Paste the public HTTPS chat endpoint for your customer facing agent. Nazir tests its replies from the outside. A successful test makes this connection the target for quick and full runs.",
+    "endpoint": "Chat endpoint URL",
+    "connectionName": "Agent name",
+    "format": "Request format",
+    "formats": {
+      "openai_chat": "OpenAI chat compatible",
+      "simple_json": "Simple JSON"
+    },
+    "headerName": "Auth header name",
+    "connectionKey": "Auth secret",
+    "testMessage": "Test message",
+    "sendTest": "Send test message",
+    "connectionReady": "Connected and ready for test runs",
+    "connectionPending": "Saved. Send a test message to go live.",
+    "connectionEmpty": "No agent connected",
+    "connectionRemoved": "Connection removed",
+    "connectionBusy": "Connecting",
+    "connectionFailed": "Could not complete the connection. Try again.",
+    "connectionReadOnly": "Connected agent: {name} at {host}",
+    "connectionContract": "OpenAI chat sends messages and reads choices[0].message.content. Simple JSON sends message, session_id and language and reads reply.",
+    "connectionKeyHint": "Leave the secret empty to keep the saved key. Clear the header name to remove the key."
   },
   "live": {
     "open": "Live test",

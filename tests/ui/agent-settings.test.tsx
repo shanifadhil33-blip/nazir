@@ -75,3 +75,22 @@ it('counts knowledge parts with the right plural in EN and AR', async () => {
   expect([1, 2, 5].map((n) => partsLabel(e, n))).toEqual(['1 part', '2 parts', '5 parts']);
   expect([1, 2, 5, 12].map((n) => partsLabel(a, n))).toEqual(['جزء واحد', 'جزآن', '5 أجزاء', '12 جزءا']);
 });
+
+it('shows connection controls only to owners and a safe host line to other seats in both languages', () => {
+  for (const lang of ['en', 'ar'] as const) {
+    const copy=messagesFor(lang);
+    const external_agent={ name:'Customer desk', host:'chat.example.com', ready:true, endpoint:'https://chat.example.com/chat', format:'simple_json' as const, header_name:'Authorization', key_saved:true, key_last4:'ABCD' };
+    const html=renderToStaticMarkup(<AgentSettingsPanel copy={copy} lang={lang} settings={{...owner,external_agent}} sample={false} onClose={noop} onSave={save} workspaceId="workspace" />);
+    expect(html).toContain(copy.settings.connect);
+    expect(html).toContain('data-action="save-connection"');
+    expect(html).toContain('data-action="test-connection"');
+    expect(html).toContain('data-action="remove-connection"');
+    expect(html).toContain('•••• ABCD');
+    const read=renderToStaticMarkup(<AgentSettingsPanel copy={copy} lang={lang} settings={{...viewer,external_agent:{ name:external_agent.name,host:external_agent.host,ready:true }}} sample={false} onClose={noop} onSave={save} workspaceId="workspace" />);
+    expect(read).toContain('chat.example.com');
+    expect(read).not.toContain('ABCD');
+    expect(read).not.toContain('data-action="test-connection"');
+    expect(read).not.toContain('data-action="save-connection"');
+    expect(read).not.toContain('data-action="remove-connection"');
+  }
+});

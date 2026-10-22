@@ -32,9 +32,9 @@ export function capValue(value: string | undefined, fallback: number): number {
   if (!/^\d+$/.test(value) || !Number.isSafeInteger(n) || n < 0) throw new Error('Invalid call cap');
   return n;
 }
-export function chainOrder(providers: Provider[], purpose: 'agent' | 'judge', agentFamily?: Family | readonly Family[]) {
+export function chainOrder(providers: Provider[], purpose: 'agent' | 'judge', agentFamily?: Family | readonly Family[], externalAgent = false) {
   const families = Array.isArray(agentFamily) ? agentFamily : agentFamily ? [agentFamily] : [];
-  if (purpose === 'judge' && (!families.length || families.some((f) => !['google_gemini','nvidia_nemotron','google_gemma','openai_gpt_oss','zhipu_glm','alibaba_qwen'].includes(f)))) throw new Error('Judge needs a known agent family');
+  if (purpose === 'judge' && !externalAgent && (!families.length || families.some((f) => !['google_gemini','nvidia_nemotron','google_gemma','openai_gpt_oss','zhipu_glm','alibaba_qwen'].includes(f)))) throw new Error('Judge needs a known agent family');
   const order: [string, number][] = purpose === 'agent'
     ? [['kilo',0],['requesty',0],['openrouter',0],['ovh',0],['ovh',1],['zai',0],['cloudflare',0],['gemini',0],['nvidia',0],['kilo',1]]
     // Judge fallbacks widened 21 Oct 2026 after 8 of 48 suite cases were judge_unavailable; the family rule still skips the agent's own family. OVH Qwen stays out: it spends 3000 tokens thinking and returns no answer.

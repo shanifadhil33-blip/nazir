@@ -255,7 +255,7 @@ export function WorkspaceApp({
     pdfHref={!preview && reportId && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer') ? `/api/workspaces/${workspaceId}/reports/${reportId}/pdf?lang=${lang}` : undefined}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
     onRecheck={recheck} measured={preview ? null : measured} onLiveTest={() => setLiveOpen(true)} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
-  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} workspaceId={preview ? undefined : workspaceId} packs={packs ?? undefined} onClose={() => setSettingsOpen(false)} onSave={saveSettings} /> : null}{liveOpen ? <LiveTestPanel key={lang} copy={copy} lang={lang} workspaceId={workspaceId} sample={preview} reportHref={`/w/${workspaceId}/report`} onClose={() => setLiveOpen(false)} /> : null}</>;
+  />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} workspaceId={preview ? undefined : workspaceId} packs={packs ?? undefined} onClose={() => setSettingsOpen(false)} onConnectionChange={(value) => setSettings((current) => current ? { ...current, external_agent: value } : { ...shown, external_agent: value })} onSave={saveSettings} /> : null}{liveOpen ? <LiveTestPanel key={lang} copy={copy} lang={lang} workspaceId={workspaceId} sample={preview} reportHref={`/w/${workspaceId}/report`} onClose={() => setLiveOpen(false)} /> : null}</>;
 }
 
 function deriveModel(bundle: Bundle | null, copy: Messages, lang: Lang, preview: boolean): ScreenModel {

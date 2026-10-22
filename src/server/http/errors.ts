@@ -2,6 +2,13 @@ import { ZodError } from 'zod';
 
 /** One plain line per code, in English and Modern Standard Arabic. */
 export const errorLines = {
+  external_safety: { en: 'The connection was refused by the safety check. Use a public HTTPS address on port 443 without redirects.', ar: 'رفض فحص الأمان الاتصال. استخدم عنوان HTTPS عاما على المنفذ 443 دون إعادة توجيه.' },
+  external_timeout: { en: 'The agent took too long to reply. Try again.', ar: 'استغرق الوكيل وقتا طويلا للرد. أعد المحاولة.' },
+  external_unreachable: { en: 'The agent could not be reached. Check the link and access key.', ar: 'تعذر الوصول إلى الوكيل. تحقق من الرابط ومفتاح الوصول.' },
+  external_format: { en: 'The reply format was not accepted or the response exceeded 64 KB.', ar: 'لم تقبل صيغة الرد أو تجاوز حجم الاستجابة 64 كيلوبايت.' },
+  external_rate_limit: { en: 'This workspace has sent 20 test messages in the past hour. Try again later.', ar: 'أرسلت مساحة العمل 20 رسالة اختبار خلال الساعة الماضية. أعد المحاولة لاحقا.' },
+  external_changed: { en: 'The connection changed. Save it and send a test message again.', ar: 'تغير الاتصال. احفظه وأرسل رسالة اختبار مجددا.' },
+  external_not_ready: { en: 'Send a successful test message before running tests on this connection.', ar: 'أرسل رسالة اختبار ناجحة قبل تشغيل الاختبارات على هذا الاتصال.' },
   unauthorized: { en: 'Please sign in to continue.', ar: 'يرجى تسجيل الدخول للمتابعة.' },
   token_invalid: { en: 'The token is no longer valid.', ar: 'لم يعد الرمز صالحا.' },
   forbidden: { en: 'Your role cannot do this.', ar: 'دورك لا يسمح بهذا.' },
