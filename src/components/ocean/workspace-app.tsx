@@ -251,7 +251,7 @@ export function WorkspaceApp({
   return <><WorkspaceScreen
     lang={lang} copy={copy} demo={demo} seat={seat} roles={roles} shared={shared} userName={userName} model={view} screen={screen}
     pending={pending} copied={copied} copyError={copyError} onScreen={go} onLang={setLang} onApprove={approve} onSkip={skip}
-    onReplay={() => void send(lang === 'ar' ? 'اقترح خطة' : 'propose a plan', copy.ui.replay)}
+    onReplay={(size = 'full') => void send(size === 'quick' ? (lang === 'ar' ? 'فحص سريع' : 'run a quick check') : (lang === 'ar' ? 'اقترح خطة للمجموعة الكاملة' : 'propose a plan for the full suite'), size === 'quick' ? copy.ui.quickCheck : copy.ui.fullSuite)}
     pdfHref={!preview && reportId && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer') ? `/api/workspaces/${workspaceId}/reports/${reportId}/pdf?lang=${lang}` : undefined}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
     onRecheck={recheck} measured={preview ? null : measured} onLiveTest={() => setLiveOpen(true)} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}

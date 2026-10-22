@@ -5,6 +5,7 @@ import { hash } from '../../sandbox/demo-rule-pack';
 import { inlineCasesSchema } from './schema';
 import { loadLibrary } from '../library/load';
 import { packById } from './catalog';
+import { quickCases } from './quick';
 /** The frozen cases of a live pack. Government reads the same 48 library files as before, so the import hashes do not change. */
 export async function loadPackCases(id = 'government', cwd = process.cwd()) {
   const pack = packById(id);
@@ -27,5 +28,6 @@ export async function loadInlineCases(id: string, cwd = process.cwd()) {
     if (/[\u0600-\u06ff]/.test(c.resident_turns.join(' ')) !== (c.language === 'ar')) throw new Error('Case text must match its language.');
   }
   for (const lang of ['en', 'ar']) if (file.cases.filter((c) => c.language === lang).length !== 24) throw new Error('Each language needs 24 cases.');
+  quickCases(pack, file.cases);
   return file.cases.map((c) => ({ ...c, content_hash: hash(c) }));
 }

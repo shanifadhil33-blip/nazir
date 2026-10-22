@@ -18,3 +18,10 @@ it.skipIf(!hasRegisterHooks)('loads TypeScript pack runtimes with JSON imports t
   ], { encoding: 'utf8' });
   expect(output.trim()).toBe('real_estate,ecommerce,clinics,schools');
 });
+
+it.skipIf(!hasRegisterHooks)('resolves quick data through the actual runner loader without a database or providers', () => {
+  const output = execFileSync(runnerNode, ['--input-type=module', '-e',
+    'import("./scripts/runner-loader.mjs").then(()=>import("./src/server/packs/quick.ts")).then(async q=>{const {focusPacks}=await import("./src/server/packs/catalog.ts"); console.log(focusPacks.map(p=>q.selectSize(p.id,p.quick.keys.map(stable_key=>({stable_key,language:stable_key.endsWith("_ar")?"ar":"en"})),q.planSize.parse(process.env.SIZE)).length).join(","))})',
+  ], { encoding: 'utf8', env: { ...process.env, SIZE: 'quick' } });
+  expect(output.trim()).toBe('16,16,16,16,16');
+});

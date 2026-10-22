@@ -116,7 +116,11 @@
     "runDone": "انتهى التشغيل: نجح {passed}، وفشل {failed}، و{inconclusive} بلا حكم.",
     "runWaiting": "التشغيل في قائمة الانتظار. يبدأ عندما يتصل محرك الاختبار هنا.",
     "attemptOutcome": "نجح {passed} من {total}",
-    "flaky": "متقلب"
+    "flaky": "متقلب",
+    "quickCheck": "فحص سريع (16 اختبارا)",
+    "fullSuite": "المجموعة الكاملة",
+    "quickHeader": "فحص سريع، {count} اختبارا",
+    "fullHeader": "المجموعة الكاملة، {count} اختبارا"
   },
   "sample": {
     "agent": "مكتب تصاريح الميناء",

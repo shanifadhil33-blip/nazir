@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { planSize } from '@/server/packs/quick';
 import { runtimeDriver } from '@/server/db/runtime';
 import { memberRoute, requestLanguage } from '@/server/http/route';
 import { approvePlan } from '@/server/memory/planner';
@@ -6,6 +7,7 @@ import { approvePlan } from '@/server/memory/planner';
 const input = z.object({
   reason: z.string().trim().min(10).max(2000),
   evidence_opened: z.literal(true),
+  size: planSize.optional(),
   repeat_count: z.number().int().min(1).max(3).default(3),
 }).strict();
 

@@ -15,7 +15,7 @@ async function rolesOf(sql: SqlConnection) {
 }
 
 async function evidence(sql: SqlConnection, runId: string) {
-  const run = (await sql.query<{ id: string; status: string; calls_used: number; calls_budget: number }>('SELECT id,status,calls_used,calls_budget FROM nazir.runs WHERE id=$1', [runId])).rows[0];
+  const run = (await sql.query<{ id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number }>(`SELECT id,status,calls_used,calls_budget,frozen_manifest->>'size' AS size,(frozen_manifest->>'testCount')::int AS test_count FROM nazir.runs WHERE id=$1`, [runId])).rows[0];
   if (!run) throw new NotFound();
   const conversations = (await sql.query<ReportConversation>(`SELECT c.id,c.status,s.split,c.language,c.scenario_id,c.attempt_number FROM nazir.conversations c JOIN nazir.scenarios s ON s.id=c.scenario_id WHERE c.run_id=$1 ORDER BY c.created_at,c.id`, [runId])).rows;
   const findings = (await sql.query<ReportFinding>(`SELECT f.id,f.check_id,f.scenario_id,f.conversation_id,greatest(1,(SELECT count(*)::int FROM nazir.finding_attempts a WHERE a.finding_id=f.id)) AS failed_attempts,f.severity,f.title,f.title_ar,f.really_happened,f.really_happened_ar,f.agent_said,f.evidence,s.split,s.family,f.language

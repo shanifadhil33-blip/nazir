@@ -15,7 +15,7 @@ import { RepairRefused, resolveExecutable } from '../repair/executable';
 import { resolvePackVersion, runtimeForPack } from '../packs/runtime';
 import { decideRepair, startRetest, submitRepair } from '../repair/proposals';
 import {
-  actionErrors, agentTools, asksImpersonation, budgetFrom, causeCopy, exactPlan, exactRepair, identityOverride,
+  actionErrors, agentTools, asksImpersonation, budgetFrom, sizeFrom, causeCopy, exactPlan, exactRepair, identityOverride,
   idsIn, mcpPlan, mcpRepair, planCostReply, replyFor, successReply, type ActionError, type AgentTool, type Bilingual,
 } from './intent';
 
@@ -132,9 +132,11 @@ async function propose(driver: TransactionDriver, memberId: string, args: unknow
     const stated = origin.message ? budgetFrom(origin.message) : null;
     if (stated) record.budget = stated;
   }
+  const size = origin.message ? sizeFrom(origin.message) : null;
+  if (size) record.size = size;
   const data = await proposeBoundedPlan(driver, memberId, record);
   const calls = data && typeof data === 'object' && 'plannedCalls' in data ? Number(data.plannedCalls) : 0;
-  return finished('propose_plan', data, planCostReply(calls));
+  return finished('propose_plan', data, planCostReply(calls, data.repeatCount));
 }
 async function startRun(driver: TransactionDriver, memberId: string, args: unknown, origin: Origin): Promise<AgentResult> {
   await allow(driver, memberId, 'plan.approve');
@@ -153,7 +155,7 @@ async function startRun(driver: TransactionDriver, memberId: string, args: unkno
     return finished('start_run', { plan_id: planId, run_id: run.id });
   }
   if (state.status !== 'proposed' || !approval) return refused('start_run', state.status === 'proposed' ? actionErrors.approval_required : actionErrors.not_waiting);
-  try { await approvePlan(driver, memberId, { id: planId, reason: approval.reason, evidence_opened: true, ...(fromMcp?.repeat_count !== undefined ? { repeat_count: fromMcp.repeat_count } : {}) }); }
+  try { await approvePlan(driver, memberId, { id: planId, reason: approval.reason, evidence_opened: true, ...(fromMcp?.size ? { size: fromMcp.size } : {}), ...(fromMcp?.repeat_count !== undefined ? { repeat_count: fromMcp.repeat_count } : {}) }); }
   catch (error) {
     if (error instanceof Forbidden) throw error;
     return refused('start_run', normalize(error));

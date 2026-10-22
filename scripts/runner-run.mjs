@@ -8,10 +8,10 @@ function cap(name,fallback,max) {
   return value;
 }
 export async function main() {
-  const [{ poolDriver }, { withWorker }, { enqueueRun }, { runNextConversation }, { networkJudge }, { networkChatModel }, { chooseScenarios }, { estimateRun }] = await Promise.all([
+  const [{ poolDriver }, { withWorker }, { enqueueRun }, { runNextConversation }, { networkJudge }, { networkChatModel }, { chooseScenarios }, { estimateRun }, { planSize, selectSize }] = await Promise.all([
     import('../src/server/db/driver.ts'), import('../src/server/db/context.ts'), import('../src/server/runner/enqueue.ts'),
     import('../src/server/runner/worker.ts'), import('../src/server/runner/network-judge.ts'), import('../src/server/runner/network-model.ts'),
-    import('../src/server/runner/choose.ts'), import('../src/server/runner/estimate.ts'),
+    import('../src/server/runner/choose.ts'), import('../src/server/runner/estimate.ts'), import('../src/server/packs/quick.ts'),
   ]);
   // Fault injection for live failure paths: providers listed here fail as forced_down without a network call.
   const forcedDown=new Set((process.env.RUNNER_FORCE_DOWN??'').split(',').map((id) => id.trim()).filter(Boolean));
@@ -19,6 +19,7 @@ export async function main() {
   const maxConversations=cap('MAX_CONVERSATIONS',2,48),maxCalls=cap('MAX_CALLS',24,300);
   const version=process.env.VERSION??'baseline',languages=(process.env.LANGUAGES??'en,ar').split(',');
   if (!languages.length || languages.some((l) => !['en','ar'].includes(l)) || new Set(languages).size!==languages.length) throw new Error('Invalid languages');
+  const size=planSize.parse(process.env.SIZE ?? 'full');
   const pack=process.env.PACK??'government';
   if (!['government','real_estate','ecommerce','clinics','schools'].includes(pack)) throw new Error('Invalid pack');
   const app=new Pool({ connectionString:process.env.DATABASE_URL }),inspect=new Pool({ connectionString:process.env.INSPECT_DATABASE_URL });
@@ -34,11 +35,13 @@ export async function main() {
       const agent=(await db.query("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1 AND ($2::uuid IS NULL OR id=$2) ORDER BY created_at,id LIMIT 1",[version,process.env.AGENT_VERSION_ID??null])).rows[0];
       const keys=process.env.RUN_SCENARIOS?.split(',').map((s)=>s.trim()).filter(Boolean);
       const rows=(await db.query("SELECT id,stable_key,language,(library_hash IS NOT NULL) AS library FROM nazir.scenarios WHERE status='approved' AND language=ANY($1::text[]) AND ($2::text[] IS NULL OR stable_key=ANY($2::text[])) AND nazir.scenario_pack(starting_state)=$3 ORDER BY stable_key,language,id",[languages,keys??null,pack])).rows;
-      const chosen=chooseScenarios(rows);
+      const deduped=chooseScenarios(rows);
+      const selected=selectSize(pack, rows.filter((row) => deduped.ids.includes(row.id)), size);
+      const chosen={ ids:selected.map((row) => row.id),notes:deduped.notes };
       for (const note of chosen.notes) console.log(JSON.stringify({ chosen_scenario: note.stable_key, language: note.language, id: note.id, skipped: note.skipped }));
       if (!plan || !agent || !chosen.ids.length || (keys && chosen.ids.length!==keys.length)) throw new Error('Fixture required');
       estimateRules=plan.stop_rules;
-      return { workspaceId:wid,planId:plan.id,agentVersionId:agent.id,scenarioIds:chosen.ids,repeats:Number(process.env.REPEAT_COUNT ?? 3),idempotencyKey:process.env.IDEMPOTENCY_KEY,recordsOnly:process.env.RECORDS_ONLY==='true'?true:process.env.RECORDS_ONLY==='false'?false:undefined };
+      return { workspaceId:wid,planId:plan.id,agentVersionId:agent.id,scenarioIds:chosen.ids,size,repeats:Number(process.env.REPEAT_COUNT ?? 3),idempotencyKey:process.env.IDEMPOTENCY_KEY,recordsOnly:process.env.RECORDS_ONLY==='true'?true:process.env.RECORDS_ONLY==='false'?false:undefined };
     });
     const estimate=estimateRun(input.scenarioIds,input.repeats,undefined,estimateRules);
     console.log(`Run estimate: ${input.scenarioIds.length} tests, ${estimate.attempts} total attempts, ${estimate.estimatedCalls} estimated calls.`);

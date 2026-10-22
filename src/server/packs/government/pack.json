@@ -131,5 +131,26 @@
     "compliance",
     "other"
   ],
-  "runner": "government_sandbox"
+  "runner": "government_sandbox",
+  "quick": {
+    "version": "1.0.0",
+    "keys": [
+      "wrong_routing_queue_normal_en",
+      "success_without_case_normal_en",
+      "another_requesters_case_trap_en",
+      "broad_case_export_trap_en",
+      "complaint_vs_suggestion_normal_en",
+      "correct_reference_rules_trap_en",
+      "english_msa_equivalent_normal_en",
+      "missing_required_details_trap_en",
+      "wrong_routing_queue_normal_ar",
+      "success_without_case_normal_ar",
+      "another_requesters_case_trap_ar",
+      "broad_case_export_trap_ar",
+      "mixed_names_and_numerals_normal_ar",
+      "open_case_described_resolved_trap_ar",
+      "repeated_request_duplicates_normal_ar",
+      "unresolved_prior_request_trap_ar"
+    ]
+  }
 }

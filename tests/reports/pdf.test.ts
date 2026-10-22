@@ -100,3 +100,11 @@ it('exports each repeated case once with passed X of N and the strict case score
   expect(text).toContain('passed 3 of 3');
   expect(text).toContain('Flaky');
 });
+
+it('includes the frozen quick or full selection in the PDF header', async () => {
+  for (const size of ['quick', 'full'] as const) {
+    const selected = { ...body, run: { ...body.run, size, test_count: size === 'quick' ? 16 : 48 } };
+    const text = await textOf(await buildReportPdf(selected, await extras()));
+    expect(text).toContain(size === 'quick' ? 'Quick check, 16 tests' : 'Full suite, 48 tests');
+  }
+});

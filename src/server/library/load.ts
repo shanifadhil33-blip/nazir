@@ -1,4 +1,6 @@
 import 'server-only';
+import { quickCases } from '../packs/quick';
+import { packById } from '../packs/catalog';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { demoRulePack, hash } from '../../sandbox/demo-rule-pack';
@@ -43,7 +45,9 @@ export async function loadLibrary(root = join(process.cwd(), 'src/server/library
     if (n !== value.family + '.json') throw new Error('Library filename must match its family.');
     return value;
   }));
-  return libraryHashes(validateLibrary(values));
+  const files = libraryHashes(validateLibrary(values));
+  quickCases(packById('government')!, files.flatMap((f) => f.meanings.flatMap((m) => m.scenarios)));
+  return files;
 }
 export function libraryHashes(files: LibraryFamily[]) {
   return files.map((file) => ({ ...file, meanings: file.meanings.map((m) => ({ ...m, content_hash: hash(m), scenarios: m.scenarios.map((s) => ({ ...s, content_hash: hash(s) })) })) }));

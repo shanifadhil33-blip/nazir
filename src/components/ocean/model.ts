@@ -1,4 +1,4 @@
-import { caseResults, type ReportBody } from '@/server/reports/build';
+import { suiteLabel, caseResults, type ReportBody } from '@/server/reports/build';
 import { fill, messagesFor, type Lang, type Messages } from './copy';
 import { presentQuote, presentRecord } from './plain';
 
@@ -56,6 +56,7 @@ export type ScreenModel = {
   failures: FailureCase[];
   fixes: FixRow[];
   coverage: string;
+  suiteLabel?: string;
   sample: boolean;
   outcomes?: { id: string; label: string; flaky: boolean }[];
 };
@@ -206,6 +207,7 @@ export function modelFromReports(latest: ReportBody, previous: ReportBody | null
     before,
     sample,
     coverage,
+    suiteLabel: suiteLabel(latest, lang),
     outcomes: caseResults(latest.conversations).map((c, index) => ({ id: c.id, label: `${copy.ui.caseWord} ${index + 1}: ` + fill(copy.ui.attemptOutcome, { passed: String(c.passed), total: String(c.total) }), flaky: c.flaky })),
     fixes: [],
     events,
