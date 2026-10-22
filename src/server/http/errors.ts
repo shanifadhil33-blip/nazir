@@ -24,6 +24,8 @@ export const errorLines = {
   impersonation: { en: 'You cannot act as another member.', ar: 'لا يمكنك أن تتصرف بصفة عضو آخر.' },
   failed: { en: 'The action was not completed.', ar: 'لم يتم تنفيذ الإجراء.' },
   invalid_patch: { en: 'That repair is not allowed.', ar: 'هذا الإصلاح غير مسموح.' },
+  repeat_budget: { en: 'The repeated tests exceed the plan call budget. Choose fewer attempts or fewer tests.', ar: 'تتجاوز الاختبارات المتكررة ميزانية مكالمات الخطة. اختر محاولات أقل أو اختبارات أقل.' },
+  repeat_daily_cap: { en: 'The repeated tests exceed the remaining daily call limit. Choose fewer attempts or fewer tests.', ar: 'تتجاوز الاختبارات المتكررة حد المكالمات اليومي المتبقي. اختر محاولات أقل أو اختبارات أقل.' },
   budget_too_small: { en: 'The budget is too small for a test.', ar: 'الميزانية أصغر من أن تكفي لاختبار.' },
   widens_tools: { en: 'A plan cannot add tools.', ar: 'لا يمكن للخطة أن تضيف أدوات.' },
   widens_permissions: { en: 'A plan cannot add permissions.', ar: 'لا يمكن للخطة أن تضيف صلاحيات.' },
@@ -46,8 +48,12 @@ export function callerLanguage(input: { header?: string | null; message?: string
   if (/(^|,)\s*ar\b/.test(header)) return 'ar';
   return 'en';
 }
-export function messageFor(code: string, language: CallerLanguage = 'en') {
+export function messageFor(code: string, language: CallerLanguage = 'en', details?: { attempts: number; estimatedCalls: number }) {
   const line = (errorLines as Record<string, { en: string; ar: string }>)[code] ?? errorLines.failed;
+  if (details && (code === 'repeat_budget' || code === 'repeat_daily_cap')) {
+    const estimate = language === 'ar' ? `عدد المحاولات ${details.attempts} والمكالمات المقدرة ${details.estimatedCalls}.` : `${details.attempts} attempts with ${details.estimatedCalls} estimated calls.`;
+    return `${line[language]} ${estimate}`;
+  }
   return line[language];
 }
 
@@ -65,10 +71,10 @@ export class NotFound extends Error {
 }
 /** A refusal with a stable code and one plain sentence. */
 export class Coded extends Error {
-  constructor(public status: number, public code: string, message: string) { super(message); this.name = 'Coded'; }
+  constructor(public status: number, public code: string, message: string, public details?: { attempts: number; estimatedCalls: number }) { super(details ? messageFor(code, 'en', details) : message); this.name = 'Coded'; }
 }
 export function mapError(error: unknown, language: CallerLanguage = 'en') {
-  const body = (code: string, status: number) => ({ status, body: { error: { code, message: messageFor(code, language) } } });
+  const body = (code: string, status: number) => ({ status, body: { error: { code, message: messageFor(code, language, error instanceof Coded ? error.details : undefined) } } });
   if (error instanceof Unauthorized) return body('unauthorized', 401);
   if (error instanceof Forbidden) return body('forbidden', 403);
   if (error instanceof TooMany) return body(error.message.includes('workspaces') ? 'workspace_limit' : 'too_many', 429);

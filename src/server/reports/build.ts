@@ -8,6 +8,9 @@ export const scopeLine = {
 export type ReportFinding = {
   id: string;
   check_id: string | null;
+  scenario_id?: string;
+  conversation_id?: string;
+  failed_attempts?: number;
   severity: string;
   title: string;
   title_ar: string | null;
@@ -20,12 +23,14 @@ export type ReportFinding = {
   evidence?: unknown;
 };
 export type ReportMessage = { conversation_id: string; seq: number; speaker: string; body: string; split: string };
-export type ReportConversation = { id: string; status: string; split: string; language: string };
+export type ReportConversation = { id: string; status: string; split: string; language: string; scenario_id?: string; attempt_number?: number };
+export type CaseResult = ReportConversation & { passed: number; total: number; flaky: boolean; attempts: ReportConversation[]; outcome: { en: string; ar: string } };
 export type ReportCounts = { conversations: number; passed: number; failed: number; inconclusive: number; findings: number };
 export type ReportBody = {
   scope: { en: string; ar: string };
   run: { id: string; status: string; calls_used: number; calls_budget: number };
   counts: ReportCounts;
+  cases?: CaseResult[];
   conversations: ReportConversation[];
   findings: ReportFinding[];
   messages: ReportMessage[];
@@ -33,12 +38,36 @@ export type ReportBody = {
   sentences: { en: string[]; ar: string[] };
 };
 
+/** Legacy snapshots have no scenario id and remain one case per conversation. */
+export function caseResults(conversations: ReportConversation[]): CaseResult[] {
+  const groups = new Map<string, ReportConversation[]>();
+  for (const row of conversations) {
+    const key = row.scenario_id ?? row.id;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  return [...groups.values()].map((rows) => {
+    const attempts = [...rows].sort((a, b) => (a.attempt_number ?? 1) - (b.attempt_number ?? 1));
+    const passed = attempts.filter((r) => r.status === 'passed').length;
+    const failed = attempts.filter((r) => r.status === 'failed').length;
+    const unfinished = attempts.some((r) => ['queued', 'running', 'planned'].includes(r.status));
+    // A finished inconclusive attempt cannot establish a safe pass.
+    const uncertain = attempts.some((r) => r.status === 'inconclusive');
+    const status = failed ? 'failed' : uncertain ? 'inconclusive' : unfinished ? 'running' : passed ? 'passed' : 'cancelled';
+    return { ...attempts[0]!, status, passed, total: attempts.length, flaky: passed > 0 && failed > 0, outcome: { en: attemptOutcome(passed, attempts.length, 'en'), ar: attemptOutcome(passed, attempts.length, 'ar') }, attempts };
+  });
+}
+
+export function attemptOutcome(passed: number, total: number, lang: 'en' | 'ar') {
+  return lang === 'ar' ? `نجح ${passed} من ${total}` : `passed ${passed} of ${total}`;
+}
+
 export function countsOf(conversations: ReportConversation[], findings: number): ReportCounts {
+  const cases = caseResults(conversations);
   return {
-    conversations: conversations.length,
-    passed: conversations.filter((row) => row.status === 'passed').length,
-    failed: conversations.filter((row) => row.status === 'failed').length,
-    inconclusive: conversations.filter((row) => row.status === 'inconclusive').length,
+    conversations: cases.length,
+    passed: cases.filter((row) => row.status === 'passed').length,
+    failed: cases.filter((row) => row.status === 'failed').length,
+    inconclusive: cases.filter((row) => row.status === 'inconclusive').length,
     findings,
   };
 }
@@ -47,16 +76,16 @@ export function sentences(counts: ReportCounts) {
   return {
     en: [
       scopeLine.en,
-      `${counts.passed} of ${counts.conversations} conversations passed.`,
-      `${counts.failed} of ${counts.conversations} conversations failed.`,
-      `${counts.inconclusive} of ${counts.conversations} conversations were inconclusive.`,
+      `${counts.passed} of ${counts.conversations} tests passed.`,
+      `${counts.failed} of ${counts.conversations} tests failed.`,
+      `${counts.inconclusive} of ${counts.conversations} tests were inconclusive.`,
       `${counts.findings} findings are in this report.`,
     ],
     ar: [
       scopeLine.ar,
-      `نجحت ${counts.passed} من ${counts.conversations} محادثات.`,
-      `فشلت ${counts.failed} من ${counts.conversations} محادثات.`,
-      `كانت ${counts.inconclusive} من ${counts.conversations} محادثات غير حاسمة.`,
+      `نجحت ${counts.passed} من ${counts.conversations} اختبارات.`,
+      `فشلت ${counts.failed} من ${counts.conversations} اختبارات.`,
+      `كانت ${counts.inconclusive} من ${counts.conversations} اختبارات غير حاسمة.`,
       `يتضمن هذا التقرير ${counts.findings} نتائج.`,
     ],
   };
@@ -69,6 +98,7 @@ export function assembleReport(input: { run: ReportBody['run']; conversations: R
     run: input.run,
     counts,
     conversations: input.conversations,
+    cases: caseResults(input.conversations),
     findings: input.findings,
     messages: input.messages,
     hidden_findings: input.findings.filter((finding) => finding.split === 'hidden').length,
@@ -87,6 +117,7 @@ export function projectReport(full: ReportBody, mode: 'full' | 'development'): R
     ...full,
     conversations,
     findings,
+    cases: caseResults(conversations),
     messages,
     counts,
     hidden_findings: full.findings.filter((finding) => finding.split === 'hidden').length,

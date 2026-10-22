@@ -228,3 +228,20 @@ it('hides approve, edit and skip when a failure has no proposed fix and says so 
     expect(screen(lang, 'editor', true, { screen: 'failures' })).toContain('data-action="approve"');
   }
 });
+
+it('shows repeat outcomes and flaky tags in the score and failure view in both languages', () => {
+  const body = assembleReport({
+    run: { id: 'run', status: 'failed', calls_used: 0, calls_budget: 24 },
+    conversations: ['passed', 'failed', 'passed'].map((status, i) => ({ id: `attempt${i}`, scenario_id: 'case', status, language: 'en', split: 'development' })),
+    findings: [{ id: 'f', scenario_id: 'case', check_id: 'right_queue', severity: 'high', title: 'Wrong queue', title_ar: 'طابور غير صحيح', really_happened: 'Wrong queue', really_happened_ar: 'طابور غير صحيح', split: 'development', family: 'routing', language: 'en' }], messages: [],
+  });
+  for (const lang of ['en', 'ar'] as const) {
+    const copy = messagesFor(lang);
+    const model = modelFromReports(body, null, copy, lang, 'Agent', false);
+    expect(model.metrics.score).toBe(0);
+    const html = screen(lang, 'owner', false, { model });
+    const outcome = lang === 'en' ? 'passed 2 of 3' : 'نجح 2 من 3';
+    expect(html.split(outcome).length).toBeGreaterThanOrEqual(3);
+    expect(html).toContain(copy.ui.flaky);
+  }
+});

@@ -63,7 +63,7 @@ it('explains a finding in both languages and hides the quote from a viewer', asy
   expect(shown.reply.en).toContain('workflow');
 });
 it('proposes a bounded plan and does not start it for the proposer', async () => {
-  const proposed = await agentChat(db.driver, reviewer, { message: 'propose a plan 8 calls' }, null);
+  const proposed = await agentChat(db.driver, reviewer, { message: 'propose a plan 24 calls' }, null);
   expect(proposed.done).toBe(true);
   expect(proposed.reply.en).toContain('within the budget');
   expect(proposed.reply.en).toContain('not started');

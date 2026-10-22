@@ -1,4 +1,4 @@
-import type { ReportBody } from '@/server/reports/build';
+import { caseResults, type ReportBody } from '@/server/reports/build';
 import { fill, messagesFor, type Lang, type Messages } from './copy';
 import { presentQuote, presentRecord } from './plain';
 
@@ -41,6 +41,8 @@ export type FailureCase = {
   rawEn?: string;
   rawAr?: string;
   rawQuote?: string;
+  outcome?: string;
+  flaky?: boolean;
 };
 
 export type FixRow = { id: string; title: string; name: string; role: string; at: Date };
@@ -55,6 +57,7 @@ export type ScreenModel = {
   fixes: FixRow[];
   coverage: string;
   sample: boolean;
+  outcomes?: { id: string; label: string; flaky: boolean }[];
 };
 
 export function seatFromRoles(roles: readonly string[]): Seat {
@@ -203,13 +206,16 @@ export function modelFromReports(latest: ReportBody, previous: ReportBody | null
     before,
     sample,
     coverage,
+    outcomes: caseResults(latest.conversations).map((c, index) => ({ id: c.id, label: `${copy.ui.caseWord} ${index + 1}: ` + fill(copy.ui.attemptOutcome, { passed: String(c.passed), total: String(c.total) }), flaky: c.flaky })),
     fixes: [],
     events,
     failures: findings.filter((finding) => finding.severity === 'critical' || findings.every((row) => row.severity !== 'critical')).map((finding, index) => {
+      const result = caseResults(latest.conversations).find((c) => (c.scenario_id === finding.scenario_id && finding.scenario_id !== undefined) || c.attempts.some((a) => a.id === finding.conversation_id));
       const record = presentRecord(finding.really_happened, finding.really_happened_ar);
       const spoken = presentQuote(finding.agent_said, emptyQuote);
       return {
         id: finding.id,
+        ...(result ? { outcome: fill(copy.ui.attemptOutcome, { passed: String(result.passed), total: String(result.total) }), flaky: result.flaky } : {}),
         tab: finding.title,
         tabAr: finding.title_ar || finding.title,
         caseLabel: `${copy.ui.caseWord} ${index + 1}`,

@@ -4,7 +4,8 @@ import { can, type Action, type Role } from '../auth/roles';
 import { requireRole, Forbidden } from '../auth/guard';
 import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Coded, NotFound, errorLines, type ErrorCode } from '../http/errors';
+import { Coded, NotFound, errorLines, messageFor, type ErrorCode } from '../http/errors';
+import { caseResults, type ReportConversation } from '../reports/build';
 import { listFindings } from '../findings/read';
 import { packById } from '../packs/catalog';
 import { approvePlan } from '../memory/planner';
@@ -33,8 +34,7 @@ function normalize(error: unknown): ActionError {
   if (error instanceof Coded) {
     const line = (errorLines as Record<string, { en: string; ar: string }>)[error.code];
     const code = (line ? error.code : 'failed') as ErrorCode;
-    const chosen = errorLines[code];
-    return { code, message: chosen.en, ar: chosen.ar };
+    return { code, message: messageFor(code, 'en', error.details), ar: messageFor(code, 'ar', error.details) };
   }
   const text = error instanceof Error ? error.message : '';
   if (text.includes('Another member must decide')) return actionErrors.four_eyes;
@@ -74,7 +74,12 @@ export async function listRuns(driver: TransactionDriver, memberId: string) {
     await requireRole(sql, 'run.read');
     const roles = (await sql.query<{ role: Role }>('SELECT role FROM nazir.member_roles WHERE member_id=nazir.current_member_id()')).rows.map((row) => row.role);
     const evidence = can(roles, 'evidence.read');
-    return (await sql.query<Record<string, unknown>>(`SELECT id,status,created_at,calls_used,calls_budget,plan_id${evidence ? ',frozen_manifest' : ''} FROM nazir.runs ORDER BY created_at DESC,id LIMIT 50`)).rows;
+    const runs = (await sql.query<Record<string, unknown>>(`SELECT id,status,repeat_count,created_at,calls_used,calls_budget,plan_id${evidence ? ',frozen_manifest' : ''} FROM nazir.runs ORDER BY created_at DESC,id LIMIT 50`)).rows;
+    for (const run of runs) {
+      const rows = (await sql.query<ReportConversation>('SELECT id,status,scenario_id,attempt_number,language FROM nazir.conversations WHERE run_id=$1 ORDER BY created_at,id', [run.id])).rows;
+      run.results = caseResults(rows);
+    }
+    return runs;
   });
 }
 async function versions(driver: TransactionDriver, memberId: string) {
@@ -148,7 +153,7 @@ async function startRun(driver: TransactionDriver, memberId: string, args: unkno
     return finished('start_run', { plan_id: planId, run_id: run.id });
   }
   if (state.status !== 'proposed' || !approval) return refused('start_run', state.status === 'proposed' ? actionErrors.approval_required : actionErrors.not_waiting);
-  try { await approvePlan(driver, memberId, { id: planId, reason: approval.reason, evidence_opened: true }); }
+  try { await approvePlan(driver, memberId, { id: planId, reason: approval.reason, evidence_opened: true, ...(fromMcp?.repeat_count !== undefined ? { repeat_count: fromMcp.repeat_count } : {}) }); }
   catch (error) {
     if (error instanceof Forbidden) throw error;
     return refused('start_run', normalize(error));
@@ -230,7 +235,11 @@ export async function runAgentTool(driver: TransactionDriver, memberId: string, 
   if (identityOverride(args) || (origin.message && asksImpersonation(origin.message))) throw new Coded(403, 'impersonation', actionErrors.impersonation.message);
   if (!(agentTools as readonly string[]).includes(name)) throw new Coded(403, 'widens_tools', 'A plan cannot add tools.');
   const tool = name as AgentTool;
-  if (tool === 'list_runs') return attempt(tool, async () => finished(tool, await listRuns(driver, memberId)));
+  if (tool === 'list_runs') return attempt(tool, async () => {
+    const data = await listRuns(driver, memberId);
+    const outcomes = data.flatMap((r) => (r.results ?? []) as { outcome: Bilingual }[]);
+    return finished(tool, data, outcomes.length ? { en: outcomes.map((r) => r.outcome.en).join('. '), ar: outcomes.map((r) => r.outcome.ar).join('. ') } : undefined);
+  });
   if (tool === 'list_findings') return attempt(tool, async () => finished(tool, await listFindings(driver, memberId, {})));
   if (tool === 'propose_plan') return attempt(tool, () => propose(driver, memberId, args, origin));
   if (tool === 'start_run') return attempt(tool, () => startRun(driver, memberId, args, origin));

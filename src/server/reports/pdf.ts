@@ -1,6 +1,6 @@
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
-import type { ReportBody, ReportCounts } from './build';
+import { caseResults, attemptOutcome, type ReportBody, type ReportCounts } from './build';
 import { shapePdfLine, wrapPdfText } from './pdf-text';
 
 export type PdfExtras = {
@@ -45,8 +45,9 @@ export function reportScore(counts: Pick<ReportCounts, 'conversations' | 'passed
 /** Only explicitly selected client facing fields enter the document. No transcripts or metadata. */
 export function clientReportSections(body: ReportBody, extras: PdfExtras) {
   const c = copy[extras.lang];
+  const cases = caseResults(body.conversations);
   const languageLines = (['en', 'ar'] as const).map((language) => {
-    const rows = body.conversations.filter((row) => row.language === language);
+    const rows = cases.filter((row) => row.language === language);
     return `${c[language]}: ${reportScore({ conversations: rows.length, passed: rows.filter((r) => r.status === 'passed').length })} / 100 (${rows.length ? `${rows.length}` : c.untested})`;
   });
   const fixes = extras.appliedFixes ?? [];
@@ -66,9 +67,9 @@ export function clientReportSections(body: ReportBody, extras: PdfExtras) {
     { title: c.languages, lines: languageLines },
     { title: `${c.tests}: ${body.counts.conversations}`, lines: [
       `${c.passed}: ${body.counts.passed}   ${c.failed}: ${body.counts.failed}   ${c.inconclusive}: ${body.counts.inconclusive}`,
-      ...body.conversations.map((row, i) => {
+      ...cases.map((row, i) => {
         const status = row.status === 'passed' ? c.passed : row.status === 'failed' ? c.failed : row.status === 'inconclusive' ? c.inconclusive : c.pending;
-        return `${extras.testNames?.[row.id] || `${c.test} ${i + 1}`} (${row.language === 'ar' ? c.ar : c.en}): ${status}`;
+        return `${extras.testNames?.[row.id] || `${c.test} ${i + 1}`} (${row.language === 'ar' ? c.ar : c.en}): ${attemptOutcome(row.passed, row.total, extras.lang)} (${status})${row.flaky ? extras.lang === 'ar' ? ' متقلب' : ' Flaky' : ''}`;
       }),
     ] },
     { title: c.changes, lines: changes },

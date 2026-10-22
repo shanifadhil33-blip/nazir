@@ -3,18 +3,18 @@ import { requireRole } from '../auth/guard';
 import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, NotFound } from '../http/errors';
+import { caseResults, type CaseResult, type ReportConversation } from '../reports/build';
 import { liveTestReady, type StepDeps } from './live-test';
 
-export type RunProgress = { run_id: string; status: string; done: boolean; passed: number; failed: number; inconclusive: number; waiting: number };
+export type RunProgress = { run_id: string; status: string; done: boolean; passed: number; failed: number; inconclusive: number; waiting: number; results?: CaseResult[] };
 
 async function progress(driver: TransactionDriver, workspaceId: string, runId: string): Promise<RunProgress> {
   return withWorker(driver, workspaceId, async (sql) => {
-    const row = (await sql.query<{ status: string; passed: string; failed: string; inconclusive: string; waiting: string }>(`SELECT r.status,
-      count(*) FILTER (WHERE c.status='passed') AS passed, count(*) FILTER (WHERE c.status='failed') AS failed,
-      count(*) FILTER (WHERE c.status='inconclusive') AS inconclusive, count(*) FILTER (WHERE c.status IN ('queued','running')) AS waiting
-      FROM nazir.runs r LEFT JOIN nazir.conversations c ON c.run_id=r.id WHERE r.id=$1 GROUP BY r.status`, [runId])).rows[0];
+    const row = (await sql.query<{ status: string }>('SELECT status FROM nazir.runs WHERE id=$1', [runId])).rows[0];
     if (!row) throw new NotFound();
-    return { run_id: runId, status: row.status, done: ['passed', 'failed', 'inconclusive', 'cancelled'].includes(row.status), passed: Number(row.passed), failed: Number(row.failed), inconclusive: Number(row.inconclusive), waiting: Number(row.waiting) };
+    const conversations = (await sql.query<ReportConversation>('SELECT id,status,scenario_id,attempt_number,language FROM nazir.conversations WHERE run_id=$1 ORDER BY created_at,id', [runId])).rows;
+    const results = caseResults(conversations);
+    return { run_id: runId, status: row.status, done: ['passed', 'failed', 'inconclusive', 'cancelled'].includes(row.status), passed: results.filter((c) => c.status === 'passed').length, failed: results.filter((c) => c.status === 'failed').length, inconclusive: results.filter((c) => c.status === 'inconclusive').length, waiting: conversations.filter((c) => ['queued', 'running'].includes(c.status)).length, results };
   });
 }
 

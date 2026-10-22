@@ -87,3 +87,16 @@ it('reports only applied changes and verified fixed findings, with explicit befo
   sections = clientReportSections(body, options);
   expect(sections[4]?.lines).toEqual(['No open issues recorded']);
 });
+
+it('exports each repeated case once with passed X of N and the strict case score', async () => {
+  const repeated = assembleReport({ run: body.run, findings: [], messages: [], conversations: [
+    ...['passed', 'failed', 'passed'].map((status, i) => ({ id: `a${i}`, scenario_id: 'a', status, language: 'en', split: 'development' })),
+    ...['passed', 'passed', 'passed'].map((status, i) => ({ id: `b${i}`, scenario_id: 'b', status, language: 'en', split: 'development' })),
+  ] });
+  const text = await textOf(await buildReportPdf(repeated, await extras()));
+  expect(text).toContain('50 / 100');
+  expect(text).toContain('Tests run: 2');
+  expect(text).toContain('passed 2 of 3');
+  expect(text).toContain('passed 3 of 3');
+  expect(text).toContain('Flaky');
+});

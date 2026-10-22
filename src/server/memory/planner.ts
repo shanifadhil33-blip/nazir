@@ -4,7 +4,7 @@ import { withMember, withWorker } from '../db/context';
 import { requireRole } from '../auth/guard';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { enqueueRun } from '../runner/enqueue';
-import { onePerKey, budgetFor, type RetestScenario } from '../repair/retest';
+import { onePerKey, budgetFor, callsPerScenario, type RetestScenario } from '../repair/retest';
 import { checkEffect, lessonReason, type LessonEffect } from './effects';
 import type { FrozenLesson } from './frozen';
 
@@ -49,24 +49,31 @@ export async function proposeNextPlan(driver: TransactionDriver, workspaceId: st
     const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages);
     const plan = planOrder(scenarios, failures, lessons);
     if (!plan.scenarioIds.length) throw new Error('No approved scenarios');
-    const calls = plan.scenarioIds.reduce((n, id) => n + (plan.repeatsFor[id] ?? 1), 0);
     const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used)
-      VALUES(nazir.current_workspace_id(),'Next plan from history and lessons',$1,$2,$3,$4,1,$5,$6::jsonb,'nazir',$7::jsonb) RETURNING id`,
-    [input.agent_version_id, input.rule_pack_version_id, plan.order, input.languages ?? ['en', 'ar'], budgetFor(calls, input.budget_cap ?? 2000),
+      VALUES(nazir.current_workspace_id(),'Next plan from history and lessons',$1,$2,$3,$4,3,$5,$6::jsonb,'nazir',$7::jsonb) RETURNING id`,
+    [input.agent_version_id, input.rule_pack_version_id, plan.order, input.languages ?? ['en', 'ar'], budgetFor(plan.scenarioIds.length * 3, input.budget_cap ?? 2000),
       JSON.stringify({ set: 'next', order: plan.order, family_repeats: plan.familyRepeats, scenario_ids: plan.scenarioIds, failures, records_only: false }), JSON.stringify(plan.lessonsUsed)])).rows[0]!;
     await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ lessons: plan.lessonsUsed.map((l) => l.lesson_id), order: plan.order })]);
-    return { id: row.id, ...plan };
+    return { id: row.id, ...plan, repeatCount: 3 };
   });
 }
 export async function approvePlan(driver: TransactionDriver, memberId: string, value: unknown) {
-  const input = z.object({ id: z.uuid(), reason: z.string().trim().min(10).max(2000), evidence_opened: z.boolean() }).strict().parse(value);
+  const input = z.object({ id: z.uuid(), reason: z.string().trim().min(10).max(2000), evidence_opened: z.boolean(), repeat_count: z.number().int().min(1).max(3).default(3) }).strict().parse(value);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
+    const plan = (await sql.query<{ stop_rules: { scenario_ids?: string[]; budget?: { kind: string; perCall?: number }; [key: string]: unknown } }>("SELECT stop_rules FROM nazir.plans WHERE id=$1 AND status='proposed' FOR UPDATE", [input.id])).rows[0];
+    if (!plan) throw new Error('Plan is not waiting');
+    const rules = { ...plan.stop_rules };
+    if (rules.scenario_ids?.length) {
+      rules.calls_per_attempt = callsPerScenario;
+      rules.planned_calls = rules.scenario_ids.length * input.repeat_count * callsPerScenario;
+      rules.planned_cost = rules.budget?.kind === 'cost' ? Number(rules.planned_calls) * Number(rules.budget.perCall) : null;
+    }
     await sql.query(`INSERT INTO nazir.approvals(workspace_id,subject_type,subject_id,decision,reason,evidence_opened,decided_by,decided_by_name_at_event,decided_by_roles_at_event)
       VALUES(nazir.current_workspace_id(),'plan',$1,'approve',$2,$3,nazir.current_member_id(),'','{}')`, [input.id, input.reason, input.evidence_opened]);
-    const row = (await sql.query<{ id: string }>("UPDATE nazir.plans SET status='approved' WHERE id=$1 AND status='proposed' RETURNING id", [input.id])).rows[0];
+    const row = (await sql.query<{ id: string }>("UPDATE nazir.plans SET status='approved',repeat_count=$2,repeats=$2,stop_rules=$3::jsonb WHERE id=$1 AND status='proposed' RETURNING id", [input.id, input.repeat_count, JSON.stringify(rules)])).rows[0];
     if (!row) throw new Error('Plan is not waiting');
-    await sql.query("SELECT nazir.append_audit('plan.approved','plan',$1,'{}')", [row.id]);
+    await sql.query("SELECT nazir.append_audit('plan.approved','plan',$1,$2)", [row.id, JSON.stringify({ repeat_count: input.repeat_count })]);
     return row;
   });
 }
@@ -75,10 +82,10 @@ export async function startNextPlan(driver: TransactionDriver, memberId: string,
   z.uuid().parse(planId);
   const plan = await withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
-    return (await sql.query<{ workspace_id: string; agent_version_id: string; stop_rules: { scenario_ids: string[]; family_repeats: Record<string, number>; set?: string }; lessons_used: FrozenLesson[] | null }>("SELECT workspace_id,agent_version_id,stop_rules,lessons_used FROM nazir.plans WHERE id=$1 AND status='approved'", [planId])).rows[0];
+    return (await sql.query<{ workspace_id: string; agent_version_id: string; repeat_count: number; stop_rules: { scenario_ids: string[]; family_repeats: Record<string, number>; set?: string }; lessons_used: FrozenLesson[] | null }>("SELECT workspace_id,agent_version_id,repeat_count,stop_rules,lessons_used FROM nazir.plans WHERE id=$1 AND status='approved'", [planId])).rows[0];
   });
   if (!plan || plan.stop_rules.set !== 'next') throw new Error('Approved next plan required');
   const fam = await withWorker(driver, plan.workspace_id, async (sql) => (await sql.query<{ id: string; family: string }>('SELECT id,family FROM nazir.scenarios WHERE id=ANY($1::uuid[])', [plan.stop_rules.scenario_ids])).rows);
   const repeatsFor = Object.fromEntries(fam.filter((s) => plan.stop_rules.family_repeats[s.family]).map((s) => [s.id, plan.stop_rules.family_repeats[s.family]!]));
-  return enqueueRun(driver, { workspaceId: plan.workspace_id, planId, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: 1, idempotencyKey: `next:${planId}`, order: plan.stop_rules.scenario_ids, repeatsFor, lessons: plan.lessons_used ?? [] });
+  return enqueueRun(driver, { workspaceId: plan.workspace_id, planId, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: plan.repeat_count, idempotencyKey: `next:${planId}`, order: plan.stop_rules.scenario_ids, repeatsFor, lessons: plan.lessons_used ?? [] });
 }

@@ -240,8 +240,14 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     if(!retry && (packReading || (evaluationInput && reading)) && status!=='inconclusive') {
       const findings=runtime?packFindings:buildFindings({ ...evaluationInput!,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
       for(const finding of findings) {
+        const previous = (await db.query<{ id: string }>('SELECT id FROM nazir.findings WHERE run_id=$1 AND scenario_id=$2 AND check_id=$3', [rid, data.scenario.id, finding.check_id])).rows[0];
+        if (previous) {
+          await db.query('INSERT INTO nazir.finding_attempts(workspace_id,finding_id,conversation_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [wid, previous.id, cid]);
+          continue;
+        }
         const fields=Object.keys(finding),values=Object.values(finding).map((v) => typeof v==='object'?JSON.stringify(v):v);
         const inserted=(await db.query<{id:string}>(`INSERT INTO nazir.findings(${fields.join(',')}) VALUES(${values.map((_,i) => '$'+(i+1)).join(',')}) ON CONFLICT(workspace_id,conversation_id,check_id) DO NOTHING RETURNING id`,values)).rows[0];
+        if (inserted) await db.query('INSERT INTO nazir.finding_attempts(workspace_id,finding_id,conversation_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [wid, inserted.id, cid]);
         if(inserted) await db.query("SELECT nazir.append_audit('finding_opened','finding',$1,$2)",[inserted.id,JSON.stringify({run_id:rid,conversation_id:cid,check_id:finding.check_id,severity:finding.severity,root_cause_class:finding.root_cause_class})]);
       }
     }

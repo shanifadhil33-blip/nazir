@@ -197,7 +197,7 @@ export const repairArgs = z.object({
   evidence_opened: z.literal(true),
 }).strict();
 
-export const planArgs = z.object({
+export const planArgs = z.object({ repeat_count: z.number().int().min(1).max(3).optional(),
   plan_id: z.uuid(),
   reason: z.string().trim().min(10).max(2000),
   evidence_opened: z.literal(true),
@@ -221,5 +221,5 @@ export function budgetFrom(message: string) {
   return null;
 }
 export function planCostReply(calls: number): Bilingual {
-  return { en: `This plan uses ${calls} calls.`, ar: `تستخدم هذه الخطة ${calls} مكالمات.` };
+  return { en: `This plan uses ${calls} calls. Each test runs 3 times.`, ar: `تستخدم هذه الخطة ${calls} مكالمات. ينفذ كل اختبار 3 مرات.` };
 }
