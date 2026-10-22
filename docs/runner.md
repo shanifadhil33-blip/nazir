@@ -101,5 +101,13 @@ Use runner-library-fixture to prepare all 48 library scenarios with a separate i
 
 * The manifest carries `manifestVersion: 'n15'`; `runner_version` stays `n13` because migration 0012 keys on it.
 * A repair version is resolved from its frozen config (`resolveExecutable`) and checked against its executable hash.
-* `enqueueRun` accepts an `order` (conversations are created in that order and claimed in that order), `repeatsFor` per scenario and frozen `lessons`.
+* `enqueueRun` accepts an `order` (conversations are created in that order and claimed in that order), a run repeat count and frozen `lessons`. Each scenario uses the greater of that count and its `repeatsFor` lesson hint, capped at three attempts. The manifest records each scenario’s actual attempt count.
 * The runner CLI picks one scenario per stable key and language, library rows first.
+
+New plan runs repeat every test three times. An owner or quality reviewer may set `repeat_count` to 1, 2 or 3 when approving through `POST /api/workspaces/{workspaceId}/plans/{planId}/approve`, or with the MCP `start_run` approval. The runner script accepts `REPEAT_COUNT`, defaulting to 3. Each conversation has its own `attempt_number`; the existing `attempt` field still fences lease recovery.
+
+The call estimate uses the plan’s per attempt allowance when provided, or its planned calls divided by the planned scenario count. Plans whose total already includes repeats record an explicit `calls_per_attempt` to avoid multiplying twice. Without a planned estimate, it uses four calls per attempt, based on a measured 48 case Government run of about 180 calls. Enqueue refuses estimates above the plan budget or remaining test run daily cap. These checks do not reserve future daily capacity; the existing call reservation still enforces the cap during execution. Budget and stop rules can leave cancelled attempts.
+
+Run the full 48 case suite with `REPEAT_COUNT=1` on the free daily cap of 300 test run calls. The fallback estimate is 192 calls for one attempt per case and 576 for three. The CLI keeps its default of three and prints the estimate before enqueue.
+
+Reports retain individual conversations and add case results with the passed count, total and flaky flag. Scores count cases, requiring every finished attempt to pass. Inconclusive attempts prevent a pass; cancelled attempts are excluded from that pass decision. A finding is stored once per case and failed check, with immutable conversation links used to count failed attempts. Existing runs and report snapshots retain single attempt defaults. Migration `0029_repeat_runs.sql` must be applied separately before using this code.

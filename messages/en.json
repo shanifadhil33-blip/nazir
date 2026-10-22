@@ -114,7 +114,9 @@
     "measuredRestricted": "Measured results are shown to members who run tests.",
     "runProgress": "Running the tests: {done} of {total} finished.",
     "runDone": "Run finished: {passed} passed, {failed} failed, {inconclusive} without a verdict.",
-    "runWaiting": "The run is queued. It starts when the test engine is connected here."
+    "runWaiting": "The run is queued. It starts when the test engine is connected here.",
+    "attemptOutcome": "passed {passed} of {total}",
+    "flaky": "Flaky"
   },
   "sample": {
     "agent": "Harbor permits desk",

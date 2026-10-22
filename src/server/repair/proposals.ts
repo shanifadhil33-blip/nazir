@@ -97,28 +97,29 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
     await asWorker(sql);
     await sql.query('SELECT nazir.repair_mark_used($1,$2)', [p.id, me]);
     const made = (await sql.query<{ r: { version_id: string; retest_plan_id: string; suite_plan_id: string } }>('SELECT nazir.repair_materialize($1,$2,$3::uuid[],$4::uuid[],$5,$6) AS r',
-      [p.id, executable, selection.retest, selection.suite, budgetFor(selection.retest.length, 400), budgetFor(selection.suite.length, 800)])).rows[0]!.r;
+      [p.id, executable, selection.retest, selection.suite, budgetFor(selection.retest.length * 3, 400), budgetFor(selection.suite.length * 3, 800)])).rows[0]!.r;
     return { id: p.id, status, approval_id: decision.id, version_id: made.version_id, parent_registry_id: parent, executable_hash: executable, retest: { ...selection, retest_plan_id: made.retest_plan_id, suite_plan_id: made.suite_plan_id } };
   });
 }
-type PlanRow = { id: string; agent_version_id: string; stop_rules: { set: 'retest' | 'suite'; scenario_ids: string[]; retest_of_proposal: string } };
+type PlanRow = { id: string; agent_version_id: string; repeat_count: number; stop_rules: { set: 'retest' | 'suite'; scenario_ids: string[]; retest_of_proposal: string } };
 /** Owner or reviewer starts the retest and then the frozen suite. Calling again returns the same runs. */
-export async function startRetest(driver: TransactionDriver, memberId: string, input: { proposalId: string; sets?: ('retest' | 'suite')[]; recordsOnly?: boolean }) {
+export async function startRetest(driver: TransactionDriver, memberId: string, input: { proposalId: string; sets?: ('retest' | 'suite')[]; recordsOnly?: boolean; repeat_count?: number }) {
   uuid.parse(input.proposalId);
+  const repeatCount = z.number().int().min(1).max(3).optional().parse(input.repeat_count);
   const { wid, plans } = await withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
     const p = (await sql.query<{ status: string; resulting_agent_version_id: string | null }>('SELECT status,resulting_agent_version_id FROM nazir.proposals WHERE id=$1', [input.proposalId])).rows[0];
     if (!p) throw new NotFound();
     if (p.status !== 'approved' || !p.resulting_agent_version_id) throw new Forbidden();
     const wid = (await sql.query<{ id: string }>('SELECT nazir.current_workspace_id() AS id')).rows[0]!.id;
-    const plans = (await sql.query<PlanRow>("SELECT id,agent_version_id,stop_rules FROM nazir.plans WHERE status='approved' AND stop_rules->>'retest_of_proposal'=$1", [input.proposalId])).rows;
+    const plans = (await sql.query<PlanRow>("SELECT id,agent_version_id,repeat_count,stop_rules FROM nazir.plans WHERE status='approved' AND stop_rules->>'retest_of_proposal'=$1", [input.proposalId])).rows;
     return { wid, plans };
   });
   const out: Record<string, string> = {};
   for (const set of input.sets ?? ['retest', 'suite']) {
     const plan = plans.find((x) => x.stop_rules.set === set);
     if (!plan) throw new NotFound();
-    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: 1, idempotencyKey: `repair:${input.proposalId}:${set}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids });
+    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids });
     out[set] = run.id;
   }
   return out;
@@ -128,7 +129,7 @@ export async function readRetest(driver: TransactionDriver, memberId: string, pr
   uuid.parse(proposalId);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'evidence.read');
-    const plans = (await sql.query<PlanRow>("SELECT id,agent_version_id,stop_rules FROM nazir.plans WHERE stop_rules->>'retest_of_proposal'=$1", [proposalId])).rows;
+    const plans = (await sql.query<PlanRow>("SELECT id,agent_version_id,repeat_count,stop_rules FROM nazir.plans WHERE stop_rules->>'retest_of_proposal'=$1", [proposalId])).rows;
     const result: Record<string, { plan_id: string; visible: { id: string; stable_key: string; language: string; split: string }[]; hidden_count: number }> = {};
     for (const plan of plans) {
       const visible = (await sql.query<{ id: string; stable_key: string; language: string; split: string }>('SELECT id,stable_key,language,split FROM nazir.scenarios WHERE id=ANY($1::uuid[]) ORDER BY stable_key,language', [plan.stop_rules.scenario_ids])).rows;

@@ -69,6 +69,7 @@ function FailureBody({ copy, item, decide, pending, onApprove, onSkip, onEdit }:
     item.rawQuote ? { text: item.rawQuote } : null,
   ].filter((line): line is { text: string; lang?: 'en' | 'ar' } => line !== null);
   return <div className="nz-cross">
+    {item.outcome ? <p>{item.outcome} {item.flaky ? <span className="nz-chip">{copy.ui.flaky}</span> : null}</p> : null}
     <div className="nz-case-line"><div><p className="nz-case">{item.caseLabel}</p><h3>{copy.ui.openFailure}</h3></div><span className="nz-chip">{copy.ui.critical}</span></div>
     <p className="nz-kicker">{copy.ui.expectedVersus}</p>
     <div className="nz-versus">
@@ -202,6 +203,7 @@ export function WorkspaceScreen({
             </div>
           </div>
           <Counters copy={copy} metrics={model.metrics} />
+          {model.outcomes?.map((c) => <p key={c.id}>{c.label} {c.flaky ? <span className="nz-chip">{copy.ui.flaky}</span> : null}</p>)}
           <Bars copy={copy} metrics={model.metrics} lang={lang} />
           <button type="button" className="nz-btn nz-btn-ghost" onClick={() => open('report')}>{copy.ui.report}</button>
         </section>

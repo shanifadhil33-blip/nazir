@@ -40,13 +40,13 @@ it('lists runs and findings for a viewer and refuses a plan', async () => {
   await expect(agentChat(db.driver, reviewer, { message: 'list runs' }, chain('{"tool":"drop_database"}'))).rejects.toThrow(/cannot add tools/);
 });
 it('proposes a plan inside the stated call budget', async () => {
-  const proposed = await agentChat(db.driver, reviewer, { message: `propose a plan ${callsPerScenario} calls` }, null);
+  const proposed = await agentChat(db.driver, reviewer, { message: `propose a plan ${(callsPerScenario * 3)} calls` }, null);
   expect(proposed.tool).toBe('propose_plan');
   expect(proposed.reply.en).toContain('within the budget');
   const data = proposed.data as { plannedCalls: number; id: string };
-  expect(data.plannedCalls).toBeLessThanOrEqual(callsPerScenario);
+  expect(data.plannedCalls).toBeLessThanOrEqual((callsPerScenario * 3));
   const row = (await db.owner.query<{ budget_calls: number }>('SELECT budget_calls FROM nazir.plans WHERE id=$1', [data.id])).rows[0]!;
-  expect(row.budget_calls).toBeLessThanOrEqual(callsPerScenario);
+  expect(row.budget_calls).toBeLessThanOrEqual((callsPerScenario * 3));
   expect((await db.owner.query("SELECT action FROM nazir.audit_events WHERE action='agent.message' AND target_id=$1", [proposed.thread_id])).rows.length).toBeGreaterThan(0);
 });
 it('proposes a valid plan when the message states no budget', async () => {

@@ -171,7 +171,7 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     const byId = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
     const candidates = ordered.scenarioIds.flatMap((id) => {
       const scenario = byId.get(id);
-      return scenario ? [{ id: scenario.id, family: scenario.family, language: scenario.language, calls: callsPerScenario * (ordered.repeatsFor[id] ?? 1) }] : [];
+      return scenario ? [{ id: scenario.id, family: scenario.family, language: scenario.language, calls: callsPerScenario * 3 }] : [];
     });
     const boost = Object.fromEntries(ordered.order.map((family, index) => [family, ordered.order.length - index]));
     const ranked = rankFamilies([...new Set(candidates.map((scenario) => scenario.family))], failures, boost)
@@ -185,13 +185,13 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     });
     const repeatsFor = Object.fromEntries(Object.entries(ordered.repeatsFor).filter(([id]) => plan.scenarioIds.includes(id)));
     const languages = input.languages ?? [...new Set(scenarios.filter((scenario) => plan.scenarioIds.includes(scenario.id)).map((scenario) => scenario.language))];
-    const stopRules = { set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling, repeats_for: repeatsFor };
+    const stopRules = { set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, calls_per_attempt: callsPerScenario, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling, repeats_for: repeatsFor };
     const lessonsUsed = ordered.lessonsUsed;
     const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used)
-      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,1,$5,$6::jsonb,'member',$7::jsonb) RETURNING id`,
+      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,3,$5,$6::jsonb,'member',$7::jsonb) RETURNING id`,
     [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules), lessonsUsed.length ? JSON.stringify(lessonsUsed) : null])).rows[0]!;
     await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order, lessons: lessonsUsed.map((lesson) => lesson.lesson_id) })]);
-    return { id: row.id, ...plan, lessonsUsed };
+    return { id: row.id, ...plan, repeatCount: 3, lessonsUsed };
   });
 }
 
@@ -200,8 +200,8 @@ export async function startBoundedRun(driver: TransactionDriver, memberId: strin
   z.uuid().parse(planId);
   const plan = await withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
-    return (await sql.query<{ workspace_id: string; agent_version_id: string; stop_rules: { set?: string; scenario_ids?: string[]; repeats_for?: Record<string, number> }; lessons_used: FrozenLesson[] | null }>(
-      "SELECT workspace_id,agent_version_id,stop_rules,lessons_used FROM nazir.plans WHERE id=$1 AND status='approved'",
+    return (await sql.query<{ workspace_id: string; agent_version_id: string; repeat_count: number; stop_rules: { set?: string; scenario_ids?: string[]; repeats_for?: Record<string, number> }; lessons_used: FrozenLesson[] | null }>(
+      "SELECT workspace_id,agent_version_id,repeat_count,stop_rules,lessons_used FROM nazir.plans WHERE id=$1 AND status='approved'",
       [planId],
     )).rows[0] ?? null;
   });
@@ -212,7 +212,7 @@ export async function startBoundedRun(driver: TransactionDriver, memberId: strin
     planId,
     agentVersionId: plan.agent_version_id,
     scenarioIds: plan.stop_rules.scenario_ids,
-    repeats: 1,
+    repeats: plan.repeat_count,
     idempotencyKey: `bounded:${planId}`,
     order: plan.stop_rules.scenario_ids,
     ...(repeatsFor ? { repeatsFor } : {}),

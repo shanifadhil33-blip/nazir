@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, expect, it } from 'vitest';
+import { beforeAll, afterAll, expect, it, vi } from 'vitest';
 import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { journey } from '../runner/helpers';
 import { enqueueRun } from '../../src/server/runner/enqueue';
@@ -61,8 +61,8 @@ it('selects affected, normal, retry and unseen related hidden cases, one per key
 });
 
 let db: TestDatabase, lib: Awaited<ReturnType<typeof createLibraryFixture>>;
-beforeAll(async () => { db = await testDatabase(); lib = await db.driver.transaction(createLibraryFixture); }, 60000);
-afterAll(async () => { await db?.close(); });
+beforeAll(async () => { vi.stubEnv('AI_DAILY_CAP_TEST_RUN', '2000'); db = await testDatabase(); lib = await db.driver.transaction(createLibraryFixture); }, 60000);
+afterAll(async () => { await db?.close(); vi.unstubAllEnvs(); });
 const version = (id: string) => lib.versions.find((v) => v.registry_id === id)!.id;
 async function drain(model = journey()) {
   while (await runNextConversation({ driver: db.driver, inspectionDriver: db.driver, workerId: 'repair_worker', chatModelFactory: () => model, judgeFactory: () => async ({ input }) => semantic('supported', input.reply.slice(0, 60), 'none') }));
@@ -110,15 +110,15 @@ it('runs the full repair cycle and keeps the old records unchanged', async () =>
   const reviewerView = await readRetest(db.driver, reviewer, proposal.id);
   expect(reviewerView.retest!.hidden_count).toBe(0);
   // Retest run on the repaired version: the affected EN and AR cases now pass on the records.
-  const runs = await startRetest(db.driver, reviewer, { proposalId: proposal.id, sets: ['retest'] });
-  expect((await startRetest(db.driver, reviewer, { proposalId: proposal.id, sets: ['retest'] })).retest).toBe(runs.retest);
+  const runs = await startRetest(db.driver, reviewer, { proposalId: proposal.id, repeat_count: 1, sets: ['retest'] });
+  expect((await startRetest(db.driver, reviewer, { proposalId: proposal.id, repeat_count: 1, sets: ['retest'] })).retest).toBe(runs.retest);
   await drain();
   const affected = (await db.owner.query<{ status: string; language: string }>('SELECT status,language FROM nazir.conversations WHERE run_id=$1 AND scenario_id=ANY($2::uuid[]) ORDER BY language', [runs.retest, sel.affected])).rows;
   expect(affected).toEqual([{ status: 'passed', language: 'ar' }, { status: 'passed', language: 'en' }]);
   const manifest = (await db.owner.query<{ frozen_manifest: { registry_id: string; manifestVersion: string; repair: { parent_registry_id: string } } }>('SELECT frozen_manifest FROM nazir.runs WHERE id=$1', [runs.retest])).rows[0]!.frozen_manifest;
-  expect(manifest).toMatchObject({ registry_id: 'repair', manifestVersion: 'n15', repair: { parent_registry_id: 'planted_wrong_queue' } });
+  expect(manifest).toMatchObject({ registry_id: 'repair', manifestVersion: 'n29', repair: { parent_registry_id: 'planted_wrong_queue' } });
   // Frozen suite on the same version, records only, enqueued with one conversation per approved library scenario.
-  const suite = await startRetest(db.driver, reviewer, { proposalId: proposal.id, sets: ['suite'], recordsOnly: true });
+  const suite = await startRetest(db.driver, reviewer, { proposalId: proposal.id, repeat_count: 1, sets: ['suite'], recordsOnly: true });
   expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.conversations WHERE run_id=$1', [suite.suite])).rows[0]).toEqual({ n: 48 });
   const after = await evidenceDigest(db.driver, lib.workspaceId, run);
   expect(after).toEqual(before);

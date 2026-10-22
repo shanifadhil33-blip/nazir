@@ -36,7 +36,7 @@ export async function readPdfReport(driver: TransactionDriver, memberId: string,
         WHERE c.run_b_id=$1 AND a.created_at<b.created_at ORDER BY c.created_at DESC,c.id LIMIT 1`, [body.run.id])).rows[0]?.id;
     }
     const before = beforeRun ? (await sql.query<{ body: ReportBody }>('SELECT body FROM nazir.reports WHERE run_id=$1 ORDER BY created_at DESC,id LIMIT 1', [beforeRun])).rows[0]?.body : null;
-    const beforeCounts = before?.counts ?? (beforeRun ? countsOf((await sql.query<ReportConversation>('SELECT id,status,language FROM nazir.conversations WHERE run_id=$1', [beforeRun])).rows, 0) : null);
+    const beforeCounts = before?.counts ?? (beforeRun ? countsOf((await sql.query<ReportConversation>('SELECT id,status,language,scenario_id,attempt_number FROM nazir.conversations WHERE run_id=$1', [beforeRun])).rows, 0) : null);
     const runDate = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', {
       timeZone: 'Asia/Dubai', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }).format(new Date(header.run_date));

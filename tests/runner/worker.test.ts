@@ -80,8 +80,8 @@ it('slow model hits the deadline and a late tool reply cannot write',async () =>
   expect((await createInspectionChannel(db.driver).snapshot(c.sandbox_tenant as string)).cases).toHaveLength(0);
 });
 it('budget stops before another model call and is never retried',async () => {
-  await db.owner.query('UPDATE nazir.plans SET budget_calls=1 WHERE id=$1',[f.planId]);
   const run=await enqueue(db,f); let calls=0;
+  await db.owner.query('UPDATE nazir.runs SET calls_budget=1 WHERE id=$1',[run.id]);
   await next({ evaluate:passed,chatModelFactory:() => async () => { calls++; return { content:'Please confirm' }; } });
   expect(calls).toBe(1); expect(await row(run.id)).toMatchObject({ status:'inconclusive',inconclusive_reason:'budget_reached' });
   expect((await db.owner.query('SELECT calls_used FROM nazir.runs WHERE id=$1',[run.id])).rows[0]!.calls_used).toBe(1);
@@ -164,8 +164,8 @@ it('fixture creation is idempotent',async () => {
 });
 it('network accounting counts failed failover calls and stops at the run budget',async () => {
   const { networkChatModel }=await import('../../src/server/runner/network-model');
-  await db.owner.query('UPDATE nazir.plans SET budget_calls=2 WHERE id=$1',[f.planId]);
   const run=await enqueue(db,f); let calls=0;
+  await db.owner.query('UPDATE nazir.runs SET calls_budget=2 WHERE id=$1',[run.id]);
   await next({ evaluate:passed,chatModelFactory:(ctx) => networkChatModel(db.driver,ctx,{ store:memoryAiStore(),env:{},fetch:async () => { calls++; return new Response('',{ status:503 }); } }) });
   expect(calls).toBe(2); expect(await row(run.id)).toMatchObject({ status:'inconclusive',inconclusive_reason:'budget_reached' });
   expect((await db.owner.query('SELECT calls_used FROM nazir.runs WHERE id=$1',[run.id])).rows[0]!.calls_used).toBe(2);
