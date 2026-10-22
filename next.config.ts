@@ -2,6 +2,9 @@ import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   turbopack: {},
+  outputFileTracingIncludes: {
+    '/api/workspaces/*/reports/*/pdf': ['./src/server/reports/fonts/NotoSansArabic.ttf'],
+  },
   poweredByHeader: false,
   async headers() {
     return [{

@@ -50,6 +50,7 @@
     "after": "After",
     "overall": "Overall score",
     "fixesApplied": "Fixes applied",
+    "downloadPdf": "Download PDF",
     "share": "Share link",
     "linkCopied": "Link copied.",
     "linkFailed": "The link was not copied.",
