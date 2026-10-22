@@ -93,12 +93,13 @@ const sections = [['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['
 
 export function WorkspaceScreen({
   lang, copy, demo, seat, roles, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
-  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null, onLiveTest,
+  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null, onLiveTest, pdfHref,
 }: {
   lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
   onReplay: () => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
+  pdfHref?: string;
   avatar?: string; onSettings?: () => void; measured?: Measured | null; onLiveTest?: () => void;
 }) {
   const [tab, setTab] = useState(0);
@@ -246,6 +247,7 @@ export function WorkspaceScreen({
         {model.fixes.length === 0 ? <p className="nz-empty">{copy.ui.noRepair}</p> : <ul className="nz-fixes">{model.fixes.map((fix) => <li key={fix.id}><strong>{fix.title}</strong><span>{fill(copy.ui.approvedBy, { name: fix.name, role: fix.role })} {dubaiStamp(fix.at, lang)}, {copy.ui.dubai}</span></li>)}</ul>}
         <p className="nz-coverage">{model.coverage}</p>
         <button type="button" className="nz-btn nz-btn-teal" onClick={onShare}>{copy.ui.share}</button>
+        {pdfHref ? <a className="nz-btn nz-btn-teal" href={pdfHref} download>{copy.ui.downloadPdf}</a> : null}
         {copied ? <p role="status">{copy.ui.linkCopied}</p> : null}
         {copyError ? <p role="status">{copy.ui.linkFailed}</p> : null}
         {demo ? <p className="nz-footer">{copy.sample.footer}</p> : null}
