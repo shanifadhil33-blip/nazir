@@ -9,14 +9,16 @@ export function privateAddress(address: string): boolean {
   const v = isIP(address);
   if (v === 4) {
     const [a, b] = address.split('.').map(Number) as [number, number];
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19) && process.env.NAZIR_ALLOW_BENCHMARK_DNS !== '1') || a >= 224;
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && (b === 168 || b === 0 || b === 2)) || (a === 198 && b === 51) || (a === 203 && b === 0) || (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19) && process.env.NAZIR_ALLOW_BENCHMARK_DNS !== '1') || a >= 224;
   }
   if (v === 6) {
-    const x = address.toLowerCase();
-    if (x === '::' || x === '::1') return true;
-    const mapped = x.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return privateAddress(mapped[1]!);
-    return /^(?:fc|fd|fe8|fe9|fea|feb|ff)/.test(x);
+    // Accept only global unicast. This also refuses mapped IPv4 (including hex forms),
+    // translation prefixes, unique local, multicast and link local addresses.
+    const [firstText, secondText = '0'] = address.split(':');
+    const first = parseInt(firstText!, 16), second = parseInt(secondText || '0', 16);
+    if ((first & 0xe000) !== 0x2000) return true;
+    // Transition, protocol assignment and documentation ranges are not public endpoints.
+    return first === 0x2002 || (first === 0x2001 && (second < 0x200 || second === 0xdb8)) || (first === 0x3fff && second < 0x1000);
   }
   return true;
 }

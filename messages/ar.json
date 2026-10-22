@@ -275,7 +275,29 @@
     "kbSample": "بيانات نموذجية. لا تحفظ المستندات هنا.",
     "kbPartsOne": "جزء واحد",
     "kbPartsTwo": "جزآن",
-    "kbPartsFew": "{chunks} أجزاء"
+    "kbPartsFew": "{chunks} أجزاء",
+    "connect": "اربط وكيلك",
+    "connectHint": "الصق عنوان HTTPS العام لمحادثة وكيلك الذي يخدم المتعاملين. يفحص ناظر ردوده من الخارج. يجعل الاختبار الناجح هذا الاتصال هدفا للتشغيلات السريعة والكاملة.",
+    "endpoint": "رابط محادثة الوكيل",
+    "connectionName": "اسم الوكيل",
+    "format": "صيغة الطلب",
+    "formats": {
+      "openai_chat": "متوافق مع محادثة OpenAI",
+      "simple_json": "JSON بسيط"
+    },
+    "headerName": "اسم ترويسة المصادقة",
+    "connectionKey": "سر المصادقة",
+    "testMessage": "رسالة الاختبار",
+    "sendTest": "أرسل رسالة اختبار",
+    "connectionReady": "متصل وجاهز لتشغيل الاختبارات",
+    "connectionPending": "حفظ الاتصال. أرسل رسالة اختبار لتفعيله.",
+    "connectionEmpty": "لا يوجد وكيل متصل",
+    "connectionRemoved": "أزيل الاتصال",
+    "connectionBusy": "جار الاتصال",
+    "connectionFailed": "تعذر إكمال الاتصال. أعد المحاولة.",
+    "connectionReadOnly": "الوكيل المتصل: {name} على {host}",
+    "connectionContract": "ترسل صيغة OpenAI الحقل messages وتقرأ choices[0].message.content. ترسل صيغة JSON البسيطة الحقول message و session_id و language وتقرأ reply.",
+    "connectionKeyHint": "اترك السر فارغا للاحتفاظ بالمفتاح المحفوظ. امسح اسم الترويسة لإزالة المفتاح."
   },
   "live": {
     "open": "اختبار مباشر",

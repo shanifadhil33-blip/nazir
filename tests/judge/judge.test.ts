@@ -94,3 +94,10 @@ it('reads judge answers that drop bold marks or write a long reason',()=>{
   const cut=parseJudgeAnswer(JSON.stringify({verdict:'contradicted',issue:'false_claim',evidence_span:'"Your complaint has been submitted as case **NZ-000120** ... and the record shows in_review','reason':'Status differs.'}),reply);
   expect(cut.evidence_span).toBe('Your complaint has been submitted as case **NZ-000120**');
 });
+
+it('scores an external agent reply with a mocked judge and labels independence as unverified', async () => {
+  const s=setup([answer]);
+  const result=await judgeReply({chain:s.chain,input:{...input,externalAgent:true},seed:'external',agentFamilies:['unknown']});
+  expect(s.fetch).toHaveBeenCalled();
+  expect(result).toMatchObject({status:'supported',independenceUnverified:true});
+});

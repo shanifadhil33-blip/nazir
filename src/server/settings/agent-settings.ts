@@ -5,6 +5,7 @@ import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, Forbidden } from '../http/errors';
 import { publicHttpsUrl, type Resolver } from './net-guard';
+import { readExternalAgent, type ExternalView } from './external-agent';
 import { livePackIds } from '../packs/catalog';
 
 export const avatarPresets = ['preset:1', 'preset:2', 'preset:3', 'preset:4', 'preset:5', 'preset:6'] as const;
@@ -23,7 +24,7 @@ export const providerBaseUrl: Record<Exclude<LlmProvider, 'custom'>, string> = {
 export function safeHttpsUrl(value: string): boolean {
   let url: URL;
   try { url = new URL(value); } catch { return false; }
-  if (url.protocol !== 'https:' || url.username || url.password) return false;
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port !== '' && url.port !== '443')) return false;
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal') || !host.includes('.') && !host.includes(':')) return false;
   if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
@@ -84,16 +85,18 @@ export function openKey(sealed: string, secret?: string) {
 }
 
 export type AgentSettings = {
+  external_agent?: ExternalView | null;
   name: string | null; instructions: string; language: 'en' | 'ar'; avatar: string; focus_pack: string;
   mcp_servers: { name: string; url?: string; host?: string | null }[]; integrations: string[];
   llm: { provider: LlmProvider; model: string; base_url?: string | null; key_last4?: string | null } | null; can_edit: boolean;
 };
 
 export async function readAgentSettings(driver: TransactionDriver, memberId: string): Promise<AgentSettings> {
-  return withMember(driver, memberId, async (sql) => {
+  const settings = await withMember(driver, memberId, async (sql) => {
     try { return (await sql.query<{ s: AgentSettings }>('SELECT nazir.read_agent_settings() AS s')).rows[0]!.s; }
     catch (error) { if (/cannot do this/.test(String((error as Error)?.message))) throw new Forbidden(); throw error; }
   });
+  return { ...settings, external_agent: await readExternalAgent(driver, memberId) };
 }
 
 export async function saveAgentSettings(driver: TransactionDriver, memberId: string, value: unknown, secret?: string, resolve?: Resolver) {

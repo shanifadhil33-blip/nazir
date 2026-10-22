@@ -73,8 +73,13 @@ export async function searchKnowledge(driver: TransactionDriver, memberId: strin
 }
 
 /** Worker search for the judge. Any failure means no context, never a failed run. */
-export async function searchKnowledgeForWorker(driver: TransactionDriver, workspaceId: string, question: string, agentId: string | null, limit = 3): Promise<KnowledgeHit[]> {
-  try { return await withWorker(driver, workspaceId, (sql) => find(sql, 'knowledge_search_worker', question.slice(0, 1000), agentId, limit)); } catch { return []; }
+export async function searchKnowledgeForWorker(driver: TransactionDriver, workspaceId: string, question: string, agentId: string | null, limit = 3, pack?: string): Promise<KnowledgeHit[]> {
+  try {
+    return await withWorker(driver, workspaceId, async (sql) => {
+      if (pack) return hits((await sql.query<Row>('SELECT * FROM nazir.knowledge_search_pack_worker($1,$2::text[],$3::uuid,$4)', [pack, searchTerms(question.slice(0, 1000)), agentId, limit])).rows);
+      return find(sql, 'knowledge_search_worker', question.slice(0, 1000), agentId, limit);
+    });
+  } catch { return []; }
 }
 
 /** The cited lines Nazir shows in chat. Built from stored text only; the model never writes them. */

@@ -22,7 +22,7 @@ export function readingFacts(reading: StateReading) {
   return { cases: reading.cases.map((c) => ({ reference:c.reference,requester:c.requesterKey,queue:c.queue,status:c.status,escalation:c.escalation })), receipts:reading.receipts.map((r) => ({ tool:r.tool,outcome:r.outcome })), serviceAvailability:(reading.tenantFaults ?? []).map((f) => ({ tool:f.tool,available:false })) };
 }
 // A pack judge input names its own rubric version; Government leaves it unset so its results keep n13.1.
-export type JudgeInput = { reply: string; prompt: string; rubricVersion?: string };
+export type JudgeInput = { externalAgent?: boolean; reply: string; prompt: string; rubricVersion?: string };
 export type JudgeKnowledge = { cite:number; title:string; excerpt:string };
 export function buildJudgeInput({ scenario,reply,reading,notes,knowledge }: { scenario: RunnerScenario; reply: string; reading: StateReading; notes?: string[]; knowledge?: JudgeKnowledge[] }): JudgeInput {
   const source = clauseText(scenario.source_clause);

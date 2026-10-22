@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { fill, type Lang, type Messages } from './copy';
+import { ExternalAgentCard, type ConnectionView } from './external-agent';
 import { KnowledgeCard } from './knowledge';
 
 export type SettingsView = {
+  external_agent?: ConnectionView | null;
   name: string | null; instructions: string; language: Lang; avatar: string; focus_pack?: string;
   mcp_servers: { name: string; url?: string; host?: string | null }[]; integrations: string[];
   llm: { provider: Provider; model: string; base_url?: string | null; key_last4?: string | null; has_key?: boolean } | null; can_edit: boolean;
@@ -41,8 +43,8 @@ export const defaultSettings = (name: string): SettingsView => ({ name, instruct
 export type PackView = { id: string; cases: number; record_checks: number; refusal_policies: number; compliance: number; runs?: boolean; installed?: number; approved?: number };
 const fallbackPacks: PackView[] = [{ id: 'government', cases: 48, record_checks: 7, refusal_policies: 3, compliance: 5 }];
 
-export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSave, workspaceId, packs = fallbackPacks }: {
-  workspaceId?: string; packs?: PackView[];
+export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSave, workspaceId, packs = fallbackPacks, onConnectionChange }: {
+  workspaceId?: string; packs?: PackView[]; onConnectionChange?: (value: ConnectionView | null) => void;
   copy: Messages; lang: Lang; settings: SettingsView; sample: boolean; onClose: () => void;
   onSave: (body: unknown) => Promise<SettingsView | null>;
 }) {
@@ -163,6 +165,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
           <button type="submit" className="nz-btn nz-btn-rust" data-action="save-settings" disabled={state === 'saving' || (provider !== '' && !modelId.trim())}>{state === 'saving' ? t.saving : t.save}</button>
         </div> : null}
       </form>
+      <ExternalAgentCard copy={copy} lang={lang} workspaceId={workspaceId} initial={settings.external_agent ?? null} onChange={onConnectionChange} edit={edit} sample={sample} />
       <KnowledgeCard copy={copy} lang={lang} workspaceId={workspaceId} pack={pack} sample={sample} />
     </div>
   </div>;
