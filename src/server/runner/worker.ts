@@ -130,7 +130,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
         judging=true;
         const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
         const knowledge=await searchKnowledgeForWorker(driver,wid,c.resident_turns.join(' '),agentId);
-        const input=buildPackJudgeInput({ pack:rt.pack,clause:rt.clause(c.source_clause),scenario:c,reply,facts:rt.facts(packReading,c).judge,notes:judgeNotes(data.manifest.lessons,c.family),knowledge }),seed=`${cid}:${attempt}`;
+        const input=buildPackJudgeInput({ pack:rt.pack,policyRules:rt.policyRules,clause:rt.clause(c.source_clause),scenario:c,reply,facts:rt.facts(packReading,c).judge,notes:judgeNotes(data.manifest.lessons,c.family),knowledge }),seed=`${cid}:${attempt}`;
         const prior=(await work(async (db) => (await db.query<{model_calls:{family?:Family}[]}>('SELECT model_calls FROM nazir.conversations WHERE id=$1',[cid])).rows[0]!.model_calls));
         const agentFamilies=[...new Set([...prior.map((m) => m.family ?? 'unknown'),...metas.map((m) => m.family)])];
         try {
@@ -170,7 +170,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       const context: ModelContext = { workspaceId:wid,conversationId:cid,onCall:(meta) => { metas.push(meta); },reserveCall,remainingMs:() => Math.max(1,end-now()) };
       const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
       const knowledge=await searchKnowledgeForWorker(driver,wid,turns.join(' '),agentId,3,runtime?.id ?? 'government');
-      const input=buildPackJudgeInput({ pack:runtime?.pack ?? governmentPack,clause:runtime && c ? runtime.clause(c.source_clause) : clauseText(data.scenario.source_clause),
+      const input=buildPackJudgeInput({ pack:runtime?.pack ?? governmentPack,policyRules:runtime?.policyRules,clause:runtime && c ? runtime.clause(c.source_clause) : clauseText(data.scenario.source_clause),
         scenario:c ?? { language:data.scenario.language,resident_turns:turns,expected:{ ...(typeof data.scenario.expected_state === 'object' && data.scenario.expected_state ? data.scenario.expected_state : {}),outcome:String(data.scenario.canonical?.outcome ?? 'Follow the service rules') } },
         reply,facts:{ recordsAvailable:false,note:'External agent has no records link. Assess the reply against the rubric and knowledge. Record claims cannot be verified.' },notes:judgeNotes(data.manifest.lessons,c?.family ?? String(data.scenario.family)),knowledge });
       input.externalAgent=true;
