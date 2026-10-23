@@ -41,6 +41,7 @@ export type PackRuntime = {
   clean(reading: unknown, c: InlineCase): boolean;
   checks(input: { scenario: InlineCase; reply: string; reading: unknown }): PackCheck[];
   facts(reading: unknown, c: InlineCase): { judge: unknown; text: Bilingual };
+  policyRules: readonly ({ id: string } & Bilingual)[];
   clause(id: string): Bilingual;
 };
 const clauseOf = (clauses: readonly { id: string; en: string; ar: string }[]) => (id: string) => { const c = clauses.find((x) => x.id === id) ?? clauses[0]!; return { en: c.en, ar: c.ar }; };
@@ -65,6 +66,7 @@ const estate: PackRuntime = {
       en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}${x.unit ? ` for ${x.unit}` : ''}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this requester.') + ' ' + rec.en,
       ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}${x.unit ? ` للوحدة ${x.unit}` : ''}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لهذا المستأجر.') + ' ' + rec.ar } };
   },
+  policyRules: estatePolicy.clauses,
   clause: clauseOf(estatePolicy.clauses),
 };
 const shop: PackRuntime = {
@@ -84,6 +86,7 @@ const shop: PackRuntime = {
       en: [orders.map((o) => `Order ${o.reference}: ${o.product}, ${o.status}, AED ${o.total_aed}.`).join(' '), mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}${x.order_reference ? ` for ${x.order_reference}` : ''}, queue ${x.queue}${x.amount_aed ? `, AED ${x.amount_aed}` : ''}.`).join(' ') : 'No request recorded for this customer.', rec.en].filter(Boolean).join(' '),
       ar: [orders.map((o) => `الطلب ${o.reference}: ${o.product}، ${o.status}، ${o.total_aed} درهم.`).join(' '), mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}${x.order_reference ? ` للطلب ${x.order_reference}` : ''}، القائمة ${x.queue}${x.amount_aed ? `، ${x.amount_aed} درهم` : ''}.`).join(' ') : 'لا يوجد طلب مسجل لهذا العميل.', rec.ar].filter(Boolean).join(' ') } };
   },
+  policyRules: shopPolicy.clauses,
   clause: clauseOf(shopPolicy.clauses),
 };
 const clinic: PackRuntime = {
@@ -103,6 +106,7 @@ const clinic: PackRuntime = {
       en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}${x.slot ? ` for ${x.slot}` : ''}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this patient.') + ' ' + rec.en,
       ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}${x.slot ? ` للموعد ${x.slot}` : ''}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لهذا المريض.') + ' ' + rec.ar } };
   },
+  policyRules: clinicPolicy.clauses,
   clause: clauseOf(clinicPolicy.clauses),
 };
 const school: PackRuntime = {
@@ -122,6 +126,7 @@ const school: PackRuntime = {
       en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this guardian.') + ' ' + rec.en,
       ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لولي الأمر.') + ' ' + rec.ar } };
   },
+  policyRules: schoolPolicy.clauses,
   clause: clauseOf(schoolPolicy.clauses),
 };
 export const packRuntimes: readonly PackRuntime[] = [estate, shop, clinic, school];
