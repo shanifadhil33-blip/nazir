@@ -12,7 +12,7 @@ import { approvePlan } from '../memory/planner';
 import { proposeBoundedPlan, startBoundedRun } from '../planner/bound';
 import { compareRuns, readComparisons } from '../compare/compare';
 import { RepairRefused, resolveExecutable } from '../repair/executable';
-import { resolvePackVersion, runtimeForPack } from '../packs/runtime';
+import { packRuntimes, resolvePackVersion, runtimeForPack } from '../packs/runtime';
 import { decideRepair, startRetest, submitRepair } from '../repair/proposals';
 import {
   actionErrors, agentTools, asksImpersonation, budgetFrom, sizeFrom, causeCopy, exactPlan, exactRepair, identityOverride,
@@ -84,11 +84,11 @@ export async function listRuns(driver: TransactionDriver, memberId: string) {
 }
 async function versions(driver: TransactionDriver, memberId: string) {
   return withMember(driver, memberId, async (sql) => {
-    // A pack with its own sandbox plans against its own baseline; Government keeps the latest version as before.
+    // A pack with its own sandbox plans against its own baseline; Government uses the latest non-pack version.
     const runtime = runtimeForPack((await sql.query<{ p: string }>('SELECT nazir.current_focus_pack() AS p')).rows[0]?.p ?? 'government');
     const agent = runtime
       ? (await sql.query<{ id: string }>("SELECT id FROM nazir.agent_versions WHERE config->>'registry_id'=$1 ORDER BY created_at DESC,id LIMIT 1", [runtime.versions[0]!.id])).rows[0]
-      : (await sql.query<{ id: string }>('SELECT id FROM nazir.agent_versions ORDER BY created_at DESC,id LIMIT 1')).rows[0];
+      : (await sql.query<{ id: string }>("SELECT id FROM nazir.agent_versions WHERE COALESCE(config->>'registry_id','') <> ALL($1::text[]) ORDER BY created_at DESC,id LIMIT 1", [packRuntimes.flatMap((pack) => pack.versions.map((version) => version.id))])).rows[0];
     const rules = (await sql.query<{ id: string }>("SELECT id FROM nazir.rule_pack_versions WHERE status='approved' ORDER BY created_at DESC,id LIMIT 1")).rows[0];
     return agent?.id && rules?.id ? { agent_version_id: agent.id, rule_pack_version_id: rules.id } : null;
   });
