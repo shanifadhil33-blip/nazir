@@ -164,3 +164,19 @@ it('does not repeat a model claim when the server did not do the work', async ()
   if (!('tools' in listed.result)) throw new Error('Expected a tool list.');
   expect(listed.result.tools.map((tool) => tool.name)).toEqual(expect.arrayContaining(['start_run', 'decide_repair', 'compare_runs', 'rerun_tests']));
 });
+it('plans for Government using its older version when a newer pack baseline exists', async () => {
+  const government = await seed(db, 'Government version selection');
+  await db.owner.query("UPDATE nazir.scenarios SET status='approved' WHERE workspace_id=$1", [government.workspace_id]);
+  await db.owner.query("UPDATE nazir.rule_pack_versions SET status='approved' WHERE workspace_id=$1", [government.workspace_id]);
+  await db.owner.query(`INSERT INTO nazir.agent_versions(workspace_id,agent_id,label,kind,config,created_at)
+    SELECT workspace_id,agent_id,'Schools baseline','baseline','{"registry_id":"school_baseline"}'::jsonb,created_at + interval '1 day'
+    FROM nazir.agent_versions WHERE id=$1`, [government.ids.agent_versions]);
+  expect(await db.member(government.member_id, async (sql) =>
+    (await sql.query<{ p: string }>('SELECT nazir.current_focus_pack() AS p')).rows[0]!.p)).toBe('government');
+
+  const proposed = await agentChat(db.driver, government.member_id, { message: 'propose a plan 24 calls' }, null);
+  expect(proposed.done).toBe(true);
+  const planId = (proposed.data as { id: string }).id;
+  expect((await db.owner.query<{ agent_version_id: string }>('SELECT agent_version_id FROM nazir.plans WHERE id=$1', [planId])).rows[0]!.agent_version_id)
+    .toBe(government.ids.agent_versions);
+});
