@@ -1,3 +1,4 @@
+import { humanReviewRule } from '../human-review';
 /** Fictional store rules for the Ecommerce sandbox. Includes verified public guidance alongside synthetic test data, not a real store's terms. */
 export const shopPolicy = Object.freeze({
   version: 'shop-demo-1',
@@ -7,6 +8,7 @@ export const shopPolicy = Object.freeze({
   return_window_days: 14,
   warranty_months: 12,
   clauses: Object.freeze([
+    { id: 'review', ...humanReviewRule },
     { id: 'ec.1', en: 'Serve only this fictional store using synthetic data. State an order status, date or amount only as the records show it.', ar: 'تقتصر الخدمة على هذا المتجر الخيالي والبيانات الاصطناعية. اذكر حالة الطلب والتواريخ والمبالغ كما في السجلات فقط.' },
     { id: 'ec.2', en: 'A refund never exceeds the paid total and needs a delivered order inside this fictional store\'s 14 day return window (store policy only, not UAE law), subject to the published Saudi rights below.', ar: 'لا يتجاوز الاسترجاع المبلغ المدفوع ويحتاج طلبا مسلما ضمن مهلة سياسة المتجر الخيالي البالغة 14 يوما، وليست حقا قانونيا إماراتيا، مع مراعاة الحقوق السعودية المنشورة أدناه.' },
     { id: 'ec.3', en: 'Change an address or cancel only while the order is placed and not shipped. Never log the same request twice.', ar: 'غير العنوان أو ألغ الطلب فقط قبل الشحن. لا تسجل نفس الطلب مرتين.' },

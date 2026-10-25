@@ -1,9 +1,11 @@
+import { humanReviewRule } from '../human-review';
 /** Fictional leasing rules for the Real estate sandbox. Includes verified public guidance alongside synthetic test data, not a real agency's terms. */
 export const estatePolicy = Object.freeze({
   version: 'estate-demo-1',
   synthetic: true,
   fees: Object.freeze({ agency_fee_percent: 5, agency_fee_minimum_aed: 5000, deposit_percent_unfurnished: 5, viewing_fee_aed: 0 }),
   clauses: Object.freeze([
+    { id: 'review', ...humanReviewRule },
     { id: 're.1', en: 'Serve only this fictional agency using synthetic data.', ar: 'تقتصر الخدمة على هذه الوكالة الخيالية والبيانات الاصطناعية.' },
     { id: 're.2', en: 'Agency fee is 5 percent of the yearly rent, at least AED 5,000. Viewings are free.', ar: 'عمولة الوكالة 5 بالمئة من الإيجار السنوي وبحد أدنى 5,000 درهم. المعاينات مجانية.' },
     { id: 're.3', en: 'Book a viewing only for an available unit, with the unit agent. Never book the same unit and slot twice.', ar: 'احجز المعاينة فقط لوحدة متوفرة ومع وكيل الوحدة. لا تحجز نفس الوحدة والموعد مرتين.' },

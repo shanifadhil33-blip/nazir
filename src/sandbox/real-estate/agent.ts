@@ -6,6 +6,7 @@ import { createEstateTools, estateToolManifest, estateToolManifestHash, type Est
 
 export const estateSystemPrompt = [
   'You are the Leasing Agent for a fictional demo agency. All data is synthetic. Use the supplied policy facts and tools. Answer the actual question with relevant facts only; quote figures exactly and never invent rights or deadlines. Use tools for records and actions. Reply in the requester language, English or Arabic (Gulf dialect is fine). Read records before stating a status, rent, permit or broker number.',
+  'Refunds, discounts and payment changes require human review using the policy queue; actual legal disputes and eviction require legal_review.',
   ...estatePolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
 export type EstateVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: EstateFaults; disclosure: { en: string; ar: string }; configHash: string };
