@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { fill, type Lang, type Messages } from './copy';
+import { fill, settingsError, type Lang, type Messages } from './copy';
 import { ExternalAgentCard, type ConnectionView } from './external-agent';
 import { KnowledgeCard } from './knowledge';
 
@@ -64,6 +64,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
   const [baseUrl, setBaseUrl] = useState(settings.llm?.provider === 'custom' ? settings.llm.base_url ?? '' : '');
   const [apiKey, setApiKey] = useState('');
   const [clearKey, setClearKey] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed' | 'image'>('idle');
   const dialog = useRef<HTMLDivElement>(null);
 
@@ -86,12 +87,18 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
     event.preventDefault();
     if (!edit) return;
     setState('saving');
+    setSaveError('');
     const body = {
       name: name.trim() || settings.name || 'Nazir', instructions, language, avatar, focus_pack: pack, mcp_servers: servers, integrations: chosen,
       llm: provider ? { provider, model: modelId.trim(), ...(provider === 'custom' ? { base_url: baseUrl.trim() } : {}), ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}), ...(clearKey ? { clear_key: true } : {}) } : null,
     };
-    const result = await onSave(body);
-    if (result) { setApiKey(''); setClearKey(false); setState('saved'); } else setState('failed');
+    try {
+      const result = await onSave(body);
+      if (result) { setApiKey(''); setClearKey(false); setState('saved'); } else setState('failed');
+    } catch (error) {
+      setSaveError(settingsError(error, copy, t.failed));
+      setState('failed');
+    }
   }
 
   const last4 = settings.llm?.key_last4;
@@ -161,7 +168,7 @@ export function AgentSettingsPanel({ copy, lang, settings, sample, onClose, onSa
           </> : null}
         </fieldset>
         {edit ? <div className="nz-settings-foot">
-          <p className="nz-hint" role="status">{state === 'saved' ? t.saved : state === 'failed' ? t.failed : ''}</p>
+          <p className="nz-hint" role="status">{state === 'saved' ? t.saved : state === 'failed' ? saveError || t.failed : ''}</p>
           <button type="submit" className="nz-btn nz-btn-rust" data-action="save-settings" disabled={state === 'saving' || (provider !== '' && !modelId.trim())}>{state === 'saving' ? t.saving : t.save}</button>
         </div> : null}
       </form>

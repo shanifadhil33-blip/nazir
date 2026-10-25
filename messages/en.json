@@ -294,6 +294,7 @@
     "connectionEmpty": "No agent connected",
     "connectionRemoved": "Connection removed",
     "connectionBusy": "Connecting",
+    "connectionSafety": "The connection was refused by the safety check. Use a public HTTPS address on port 443 without redirects.",
     "connectionPrivateAddress": "This link points to a private or local address, so Nazir will not call it for safety.",
     "connectionFailed": "Could not complete the connection. Try again.",
     "connectionReadOnly": "Connected agent: {name} at {host}",

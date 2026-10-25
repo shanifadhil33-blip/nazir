@@ -242,7 +242,7 @@ export function WorkspaceApp({
   async function saveSettings(body: unknown): Promise<SettingsView | null> {
     if (preview) { const next = { ...shown, ...(body as Partial<SettingsView>), llm: shown.llm, can_edit: shown.can_edit }; setSettings(next); return next; }
     const response = await fetch(`/api/workspaces/${workspaceId}/settings`, { method: 'PUT', headers: { 'content-type': 'application/json', 'accept-language': lang }, body: JSON.stringify(body) }).catch(() => null);
-    if (!response?.ok) return null;
+    if (!response?.ok) throw await response?.json().catch(() => null);
     const next = await response.json().catch(() => null) as SettingsView | null;
     if (next) { setSettings(next); if (next.language !== lang) setLang(next.language); }
     return next;

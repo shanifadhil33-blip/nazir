@@ -294,6 +294,7 @@
     "connectionEmpty": "لا يوجد وكيل متصل",
     "connectionRemoved": "أزيل الاتصال",
     "connectionBusy": "جار الاتصال",
+    "connectionSafety": "رفض فحص الأمان الاتصال. استخدم عنوان HTTPS عاما على المنفذ 443 دون إعادة توجيه.",
     "connectionPrivateAddress": "يشير هذا الرابط إلى عنوان خاص أو محلي، لذلك لن يتصل به ناظر حفاظا على الأمان.",
     "connectionFailed": "تعذر إكمال الاتصال. أعد المحاولة.",
     "connectionReadOnly": "الوكيل المتصل: {name} على {host}",
