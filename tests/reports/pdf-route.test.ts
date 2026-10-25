@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { seed, testDatabase, type TestDatabase } from '../helpers/pglite';
+import { readPdfReport } from '../../src/server/reports/read-pdf';
 import { createReport } from '../../src/server/reports/read';
 import { GET } from '../../src/app/api/workspaces/[workspaceId]/reports/[reportId]/pdf/route';
 
@@ -55,4 +56,18 @@ it('returns 404 when a member requests a report belonging to another workspace',
 
 it('validates the requested language', async () => {
   expect((await download(owner, 'fr')).status).toBe(400);
+});
+
+it.each(['en', 'ar'] as const)('uses localized saved test goals and labels Dubai time in %s PDF context', async (lang) => {
+  const goal = { en: 'Explain the permit fee', ar: 'شرح رسوم التصريح' };
+  const scenario = (await db.owner.query<{ id: string; expected_state: unknown; run_id: string }>(
+    'SELECT s.id,s.expected_state,c.run_id FROM nazir.scenarios s JOIN nazir.conversations c ON c.scenario_id=s.id WHERE s.workspace_id=$1 LIMIT 1', [workspaceId])).rows[0]!;
+  await db.owner.query('UPDATE nazir.scenarios SET expected_state=$1::jsonb WHERE id=$2', [JSON.stringify({ assessment: { goal } }), scenario.id]);
+  try {
+    const { body, extras } = await readPdfReport(db.driver, owner, reportId, lang);
+    expect(extras.testNames?.[body.conversations[0]!.id]).toBe(goal[lang]);
+    expect(extras.runDate).toContain(lang === 'ar' ? 'بتوقيت دبي' : 'Dubai time');
+  } finally {
+    await db.owner.query('UPDATE nazir.scenarios SET expected_state=$1::jsonb WHERE id=$2', [JSON.stringify(scenario.expected_state), scenario.id]);
+  }
 });

@@ -138,3 +138,22 @@ export function suiteLabel(body: ReportBody, lang: 'en' | 'ar') {
   const ui = (lang === 'ar' ? ar : en).ui;
   return (body.run.size === 'quick' ? ui.quickHeader : ui.fullHeader).replace('{count}', String(body.run.test_count ?? body.counts.conversations));
 }
+
+/** Saved assessment goals are the bilingual test labels in the current scenario and inline pack schemas. */
+export function reportTestTitle(stableKey: string, expectedState: unknown, canonical: unknown, lang: 'en' | 'ar'): string {
+  const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const expected = record(expectedState), meaning = record(canonical);
+  const candidates = [expected.title, expected.name, meaning.title, meaning.name, record(expected.assessment).goal];
+  for (const candidate of candidates) {
+    const value = record(candidate)[lang];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return stableKey;
+}
+
+export function reportRunDate(value: string, lang: 'en' | 'ar'): string {
+  const date = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', {
+    timeZone: 'Asia/Dubai', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(new Date(value));
+  return `${date} ${lang === 'ar' ? 'بتوقيت دبي' : 'Dubai time'}`;
+}
