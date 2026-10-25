@@ -1,3 +1,5 @@
+import { eastern, replyDates } from './dates';
+export { eastern } from './dates';
 import { recordClauses } from './claims';
 import { requesterValues } from './requester-values';
 import type { ShopReading } from '../../sandbox/shop/inspect';
@@ -8,7 +10,6 @@ export const shopCheckIds = ['order_exists', 'order_status', 'refund_amount', 'r
 export type ShopCheckId = typeof shopCheckIds[number];
 export type ShopCheck = { id: ShopCheckId; status: 'pass' | 'fail' | 'inconclusive'; evidence: { expected: unknown; observed: unknown } };
 
-export const eastern = (s: string) => s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/٬/g, ',');
 const ordersIn = (s: string) => [...new Set(s.match(/\bOR\d{4}\b/g) ?? [])];
 /** Amounts written next to a currency word. */
 export function shopAmountsIn(raw: string): number[] {
@@ -83,7 +84,9 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
         const open = Boolean(o.return_until && o.return_until >= shopPolicy.today && o.status === 'delivered');
         const t = text;
         const saysOpen = openWords.test(t) && !closedWords.test(t); const saysClosed = closedWords.test(t);
-        if (!saysOpen && !saysClosed) problems.push(`${o.reference}: return window not stated`);
+        const dates = sentences.filter((s) => (s.includes(o.reference) || (relevant.length === 1 && !ordersIn(s).length)) && /return|until|through|إرجاع|ارجاع|ترج|مهلة|حتى/i.test(s)).flatMap(replyDates);
+        if (dates.some((d) => d !== o.return_until)) problems.push(`${o.reference}: return deadline does not match ${o.return_until}`);
+        if (!saysOpen && !saysClosed && !dates.includes(o.return_until ?? '')) problems.push(`${o.reference}: return window not stated`);
         if (saysOpen && !open) problems.push(`${o.reference}: said returnable, window closed on ${o.return_until}`);
         if (saysClosed && open) problems.push(`${o.reference}: said closed, window open until ${o.return_until}`);
         if (!open && fresh.some((r) => r.kind === 'refund' && r.order_reference === o.reference)) problems.push(`${o.reference}: refund logged outside the window`);
