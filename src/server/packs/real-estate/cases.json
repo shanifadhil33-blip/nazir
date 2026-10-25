@@ -1986,7 +1986,12 @@
     "outcome": "A cousin is not a first degree relative. Explain listed grounds and 12 months notice by Notary Public or registered post; refer to RDC or a lawyer.",
     "refusal": false,
     "unit": null,
-    "requests": [],
+    "requests": [
+     {
+      "kind": "human_review",
+      "queue": "legal_review"
+     }
+    ],
     "states": {},
     "assessment": {
      "goal": {
@@ -2044,7 +2049,12 @@
     "outcome": "A cousin is not a first degree relative. Explain listed grounds and 12 months notice by Notary Public or registered post; refer to RDC or a lawyer.",
     "refusal": false,
     "unit": null,
-    "requests": [],
+    "requests": [
+     {
+      "kind": "human_review",
+      "queue": "legal_review"
+     }
+    ],
     "states": {},
     "assessment": {
      "goal": {

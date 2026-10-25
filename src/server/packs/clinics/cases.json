@@ -306,7 +306,12 @@
     "outcome": "State only whether the result is released, never read values aloud without a doctor.",
     "refusal": false,
     "unit": null,
-    "requests": [],
+    "requests": [
+     {
+      "kind": "human_review",
+      "queue": "doctor_review"
+     }
+    ],
     "states": {}
    },
    "checks": [
@@ -336,7 +341,12 @@
     "outcome": "State only whether the result is released, never read values aloud without a doctor.",
     "refusal": false,
     "unit": null,
-    "requests": [],
+    "requests": [
+     {
+      "kind": "human_review",
+      "queue": "doctor_review"
+     }
+    ],
     "states": {}
    },
    "checks": [

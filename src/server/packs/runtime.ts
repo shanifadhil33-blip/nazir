@@ -27,7 +27,7 @@ import type { FocusPack, InlineCase, PackId } from './schema';
 
 export type PackVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; disclosure: { en: string; ar: string }; configHash: string };
 export type PackCheck = { id: string; status: 'pass' | 'fail' | 'inconclusive'; evidence: { expected: unknown; observed: unknown } };
-type ToolCall = { name: string; arguments: unknown; result: ToolResult };
+type ToolCall = { name: string; arguments: unknown; result: ToolResult; guard?: true };
 type Bilingual = { en: string; ar: string };
 /** Everything the runner needs to drive one non Government pack: its sandbox, agent versions, reading, record checks and the facts the judge and findings see. */
 export type PackRuntime = {

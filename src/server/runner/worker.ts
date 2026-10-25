@@ -1,3 +1,4 @@
+import type { AgentToolEvent } from '../../sandbox/review-guard';
 import 'server-only';
 import { Coded } from '../http/errors';
 import { externalAgentForWorker, type ExternalTransport } from '../settings/external-agent';
@@ -23,12 +24,12 @@ import type { Family } from '../ai/providers';
 import { combineVerdicts } from '../judge/evaluate';
 import { networkJudge } from './network-judge';
 import { buildFindings } from '../findings/build';
-import { buildPackFindings, packRecord } from '../findings/pack';
+import { buildPackFindings, packRecord, guardEscalationChecks } from '../findings/pack';
 import { caseFromRow, resolvePackVersion, runtimeForSeed } from '../packs/runtime';
 import { applyBoundedStop } from '../planner/stop';
 import type { RecordCheck } from '../checks/record-checks';
 import { runRecordChecks, recordChecksEvaluator } from '../checks/record-checks';
-type ToolEvents = Awaited<ReturnType<typeof runServiceAgent>>['toolCalls'];
+type ToolEvents = AgentToolEvent[];
 export type EvaluationInput = { scenario: RunnerScenario; version: AgentVersion; reply: string; transcript: Message[]; toolCalls: ToolEvents; reading: StateReading; expectedTenant?: string };
 export type Verdict = { status: 'passed' | 'failed' | 'inconclusive'; reason?: string; results: unknown };
 export const defaultEvaluator = recordChecksEvaluator;
@@ -124,7 +125,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     try { packReading=await bounded(rt.read(inspectionDriver,tenant)); } catch { reason ??= 'reading_failed'; return; }
     if (reason) return;
     try {
-      records=rt.checks({ scenario:c,reply,reading:packReading }).map((k) => packRecord(rt,c,k));
+      records=[...rt.checks({ scenario:c,reply,reading:packReading }).map((k) => packRecord(rt,c,k)), ...guardEscalationChecks(toolCalls)];
       verdict={ ...combineVerdicts(records,null),results:{ records } };
       if (!data.manifest.recordsOnly) {
         judging=true;
@@ -276,7 +277,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     let seq=Number((await db.query<{ n: number }>('SELECT coalesce(max(seq),0) AS n FROM nazir.conversation_messages WHERE conversation_id=$1',[cid])).rows[0]!.n);
     for (const m of transcript) if ((m.role==='user' || m.role==='assistant') && m.content) await db.query('INSERT INTO nazir.conversation_messages(workspace_id,conversation_id,seq,speaker,body,attempt) VALUES($1,$2,$3,$4,$5,$6)',[wid,cid,++seq,m.role==='user'?'resident':'agent',m.content,attempt]);
     let toolSeq=Number((await db.query<{ n: number }>('SELECT coalesce(max(seq),0) AS n FROM nazir.tool_events WHERE conversation_id=$1',[cid])).rows[0]!.n);
-    for (const t of toolCalls) await db.query('INSERT INTO nazir.tool_events(workspace_id,conversation_id,seq,tool_name,request,response,outcome,idempotency_key,attempt,tool_idempotency_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[wid,cid,++toolSeq,t.name,JSON.stringify(t.arguments),JSON.stringify(t.result),t.result.ok?'ok':'error',`${cid}:${t.name}:${hash(t.arguments)}:attempt_${attempt}:event_${toolSeq}`,attempt,`${cid}:${t.name}:${hash(t.arguments)}`]);
+    for (const t of toolCalls) await db.query('INSERT INTO nazir.tool_events(workspace_id,conversation_id,seq,tool_name,request,response,outcome,idempotency_key,attempt,tool_idempotency_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[wid,cid,++toolSeq,t.name,JSON.stringify(t.arguments),JSON.stringify({ ...t.result, ...(t.guard ? { guard: true, source: 'guard' } : {}) }),t.result.ok?'ok':'error',`${cid}:${t.name}:${hash(t.arguments)}:attempt_${attempt}:event_${toolSeq}`,attempt,`${cid}:${t.name}:${hash(t.arguments)}`]);
     if (reading) await db.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading,attempt) VALUES($1,$2,'inspection_channel',$3,$4)",[wid,cid,JSON.stringify(reading),attempt]);
     if (packReading) await db.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading,attempt) VALUES($1,$2,'inspection_channel',$3,$4)",[wid,cid,JSON.stringify({ pack:runtime!.id,...(packReading as object) }),attempt]);
     const meta=metas.at(-1);

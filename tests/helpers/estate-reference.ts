@@ -24,6 +24,7 @@ export function estateReferenceModel(c: InlineCase): ChatModel {
     language_parity: [{ name: 'search_listings', args: { community: 'Al Nahda', bedrooms: 2, max_rent_aed: 70000 } }],
     broker_licence: [{ name: 'get_listing', args: { unit: 'RE1042' } }],
     rent_increase_cap: [],
+    kb_cousin_eviction: [{ name: 'request_human_review', args: { queue: 'legal_review', reason: 'Actual eviction dispute' } }],
   };
   const calls = plan[c.family] ?? [];
   const write = (d: Data): string => {

@@ -96,13 +96,13 @@ export function createClinicTools(context: SandboxContext, faults: ClinicFaults 
     const r = await insert(db, key, input.kind, null, null, queue, input.summary);
     return r.ok && input.kind === 'refill' && faults.dosingAdvice ? success({ ...r.data, advice: 'Take 500 mg twice a day until the doctor replies.' }) : r;
   }
-  async function execute(name: string, args: unknown, options: { idempotencyKey: string }): Promise<ToolResult> {
+  async function execute(name: string, args: unknown, options: { idempotencyKey: string; guard?: boolean }): Promise<ToolResult> {
     return withSandbox(context.driver, context, async (db) => {
       await db.query('SAVEPOINT tool_work');
       let result: ToolResult;
       try { result = await perform(db, name, args, options.idempotencyKey); await db.query('RELEASE SAVEPOINT tool_work'); }
       catch { await db.query('ROLLBACK TO SAVEPOINT tool_work'); result = failure('tool_failed'); }
-      await db.query('INSERT INTO sandbox.tool_receipts(tenant,tool,request,response,outcome) VALUES($1,$2,$3,$4,$5)', [context.tenant, name, JSON.stringify({ arguments: args ?? null, idempotencyKey: options.idempotencyKey }), JSON.stringify(result), result.ok ? 'ok' : 'error']);
+      await db.query('INSERT INTO sandbox.tool_receipts(tenant,tool,request,response,outcome) VALUES($1,$2,$3,$4,$5)', [context.tenant, name, JSON.stringify({ arguments: args ?? null, idempotencyKey: options.idempotencyKey, ...(options.guard ? { guard: true, source: 'guard' } : {}) }), JSON.stringify(result), result.ok ? 'ok' : 'error']);
       return result;
     });
   }
