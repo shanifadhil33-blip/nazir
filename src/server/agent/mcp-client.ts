@@ -1,5 +1,5 @@
 import 'server-only';
-import { publicHttpsUrl, type Resolver } from '../settings/net-guard';
+import { checkedHttpsAddress, pinnedHttpsFetch, pinnedLookup, type Resolver } from '../settings/net-guard';
 
 export type McpTool = { name: string; description?: string; readOnly: boolean };
 type Rpc = { jsonrpc: '2.0'; id?: number | string; result?: unknown; error?: { message?: string } };
@@ -16,10 +16,11 @@ async function readRpc(response: Response, id: number): Promise<Rpc | null> {
 }
 
 /** Minimal streamable HTTP MCP client: initialize, then one request. No redirects, 15 s per request, public addresses only. */
-export async function mcpRequest(url: string, method: string, params: unknown, options: { fetcher?: typeof fetch; resolve?: Resolver } = {}) {
-  const fetcher = options.fetcher ?? fetch;
-  if (!await publicHttpsUrl(url, options.resolve)) throw new Error('blocked_address');
-  const post = (body: unknown, session?: string) => fetcher(url, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
+export async function mcpRequest(url: string, method: string, params: unknown, options: { fetcher?: typeof pinnedHttpsFetch; resolve?: Resolver } = {}) {
+  const fetcher = options.fetcher ?? pinnedHttpsFetch;
+  let address: string;
+  try { address = await checkedHttpsAddress(url, options.resolve); } catch { throw new Error('blocked_address'); }
+  const post = (body: unknown, session?: string) => fetcher(url, { method: 'POST', redirect: 'error', lookup: pinnedLookup(address), servername: new URL(url).hostname, rejectUnauthorized: true, signal: AbortSignal.timeout(15000),
     headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', ...(session ? { 'mcp-session-id': session } : {}) }, body: JSON.stringify(body) });
   const init = await post({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'nazir', version: 'n27' } } });
   if (!init.ok) throw new Error(`mcp_http_${init.status}`);

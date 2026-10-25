@@ -96,7 +96,7 @@ it('uses the own model for the agent under test and falls back to the free chain
   globalThis.fetch = okFetch;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const runner = networkChatModel(db.driver, context as any, { own: Promise.resolve(own), resolve, store: { reserve: async () => true } as any });
+    const runner = networkChatModel(db.driver, context as any, { own: Promise.resolve(own), ownFetcher: okFetch, resolve, store: { reserve: async () => true } as any });
     const tools = [{ type: 'function' as const, function: { name: 'create_case', description: 'x', parameters: { type: 'object', properties: {} } } }];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const reply = await runner.model({ messages: [{ role: 'user', content: 'hi' }], tools } as any);

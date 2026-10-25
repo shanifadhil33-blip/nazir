@@ -4,23 +4,24 @@ import type { ChatChain } from '../agent/chat';
 import type { OwnModel } from './agent-settings';
 import type { ToolCall } from '../../sandbox/agent';
 import type { Tool } from '../ai/schema';
-import { publicHttpsUrl, type Resolver } from './net-guard';
+import { checkedHttpsAddress, pinnedHttpsFetch, pinnedLookup, type Resolver } from './net-guard';
 
 /** Text only call to the workspace's own model. Returns null on any failure so the caller falls back to the free chain. */
-export async function callOwnModel(own: NonNullable<OwnModel>, request: ChatRequest, fetcher: typeof fetch = fetch, resolve?: Resolver): Promise<string | null> {
+export async function callOwnModel(own: NonNullable<OwnModel>, request: ChatRequest, fetcher: typeof pinnedHttpsFetch = pinnedHttpsFetch, resolve?: Resolver): Promise<string | null> {
   const reply = await callOwnModelFull(own, request, fetcher, resolve);
   return reply && !reply.tool_calls?.length ? reply.content : null;
 }
 
 /** Own model call with OpenAI style tools. Anthropic is used only for text requests; with tools it returns null so the free chain answers. */
-export async function callOwnModelFull(own: NonNullable<OwnModel>, request: ChatRequest, fetcher: typeof fetch = fetch, resolve?: Resolver): Promise<{ content: string | null; tool_calls?: ToolCall[] } | null> {
+export async function callOwnModelFull(own: NonNullable<OwnModel>, request: ChatRequest, fetcher: typeof pinnedHttpsFetch = pinnedHttpsFetch, resolve?: Resolver): Promise<{ content: string | null; tool_calls?: ToolCall[] } | null> {
   const signal = AbortSignal.timeout(20000);
   try {
-    if (!await publicHttpsUrl(own.baseUrl, resolve)) return null;
+    const address = await checkedHttpsAddress(own.baseUrl, resolve);
+    const connection = { lookup: pinnedLookup(address), servername: new URL(own.baseUrl).hostname, rejectUnauthorized: true as const };
     if (own.provider === 'anthropic' && request.tools?.length) return null;
     if (own.provider === 'anthropic') {
       const system = request.messages.filter((m) => m.role === 'system').map((m) => m.content ?? '').join('\n');
-      const response = await fetcher(`${own.baseUrl}/messages`, { method: 'POST', redirect: 'error', signal,
+      const response = await fetcher(`${own.baseUrl}/messages`, { ...connection, method: 'POST', redirect: 'error', signal,
         headers: { 'content-type': 'application/json', 'x-api-key': own.key, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: own.model, max_tokens: request.maxTokens ?? 400, temperature: request.temperature ?? 0, ...(system ? { system } : {}),
           messages: request.messages.filter((m) => m.role === 'user' || m.role === 'assistant').map((m) => ({ role: m.role, content: m.content ?? '' })) }) });
@@ -29,7 +30,7 @@ export async function callOwnModelFull(own: NonNullable<OwnModel>, request: Chat
       const text = body.content?.filter((part) => part.type === 'text').map((part) => part.text ?? '').join('') ?? '';
       return text.trim() ? { content: text } : null;
     }
-    const response = await fetcher(`${own.baseUrl}/chat/completions`, { method: 'POST', redirect: 'error', signal,
+    const response = await fetcher(`${own.baseUrl}/chat/completions`, { ...connection, method: 'POST', redirect: 'error', signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${own.key}` },
       body: JSON.stringify({ model: own.model, max_tokens: request.maxTokens ?? 400, temperature: request.temperature ?? 0,
         ...(request.tools?.length ? { tools: request.tools as Tool[] } : {}),
@@ -53,7 +54,7 @@ export async function callOwnModelFull(own: NonNullable<OwnModel>, request: Chat
 }
 
 /** Own model first, then the free chain when it is missing, fails or answers in a shape the request refuses. */
-export function withOwnModel(own: OwnModel, free: ChatChain | null, fetcher?: typeof fetch, resolve?: Resolver): ChatChain | null {
+export function withOwnModel(own: OwnModel, free: ChatChain | null, fetcher?: typeof pinnedHttpsFetch, resolve?: Resolver): ChatChain | null {
   if (!own) return free;
   return {
     async chat(request) {
