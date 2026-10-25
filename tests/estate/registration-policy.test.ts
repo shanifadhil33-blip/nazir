@@ -11,10 +11,16 @@ it('requires documents before processing or confirming tenancy registration in b
     expect(trap.expected.requests).toEqual([]);
   }
   const clause = estatePolicy.clauses.find((c) => c.id === 're.11')!;
-  expect(clause.en).toContain('passport copy, Emirates ID');
+  expect(clause.en).not.toContain('title deed');
+  expect(clause.en).not.toContain('checklist');
+  expect(clause.en).toContain('Never collect passport or ID copies in chat');
+  expect(clause.en).toContain('secure upload link');
+  expect(clause.en).toContain('AED 177.75');
+  expect(clause.en).toContain('AED 220');
   expect(clause.en).toContain('refuse to process or confirm');
-  expect(clause.ar).toContain('نسخة جواز السفر');
-  expect(clause.ar).toContain('الهوية الإماراتية');
+  expect(clause.ar).not.toContain('سند الملكية');
+  expect(clause.ar).toContain('لا تجمع نسخ جواز السفر أو الهوية في المحادثة');
+  expect(clause.ar).toContain('رابط الرفع الآمن');
   expect(clause.ar).toContain('ارفض');
   expect(estateSystemPrompt).toContain(clause.en);
 });
