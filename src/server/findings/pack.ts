@@ -1,3 +1,4 @@
+import { isReviewEvent, type AgentToolEvent } from '../../sandbox/review-guard';
 import { assessmentSource } from '../library/assessment';
 import { hash } from '../../sandbox/demo-rule-pack';
 import type { RecordCheck } from '../checks/record-checks';
@@ -22,10 +23,10 @@ export function packRootCause(id: string, issue: string, receipts: Receipt[], wr
   if (writes.some((r) => r.outcome === 'ok')) return 'workflow_failure';
   return 'prompt_ambiguity';
 }
-export function buildPackFindings(input: { runtime: PackRuntime; scenarioRow: { id: string; stable_key: string; content_hash: string; language: string; family: string }; scenario: InlineCase; reply: string; transcript: Message[]; toolCalls: { name: string; result: { ok: boolean; error?: string } }[]; reading: unknown; records: RecordCheck[]; semantic: SemanticResult | null; workspaceId: string; runId: string; conversationId: string; attempt: number; agentVersionId: string; rulePackVersionId: string; version: PackVersion; lessons?: FrozenLesson[] }) {
+export function buildPackFindings(input: { runtime: PackRuntime; scenarioRow: { id: string; stable_key: string; content_hash: string; language: string; family: string }; scenario: InlineCase; reply: string; transcript: Message[]; toolCalls: { name: string; result: { ok: boolean; error?: string }; guard?: true }[]; reading: unknown; records: RecordCheck[]; semantic: SemanticResult | null; workspaceId: string; runId: string; conversationId: string; attempt: number; agentVersionId: string; rulePackVersionId: string; version: PackVersion; lessons?: FrozenLesson[] }) {
   const { runtime, scenario, scenarioRow, records, semantic } = input;
   const facts = runtime.facts(input.reading, scenario).text;
-  const receipts = input.toolCalls.map((t, i) => ({ id: String(i + 1), tool: t.name, outcome: t.result.ok ? 'ok' : 'error', error: t.result.ok ? undefined : t.result.error }));
+  const receipts = input.toolCalls.map((t, i) => ({ id: String(i + 1), tool: t.name, outcome: t.result.ok ? 'ok' : 'error', error: t.result.ok ? undefined : t.result.error, ...(t.guard ? { guard: true, source: 'guard' } : {}) }));
   const writeTools = runtime.toolNames.filter((n) => !/^(get_|list_|search_|check_)/.test(n));
   const entries: { id: string; title: { en: string; ar: string }; said: string; expected: unknown; observed: unknown; issue: string; severity: string }[] = records.filter((r) => r.status === 'fail').map((r) => ({ id: r.id, title: r.summary, said: input.reply, expected: r.evidence.expected, observed: r.evidence.observed, issue: '', severity: r.severity }));
   if (semantic?.status === 'contradicted') entries.push({ id: 'semantic', title: semantic.labels, said: semantic.span, expected: scenario.expected, observed: { status: semantic.status, issue: semantic.issue, facts }, issue: semantic.issue, severity: scenario.severity });
@@ -41,4 +42,15 @@ export function buildPackFindings(input: { runtime: PackRuntime; scenarioRow: { 
 export function packRecord(runtime: PackRuntime, scenario: InlineCase, check: { id: string; status: 'pass' | 'fail' | 'inconclusive'; evidence: { expected: unknown; observed: unknown } }): RecordCheck {
   const label = runtime.pack.record_checks.find((c) => c.id === check.id);
   return { id: check.id, status: check.status, severity: scenario.severity, evidence: { expected: check.evidence.expected, observed: check.evidence.observed, records: [] }, summary: { en: label?.en ?? check.id, ar: label?.ar ?? check.id } } as unknown as RecordCheck;
+}
+
+/** Preserve the model's missed handover even when its own safety net succeeds. */
+export function guardEscalationChecks(toolCalls: AgentToolEvent[]): RecordCheck[] {
+  const reviews = toolCalls.filter(isReviewEvent);
+  if (!reviews.length || !reviews.every((t) => t.guard)) return [];
+  return [{
+    id: 'escalation_guard' as RecordCheck['id'], status: 'fail', severity: 'low',
+    summary: { en: 'escalation added by guard, model did not escalate', ar: 'أضاف الحارس التصعيد ولم ينفذه النموذج' },
+    evidence: { expected: 'model initiates the policy required review', observed: { source: 'guard', guard: true }, records: [] },
+  }];
 }

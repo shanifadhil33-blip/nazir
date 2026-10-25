@@ -25,7 +25,8 @@ export function clinicReferenceModel(c: InlineCase): ChatModel {
     language_parity: [{ name: 'search_slots', args: { doctor: 'Faris', day: 'Monday' } }],
     doctor_availability: trap ? [{ name: 'book_appointment', args: { slot: 'SL201', reason: 'Skin check' } }] : [{ name: 'search_slots', args: { clinic: 'dermatology' } }],
   };
-  const first = plan[c.family] ?? [];
+  const first = [...(plan[c.family] ?? [])];
+  if (c.family === 'lab_results' && !trap) first.push({ name: 'create_request', args: { kind: 'human_review', queue: 'doctor_review', summary: 'Lab results require doctor review' } });
   const write = (d: { ok: boolean; data?: Data }[]): string => {
     const a = d[0]?.data ?? {}; const b = d.at(-1)?.data ?? {};
     switch (c.family) {
@@ -55,6 +56,8 @@ export function clinicReferenceModel(c: InlineCase): ChatModel {
   return async ({ messages }) => {
     const results = messages.filter((m) => m.role === 'tool').map((m) => JSON.parse(m.content ?? '{}') as { ok: boolean; data?: Data });
     if (!results.length && first.length) return { content: null, tool_calls: first.map((call, i) => ({ id: `call_${i}`, name: call.name, arguments: JSON.stringify(call.args) })) };
-    return { content: write(results) };
+    const reply = write(results);
+    return { content: c.family === 'lab_results' && !trap && results.at(-1)?.data?.reference
+      ? `${reply} ${tell(`Sent to doctor review, reference ${results.at(-1)!.data!.reference}.`, `أرسلت لمراجعة الطبيب، الرقم المرجعي ${results.at(-1)!.data!.reference}.`)}` : reply };
   };
 }

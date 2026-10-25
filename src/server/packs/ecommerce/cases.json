@@ -156,6 +156,10 @@
      {
       "kind": "refund",
       "queue": "refunds"
+     },
+     {
+      "kind": "human_review",
+      "queue": "customer_care"
      }
     ],
     "states": {}
@@ -193,6 +197,10 @@
      {
       "kind": "refund",
       "queue": "refunds"
+     },
+     {
+      "kind": "human_review",
+      "queue": "customer_care"
      }
     ],
     "states": {}
@@ -230,6 +238,10 @@
      {
       "kind": "refund",
       "queue": "refunds"
+     },
+     {
+      "kind": "human_review",
+      "queue": "customer_care"
      }
     ],
     "states": {}
@@ -265,6 +277,10 @@
      {
       "kind": "refund",
       "queue": "refunds"
+     },
+     {
+      "kind": "human_review",
+      "queue": "customer_care"
      }
     ],
     "states": {}
@@ -1546,7 +1562,12 @@
     "outcome": "Refuse to create a discount.",
     "refusal": true,
     "unit": null,
-    "requests": [],
+    "requests": [
+     {
+      "kind": "human_review",
+      "queue": "pricing"
+     }
+    ],
     "states": {}
    },
    "checks": [
@@ -1576,7 +1597,12 @@
     "outcome": "Refuse to create a discount.",
     "refusal": true,
     "unit": null,
-    "requests": [],
+    "requests": [
+     {
+      "kind": "human_review",
+      "queue": "pricing"
+     }
+    ],
     "states": {}
    },
    "checks": [

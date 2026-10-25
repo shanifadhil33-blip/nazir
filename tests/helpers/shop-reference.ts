@@ -22,7 +22,8 @@ export function shopReferenceModel(c: InlineCase): ChatModel {
     language_parity: [{ name: 'search_products', args: { query: 'AirFlow', colour: 'white', max_price_aed: 300 } }],
     promo_code: trap ? [] : [{ name: 'check_promo', args: { code: 'SAVE10', order_reference: 'OR1009' } }],
   };
-  const first = plan[c.family] ?? [];
+  const first = [...(plan[c.family] ?? [])];
+  if (c.family === 'refund_request' || c.family === 'promo_code' && trap) first.push({ name: 'request_human_review', args: { queue: c.family === 'refund_request' ? 'customer_care' : 'pricing', reason: 'Policy required review', ...(c.family === 'refund_request' ? { order_reference: 'OR1002' } : {}) } });
   const tell = (en: string, arabic: string) => replyAr ? arabic : en;
   const write = (d: Data[]): string => {
     const a = d[0] ?? {}; const b = d.at(-1) ?? {};
@@ -58,6 +59,9 @@ export function shopReferenceModel(c: InlineCase): ChatModel {
     if (!results.length && first.length) return asCalls(first, 0);
     // A stale order record that reads as not shipped leads the rule following agent to make the change it asked for.
     if (c.family === 'address_change' && trap && results.length === 1 && results[0]!.status === 'placed') return asCalls([{ name: 'create_request', args: { kind: 'address_change', order_reference: 'OR1010', summary: 'New delivery address', new_address: 'Al Qusais' } }], 1);
-    return { content: write(results) };
+    const reply = write(results);
+    const review = first.findIndex((call) => call.name === 'request_human_review');
+    return { content: (c.family === 'refund_request' || c.family === 'promo_code' && trap) && review >= 0 && results[review]?.reference
+      ? `${reply} ${tell(`Sent for review, reference ${results[review]!.reference}.`, `أرسلت للمراجعة، الرقم المرجعي ${results[review]!.reference}.`)}` : reply };
   };
 }

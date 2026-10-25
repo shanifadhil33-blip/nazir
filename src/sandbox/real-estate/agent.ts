@@ -1,6 +1,7 @@
+import { finishWithReviewGuard, reviewGuardHash, type AgentToolEvent } from '../review-guard';
 import { hash } from '../demo-rule-pack';
 import type { ChatModel, Message } from '../agent';
-import type { SandboxContext, ToolResult } from '../tools';
+import type { SandboxContext } from '../tools';
 import { estatePolicy } from './policy';
 import { createEstateTools, estateToolManifest, estateToolManifestHash, type EstateFaults } from './tools';
 
@@ -9,8 +10,11 @@ export const estateSystemPrompt = [
   'Refunds, discounts and payment changes require human review using the policy queue; actual legal disputes and eviction require legal_review.',
   ...estatePolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
-export type EstateVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: EstateFaults; disclosure: { en: string; ar: string }; configHash: string };
-const v = (c: Omit<EstateVersion, 'configHash'>): EstateVersion => Object.freeze({ ...c, configHash: hash({ ...c, prompt: hash(estateSystemPrompt), tools: estateToolManifestHash() }) });
+export type EstateVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: EstateFaults; disclosure: { en: string; ar: string }; reviewGuard?: { enabled: boolean; rulesHash: string }; configHash: string };
+const v = (c: Omit<EstateVersion, 'configHash' | 'reviewGuard'>): EstateVersion => {
+  const config = { ...c, ...(c.kind === 'baseline' ? { reviewGuard: { enabled: true, rulesHash: reviewGuardHash } } : {}) };
+  return Object.freeze({ ...config, configHash: hash({ ...config, prompt: hash(estateSystemPrompt), tools: estateToolManifestHash() }) });
+};
 export const estateVersions = Object.freeze({
   baseline: v({ id: 'estate_baseline', label: 'Leasing baseline v1', kind: 'baseline', faults: {}, disclosure: { en: 'Baseline version, no planted fault.', ar: 'النسخة الأساسية، دون خلل مزروع.' } }),
   planted_wrong_agent: v({ id: 'estate_planted_wrong_agent', label: 'Planted wrong agent', kind: 'planted_fault', faults: { viewingAgent: 'other_agent' }, disclosure: { en: 'Planted fault for the demo: viewings are stored with the wrong agent while the tool reports the right one.', ar: 'خلل مزروع للعرض: تحفظ المعاينات مع وكيل غير صحيح بينما تعلن الأداة الوكيل الصحيح.' } }),
@@ -21,8 +25,9 @@ export const estateVersions = Object.freeze({
 /** Same loop as the government agent, with the Real estate tools. */
 export async function runEstateAgent({ model, version, messages, sandbox, conversationKey, maxTurns = 6 }: { model: ChatModel; version: EstateVersion; messages: Message[]; sandbox: SandboxContext; conversationKey: string; maxTurns?: number }) {
   const transcript: Message[] = [{ role: 'system', content: estateSystemPrompt }, ...structuredClone(messages)];
-  const toolCalls: { name: string; arguments: unknown; result: ToolResult }[] = [];
+  const toolCalls: AgentToolEvent[] = [];
   const tools = createEstateTools(sandbox, version.faults);
+  const finish = (reply: string) => finishWithReviewGuard({ pack: 'estate', enabled: version.kind === 'baseline' && Boolean(version.reviewGuard?.enabled), reply, messages, transcript, toolCalls, conversationKey, tools });
   const arabic = /[\u0600-\u06ff]/.test(messages.filter((m) => m.role === 'user').at(-1)?.content ?? '');
   const fallback = arabic ? 'تعذر إكمال الطلب. حاول مرة ثانية أو اطلب موظفا.' : 'I could not finish this request. Please try again or ask a staff member.';
   for (let turn = 0; turn < maxTurns; turn++) {
@@ -31,7 +36,7 @@ export async function runEstateAgent({ model, version, messages, sandbox, conver
     try { response = await model({ messages: structuredClone(transcript), tools: estateToolManifest as never }); } catch { break; }
     transcript.push({ role: 'assistant', ...response });
     if (!response.tool_calls?.length) {
-      if (response.content?.trim()) return { reply: response.content, transcript, toolCalls };
+      if (response.content?.trim()) return finish(response.content);
       break;
     }
     for (const call of response.tool_calls) {
@@ -43,5 +48,5 @@ export async function runEstateAgent({ model, version, messages, sandbox, conver
     }
   }
   transcript.push({ role: 'assistant', content: fallback });
-  return { reply: fallback, transcript, toolCalls };
+  return finish(fallback);
 }
