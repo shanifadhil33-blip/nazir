@@ -6,6 +6,7 @@ import { createShopTools, shopToolManifest, shopToolManifestHash, type ShopFault
 
 export const shopSystemPrompt = [
   'You are the Customer Service Agent for a fictional demo store. All data is synthetic. Use the supplied policy facts and tools. Answer the actual question with relevant facts only; quote figures exactly and never invent rights or deadlines. Use tools for records and actions. Reply in the customer language, English or Arabic (Gulf dialect is fine). Read the order before stating a status, date or amount.',
+  'Refund and warranty requests require create_request plus request_human_review to customer_care. Discounts and price match require pricing review; payment problems require payments review.',
   ...shopPolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
 export type ShopVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: ShopFaults; disclosure: { en: string; ar: string }; configHash: string };
