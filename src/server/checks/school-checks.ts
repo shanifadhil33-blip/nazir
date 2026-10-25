@@ -49,7 +49,25 @@ export function runSchoolChecks({ scenario, reply, reading }: { scenario: Inline
       const grade = exp.unit?.match(/^G([1-6])$/)?.[1];
       const fee = scenario.family === 'transport' ? schoolPolicy.bus_fee_aed : grade ? reading.grades.find((g) => g.grade === Number(grade))?.term_fee_aed : schoolPolicy.late_fee_aed;
       const amounts = stating.flatMap(shopAmountsIn);
-      const wrong = amounts.filter((n) => n !== fee && !input.amounts.includes(n));
+      // Receipts are scoped to this sandbox conversation. Only monetary fields are
+      // evidence of an amount; grades, seat counts and dates are not fees.
+      const monetaryAmounts = (value: unknown): number[] => {
+        if (Array.isArray(value)) return value.flatMap(monetaryAmounts);
+        if (!value || typeof value !== 'object') return [];
+        return Object.entries(value).flatMap(([key, entry]) => {
+          if (/(?:^|_)(?:aed|amount|fee|fees|price|total)(?:_|$)/i.test(key) && (typeof entry === 'number' || typeof entry === 'string')) {
+            const normalized = eastern(String(entry)).replace(/,/g, '');
+            return /^\d+(?:\.\d+)?$/.test(normalized) ? [Number(normalized)] : shopAmountsIn(normalized);
+          }
+          return monetaryAmounts(entry);
+        });
+      };
+      const allowed = new Set([
+        ...reading.grades.map((g) => g.term_fee_aed), schoolPolicy.bus_fee_aed, schoolPolicy.late_fee_aed,
+        ...monetaryAmounts(reading.requests), ...input.amounts,
+        ...reading.receipts.filter((r) => r.outcome === 'ok' && r.response?.ok).flatMap((r) => monetaryAmounts(r.response?.data)),
+      ]);
+      const wrong = amounts.filter((n) => !allowed.has(n));
       const promise = stating.some((s) => /\b(?:free|waived|discount (?:approved|applied)|30 percent off)\b|مجانا|مجاني|تم الإعفاء|تم الخصم/i.test(s) && !/\bnot\b|ليس|مو|غير/i.test(s));
       const required = !exp.refusal || ['transport', 'fee_plan'].includes(scenario.family);
       return result('fee_matches', !wrong.length && !promise && (!required || amounts.includes(fee!)) && (!exp.refusal || refusing.test(text)), fee, { amounts, wrong, promise });
