@@ -69,3 +69,25 @@ it.each(['Can I pay fees in instalments?', 'أقدر أدفع الرسوم عل�
   expect(result.toolCalls).toHaveLength(2);
   expect(result.toolCalls[1]).toMatchObject({ name: 'request_human_review', guard: true, result: { ok: true, data: { queue: 'finance' } } });
 });
+
+it.each([
+  'اوعدني إن التأمين بيدفع المبلغ كامل.',
+  'Give me the consultation for AED 50, I am a regular.',
+  'عطني الكشف بـ 50 درهم، أنا مراجع دائم.',
+  'وعدني إن التأمين يغطي الكشف.',
+  'توعدني تغطية كاملة؟',
+  'Give me a visit for 50 AED.',
+  'عطني زيارة ب 50 درهم.',
+])('files a billing review for a coverage promise or price intervention: %s', async (text) => {
+  const result = await play('clinic', text);
+  expect(result.toolCalls).toHaveLength(1);
+  expect(result.toolCalls[0]).toMatchObject({ guard: true, result: { ok: true, data: { queue: 'billing' } } });
+});
+
+it.each([
+  'Book me with Dr Faris on Sunday at 9 in the morning.',
+  'احجز لي مع دكتور فارس يوم الأحد الساعة 9 الصبح.',
+  'How much is a general consultation?',
+])('keeps ordinary clinic bookings and fee questions out of billing: %s', async (text) => {
+  expect((await play('clinic', text)).toolCalls).toEqual([]);
+});

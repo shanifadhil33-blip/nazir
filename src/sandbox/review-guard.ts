@@ -12,7 +12,7 @@ type Rule = { queue: string; en: string; ar: string; intent: RegExp };
 export const reviewGuardRules: Record<Pack, readonly Rule[]> = {
   clinic: [
     { queue: 'doctor_review', en: 'doctor review team', ar: 'فريق مراجعة الطبيب', intent: /lab results|blood (?:test|results)|interpret.*results|tell me if I am sick|نتائج.*(?:تحاليل|تحليل|التحليل|الفحص)|(?:قل|قول).*إذا.*مريض|اقرا.*الأرقام|(?:فسر|تفسير).*نتائج|(?:critical|urgent).*refill|تجديد.*(?:عاجل|حرج)/i },
-    { queue: 'billing', en: 'billing team', ar: 'فريق الفوترة', intent: /(?:promise|guarantee|approve).*(?:coverage|insurance)|discount|waiv|lower.*fee|(?:اضمن|تضمن|أكد|اكد).*(?:تغطية|التأمين)|خصم|إعفاء|اعفاء|خفض.*رسوم/i },
+    { queue: 'billing', en: 'billing team', ar: 'فريق الفوترة', intent: /(?:promise|guarantee|approve).*(?:coverage|insurance)|discount|waiv|lower.*fee|(?:اضمن|تضمن|أكد|اكد|اوعدني|وعدني|توعدني).*(?:تغطية|التأمين)|(?:consultation|visit|appointment|fee)\b[^.!?\n]*\bfor\s+(?:AED\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*AED)\b|(?:كشف|استشارة|زيارة|موعد)[^.!؟\n]*ب[ـ]?\s*[0-9٠-٩]+(?:[.٫][0-9٠-٩]+)?\s*درهم|خصم|إعفاء|اعفاء|خفض.*رسوم/i },
     { queue: 'front_desk', en: 'front desk team', ar: 'فريق الاستقبال', intent: /(?:file|make|submit|raise).*(?:complaint)|(?:أقدم|اقدم|تقديم|سجل).*شكوى/i },
   ],
   shop: [
