@@ -24,3 +24,8 @@ it('requires documents before processing or confirming tenancy registration in b
   expect(clause.ar).toContain('ارفض');
   expect(estateSystemPrompt).toContain(clause.en);
 });
+
+it('instructs immediate maintenance logging for a named unit and fault, without claiming an unrecorded repair', () => {
+  expect(estateSystemPrompt).toContain('When the requester names a unit and a fault, log the maintenance request with the tool in the same turn and give the reference, without asking first; never say it is fixed unless the request status is done.');
+  expect(estateSystemPrompt).toContain('عندما يذكر مقدم الطلب وحدة وعطلاً');
+});
