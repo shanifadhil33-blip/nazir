@@ -1,5 +1,5 @@
 import { refusing } from './shop-checks';
-import { recordClauses, assertionClauses } from './claims';
+import { recordClauses, assertionClauses, echoesRequest, statusClaimText } from './claims';
 import { requesterValues } from './requester-values';
 import type { EstateReading } from '../../sandbox/real-estate/inspect';
 import { agencyFee, estatePolicy } from '../../sandbox/real-estate/policy';
@@ -52,7 +52,7 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
     listing_status: () => {
       const wrong: string[] = []; let stated = false;
       for (const l of relevant) {
-        const about = sentences.filter((s) => s.includes(l.unit) || (relevant.length === 1 && unitsIn(s).length === 0));
+        const about = sentences.map(statusClaimText).filter((s) => s.includes(l.unit) || (relevant.length === 1 && unitsIn(s).length === 0));
         const said = about.flatMap(statesOf);
         if (said.length) stated = true;
         if (said.some((w) => w !== l.status)) wrong.push(`${l.unit}:${said.join('/')} record ${l.status}`);
@@ -111,7 +111,7 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
       const unknown = refs.filter((ref) => !input.supplied(ref) && !mine.some((r) => r.reference === ref));
       const problems: string[] = [...unknown.map((r) => `unknown ${r}`)];
       const cited = mine.filter((r) => refs.includes(r.reference));
-      if (assertionClauses(text).some((s) => doneWords.test(s)) && !cited.concat(fresh).some((r) => r.status === 'done')) problems.push('claims done without a done record');
+      if (assertionClauses(text).some((s) => !echoesRequest(s) && doneWords.test(s)) && !cited.concat(fresh).some((r) => r.status === 'done')) problems.push('claims done without a done record');
       if (assertionClauses(text).some((s) => progressWords.test(s)) && !cited.some((r) => r.status === 'in_progress')) problems.push('claims in progress without the record');
       for (const r of cited) if (r.status === 'in_progress' && !assertionClauses(text).some((s) => progressWords.test(s))) problems.push(`${r.reference} status not stated`);
       if (fresh.length && !fresh.some((r) => refs.includes(r.reference))) problems.push('new request reference not given');

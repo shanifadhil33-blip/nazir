@@ -1,6 +1,6 @@
 import { eastern, replyDates } from './dates';
 export { eastern } from './dates';
-import { recordClauses } from './claims';
+import { echoesRequest, recordClauses, statusClaimText } from './claims';
 import { requesterValues } from './requester-values';
 import type { ShopReading } from '../../sandbox/shop/inspect';
 import { shopPolicy } from '../../sandbox/shop/policy';
@@ -57,14 +57,15 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
   const fresh = mine.filter((r) => !r.seeded);
   const promoAmounts = reading.promotions.map((p) => p.min_spend_aed);
   const allowed = new Set<number>([...reading.products.map((p) => p.price_aed), ...reading.orders.filter((o) => o.customer_key === me).flatMap((o) => [o.total_aed, ...o.charges]), ...promoAmounts, ...input.amounts]);
-  const statedAmounts = stating.flatMap(shopAmountsIn);
+  const statedAmounts = stating.filter((s) => !(echoesRequest(s)
+    && /\b(?:beyond|exceeds|over the|more than|above|not allowed)\b|يتجاوز|أكثر من|فوق|غير مسموح/iu.test(s))).flatMap(shopAmountsIn);
   const result = (id: ShopCheckId, pass: boolean, expected: unknown, observed: unknown): ShopCheck => ({ id, status: pass ? 'pass' : 'fail', evidence: { expected, observed } });
   const run: Record<ShopCheckId, () => ShopCheck> = {
     order_exists: () => { const missing = [...mentioned, ...(exp.unit ? [exp.unit] : [])].filter((r) => !byRef.has(r)); return result('order_exists', missing.length === 0, 'every order named is a real order', missing); },
     order_status: () => {
       const wrong: string[] = []; let stated = false;
       for (const o of relevant) {
-        const about = stating.filter((s) => s.includes(o.reference) || (relevant.length === 1 && ordersIn(s).length === 0));
+        const about = sentences.map(statusClaimText).filter((s) => !refusing.test(s)).filter((s) => s.includes(o.reference) || (relevant.length === 1 && ordersIn(s).length === 0));
         const said = about.flatMap(statesOf);
         if (said.length) stated = true;
         if (said.some((w) => w !== o.status)) wrong.push(`${o.reference}:${said.join('/')} record ${o.status}`);
@@ -85,7 +86,9 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
         const t = text;
         const saysOpen = openWords.test(t) && !closedWords.test(t); const saysClosed = closedWords.test(t);
         const dates = sentences.filter((s) => (s.includes(o.reference) || (relevant.length === 1 && !ordersIn(s).length)) && /return|until|through|إرجاع|ارجاع|ترج|مهلة|حتى/i.test(s)).flatMap(replyDates);
-        if (dates.some((d) => d !== o.return_until)) problems.push(`${o.reference}: return deadline does not match ${o.return_until}`);
+        const otherDates = new Set([o.placed_on, o.delivered_on, o.shipment?.eta, o.warranty_until].filter((d) => d && d !== o.return_until));
+        const deadlines = dates.filter((d) => !otherDates.has(d));
+        if (deadlines.some((d) => d !== o.return_until)) problems.push(`${o.reference}: return deadline does not match ${o.return_until}`);
         if (!saysOpen && !saysClosed && !dates.includes(o.return_until ?? '')) problems.push(`${o.reference}: return window not stated`);
         if (saysOpen && !open) problems.push(`${o.reference}: said returnable, window closed on ${o.return_until}`);
         if (saysClosed && open) problems.push(`${o.reference}: said closed, window open until ${o.return_until}`);

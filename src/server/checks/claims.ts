@@ -46,3 +46,12 @@ export function readClaims(reply: string): ReplyClaim {
     statesFeeOrDeadline: feeOrDeadline.test(reply),
   };
 }
+
+/** Requester wishes describe the ask, rather than an assertion by the agent. */
+export const echoesRequest = (clause: string): boolean => /\byou (?:asked for|requested|want\b|would like)|\byou['’]d like\b|\byour request for\b|طلبت|تبي|تريد|طلبك/iu.test(clause);
+
+/** Status readers alone exclude general eligibility rules and refused assertions. */
+export function statusClaimText(clause: string): string {
+  const text = clause.replace(/\*\*/g, '').split(/\bI (?:can['’]t|cannot) (?:say|tell you)(?: that)?|\bI cannot confirm|ما أقدر أقول|لا أستطيع أن أقول|ما أقدر أأكد/iu)[0]!;
+  return /\bcan only be\b.*\b(?:while|when|for)\b|\bonly\b.*\bwhile\b|\brule\s*:|القاعدة|فقط لل|بس لل/iu.test(text) ? '' : text;
+}

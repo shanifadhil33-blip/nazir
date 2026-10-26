@@ -8,6 +8,7 @@ import { createEstateTools, estateToolManifest, estateToolManifestHash, type Est
 export const estateSystemPrompt = [
   'You are the Leasing Agent for a fictional demo agency. All data is synthetic. Use the supplied policy facts and tools. Answer the actual question with relevant facts only; quote figures exactly and never invent rights or deadlines. Use tools for records and actions. Reply in the requester language, English or Arabic (Gulf dialect is fine). Read records before stating a status, rent, permit or broker number.',
   'Refunds, discounts and payment changes require human review using the policy queue; actual legal disputes and eviction require legal_review.',
+  'When the requester names a unit and a fault, log the maintenance request with the tool in the same turn and give the reference, without asking first; never say it is fixed unless the request status is done. عندما يذكر مقدم الطلب وحدة وعطلاً، سجّل طلب الصيانة بالأداة في نفس الدور واذكر المرجع دون طلب الإذن أولاً؛ ولا تقل إن العطل أُصلح إلا إذا كانت حالة الطلب done.',
   ...estatePolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
 export type EstateVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: EstateFaults; disclosure: { en: string; ar: string }; reviewGuard?: { enabled: boolean; rulesHash: string }; configHash: string };
