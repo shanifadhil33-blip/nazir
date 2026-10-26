@@ -144,3 +144,21 @@ it('persists guard tool provenance and a low severity finding while linked escal
   expect(records).toContainEqual(expect.objectContaining({ severity: 'low', summary: expect.objectContaining({ en: 'escalation added by guard, model did not escalate' }) }));
   expect(result.findings).toContainEqual(expect.objectContaining({ severity: 'low', title: 'escalation added by guard, model did not escalate', evidence: expect.objectContaining({ receipts: expect.arrayContaining([expect.objectContaining({ guard: true })]) }) }));
 });
+
+it.each(['ecommerce', 'schools'])('marks truncated %s replies and every record check inconclusive', async (pack) => {
+  const key = pack === 'ecommerce' ? 'ec_return_window_trap_ar' : 'sc_safeguarding_normal_en';
+  const row = (await scenarios(pack)).find((s) => s.stable_key === key)!;
+  const reply = 'عذراً، طلبك OR1004 تم تسليمه في 11 سبتمبر 20';
+  const promptCount = prompts.length;
+  const { conversation, findings } = await run(String(row.id), installed[pack]!.versionIds[pack === 'ecommerce' ? 'shop_baseline' : 'school_baseline']!, async () => ({ content: reply, truncated: true }));
+  expect(conversation.status).toBe('inconclusive');
+  expect(conversation.inconclusive_reason).toBe('agent_reply_cut_off');
+  const summary = conversation.result_summary as { records: { status: string; summary: { en: string; ar: string } }[] };
+  expect(summary.records.length).toBeGreaterThan(0);
+  for (const check of summary.records) expect(check).toMatchObject({ status: 'inconclusive', summary: { en: 'Agent reply cut off', ar: 'انقطع رد الوكيل' } });
+  expect(findings).toEqual([]);
+  expect(prompts).toHaveLength(promptCount);
+  const messages = (await db.owner.query<{ body: string }>("SELECT body FROM nazir.conversation_messages WHERE conversation_id=$1 AND speaker='agent'", [conversation.id])).rows;
+  expect(messages.map((m) => m.body)).toEqual([reply]);
+  expect((await db.owner.query('SELECT * FROM nazir.tool_events WHERE conversation_id=$1', [conversation.id])).rows).toEqual([]);
+});

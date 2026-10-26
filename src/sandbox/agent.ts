@@ -2,8 +2,8 @@ import { hash } from './demo-rule-pack';
 import { createSandboxTools, toolManifest, type SandboxContext, type ToolResult } from './tools';
 import { systemPrompt, type AgentVersion } from './versions';
 export type ToolCall = { id: string; name: string; arguments: string };
-export type Message = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string | null; tool_calls?: ToolCall[]; tool_call_id?: string };
-export type ChatModel = (request: { messages: Message[]; tools: typeof toolManifest }) => Promise<{ content: string | null; tool_calls?: ToolCall[] }>;
+export type Message = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string | null; tool_calls?: ToolCall[]; tool_call_id?: string; truncated?: true };
+export type ChatModel = (request: { messages: Message[]; tools: typeof toolManifest }) => Promise<{ content: string | null; tool_calls?: ToolCall[]; truncated?: true }>;
 export async function runServiceAgent({ model, version, messages, sandbox, conversationKey, maxTurns = 6 }: {
   model: ChatModel; version: AgentVersion; messages: Message[]; sandbox: SandboxContext; conversationKey: string; maxTurns?: number;
 }) {

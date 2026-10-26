@@ -35,6 +35,7 @@ export async function runSchoolAgent({ model, version, messages, sandbox, conver
     // The shared ChatModel type names the government manifest; the call shape is the same.
     try { response = await model({ messages: structuredClone(transcript), tools: schoolToolManifest as never }); } catch { break; }
     transcript.push({ role: 'assistant', ...response });
+    if (response.truncated) return { reply: response.content ?? '', transcript, toolCalls };
     if (!response.tool_calls?.length) {
       if (response.content?.trim()) return finish(response.content);
       break;
