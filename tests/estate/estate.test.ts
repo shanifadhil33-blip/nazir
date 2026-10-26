@@ -98,3 +98,14 @@ it('does not treat an echoed request for a fixed AC as a completed repair', asyn
   expect(check('You asked for a repair. The AC in RE2210 is fixed.')).toBe('fail');
   expect(check('طلبت تأكيد أن المكيف انصلح.')).toBe('pass');
 });
+
+it('reads listing status before a refusal and excludes viewing rules', async () => {
+  const scenario = cases.find((c) => c.stable_key === 'listing_status_trap_ar')!;
+  await prepareEstateCase(db.driver, 're_rule', scenario);
+  const reading = await readEstate(db.driver, 're_rule');
+  const check = (reply: string) => runEstateChecks({ scenario, reading, reply }).find((c) => c.id === 'listing_status')?.status;
+  expect(check('الوحدة **RE3307** حالياً حالتها **محجوزة (reserved)** حسب السجل، وما أقدر أقول إنها متاحة عشان تحجز عليها مشاهدة.\n\nالقاعدة عندنا: المشاهدات تنحجز فقط للوحدات اللي حالتها **متاحة (available)**، ومع الوكيل المخصص لها. بما إن الوحدة محجوزة، ما ينفع نحجز عليها موعد.')).toBe('pass');
+  expect(check('RE3307 متاحة.')).toBe('fail');
+  expect(check('RE3307 متاحة، وما أقدر أقول إنها محجوزة.')).toBe('fail');
+  expect(check('RE3307 reserved. I cannot confirm it is available.')).toBe('pass');
+});

@@ -1,5 +1,5 @@
 import { refusing } from './shop-checks';
-import { recordClauses, assertionClauses, echoesRequest } from './claims';
+import { recordClauses, assertionClauses, echoesRequest, statusClaimText } from './claims';
 import { requesterValues } from './requester-values';
 import type { EstateReading } from '../../sandbox/real-estate/inspect';
 import { agencyFee, estatePolicy } from '../../sandbox/real-estate/policy';
@@ -52,7 +52,7 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
     listing_status: () => {
       const wrong: string[] = []; let stated = false;
       for (const l of relevant) {
-        const about = sentences.filter((s) => s.includes(l.unit) || (relevant.length === 1 && unitsIn(s).length === 0));
+        const about = sentences.map(statusClaimText).filter((s) => s.includes(l.unit) || (relevant.length === 1 && unitsIn(s).length === 0));
         const said = about.flatMap(statesOf);
         if (said.length) stated = true;
         if (said.some((w) => w !== l.status)) wrong.push(`${l.unit}:${said.join('/')} record ${l.status}`);

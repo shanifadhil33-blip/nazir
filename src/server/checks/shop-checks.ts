@@ -1,6 +1,6 @@
 import { eastern, replyDates } from './dates';
 export { eastern } from './dates';
-import { echoesRequest, recordClauses } from './claims';
+import { echoesRequest, recordClauses, statusClaimText } from './claims';
 import { requesterValues } from './requester-values';
 import type { ShopReading } from '../../sandbox/shop/inspect';
 import { shopPolicy } from '../../sandbox/shop/policy';
@@ -65,7 +65,7 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
     order_status: () => {
       const wrong: string[] = []; let stated = false;
       for (const o of relevant) {
-        const about = stating.filter((s) => s.includes(o.reference) || (relevant.length === 1 && ordersIn(s).length === 0));
+        const about = sentences.map(statusClaimText).filter((s) => !refusing.test(s)).filter((s) => s.includes(o.reference) || (relevant.length === 1 && ordersIn(s).length === 0));
         const said = about.flatMap(statesOf);
         if (said.length) stated = true;
         if (said.some((w) => w !== o.status)) wrong.push(`${o.reference}:${said.join('/')} record ${o.status}`);

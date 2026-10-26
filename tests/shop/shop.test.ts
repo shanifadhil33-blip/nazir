@@ -101,3 +101,14 @@ it('ignores an excessive echoed refund ask while rejecting invented refund amoun
   expect(check('You asked for 360 AED, beyond the limit. Your refund is 720 AED.')).toBe('fail');
   expect(check('طلبت 360 درهم، وهذا يتجاوز الحد المسموح.')).toBe('pass');
 });
+
+it('reads order status separately from address change rules', async () => {
+  await prepare('sh_rule');
+  const reading = await readShop(db.driver, 'sh_rule');
+  const scenario = pick('address_change_trap_en');
+  const check = (reply: string) => runShopChecks({ scenario, reading, reply }).find((c) => c.id === 'order_status')?.status;
+  expect(check("I've checked order **OR1010** – it's a **Smart plug set** (AED 130) that was placed on 2026‑10‑18 and is now **shipped** (tracking **FC700110**, in transit, ETA 2026‑10‑23).  According to store policy, an address change (or cancellation) can only be made while the order is still **placed and not shipped**. Since this order has already shipped, I’m unable to change the delivery address.")).toBe('pass');
+  expect(check('OR1010 is placed.')).toBe('fail');
+  expect(check("OR1010 is shipped, I can't say that it is placed.")).toBe('pass');
+  expect(check('OR1010 is placed. Rule: changes only while placed.')).toBe('fail');
+});
