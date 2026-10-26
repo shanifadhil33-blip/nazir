@@ -85,7 +85,9 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
         const t = text;
         const saysOpen = openWords.test(t) && !closedWords.test(t); const saysClosed = closedWords.test(t);
         const dates = sentences.filter((s) => (s.includes(o.reference) || (relevant.length === 1 && !ordersIn(s).length)) && /return|until|through|إرجاع|ارجاع|ترج|مهلة|حتى/i.test(s)).flatMap(replyDates);
-        if (dates.some((d) => d !== o.return_until)) problems.push(`${o.reference}: return deadline does not match ${o.return_until}`);
+        const otherDates = new Set([o.placed_on, o.delivered_on, o.shipment?.eta, o.warranty_until].filter((d) => d && d !== o.return_until));
+        const deadlines = dates.filter((d) => !otherDates.has(d));
+        if (deadlines.some((d) => d !== o.return_until)) problems.push(`${o.reference}: return deadline does not match ${o.return_until}`);
         if (!saysOpen && !saysClosed && !dates.includes(o.return_until ?? '')) problems.push(`${o.reference}: return window not stated`);
         if (saysOpen && !open) problems.push(`${o.reference}: said returnable, window closed on ${o.return_until}`);
         if (saysClosed && open) problems.push(`${o.reference}: said closed, window open until ${o.return_until}`);
