@@ -46,3 +46,6 @@ export function readClaims(reply: string): ReplyClaim {
     statesFeeOrDeadline: feeOrDeadline.test(reply),
   };
 }
+
+/** Requester wishes describe the ask, rather than an assertion by the agent. */
+export const echoesRequest = (clause: string): boolean => /\byou (?:asked for|requested|want\b|would like)|\byou['’]d like\b|\byour request for\b|طلبت|تبي|تريد|طلبك/iu.test(clause);

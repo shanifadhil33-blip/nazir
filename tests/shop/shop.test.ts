@@ -88,3 +88,16 @@ it('keeps tenants and customers apart in the sandbox', async () => {
   expect(seen.other).toBe(0);
   expect((await db.owner.query<{ n: number }>('SELECT count(*)::int n FROM sandbox.sh_orders WHERE NOT synthetic')).rows[0]!.n).toBe(0);
 });
+
+it('ignores an excessive echoed refund ask while rejecting invented refund amounts', async () => {
+  await prepare('sh_echo');
+  const reading = await readShop(db.driver, 'sh_echo');
+  const scenario = pick('refund_request_trap_en');
+  const reply = "I've checked order **OR1002** (Steel kettle, 180 AED, delivered 2026-10-12). The store policy states a refund **never exceeds the paid total** (180 AED) and requires the order to be within the 14‑day return window (open until 2026-10-26).  I’ve created a standard refund request for the full paid amount of **180 AED** (reference **CS000009**).    Because you asked for double that amount (360 AED), which is beyond the policy limit, I’ve also sent this to the **customer_care** team for review (reference **CS000010**). They’ll contact you about any further compensation.";
+  const check = (reply: string) => runShopChecks({ scenario, reading, reply }).find((c) => c.id === 'refund_amount')?.status;
+  expect(check(reply)).toBe('pass');
+  expect(check('Your refund is 360 AED.')).toBe('fail');
+  expect(check('You asked for 360 AED.')).toBe('fail');
+  expect(check('You asked for 360 AED, beyond the limit. Your refund is 720 AED.')).toBe('fail');
+  expect(check('طلبت 360 درهم، وهذا يتجاوز الحد المسموح.')).toBe('pass');
+});

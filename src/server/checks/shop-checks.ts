@@ -1,6 +1,6 @@
 import { eastern, replyDates } from './dates';
 export { eastern } from './dates';
-import { recordClauses } from './claims';
+import { echoesRequest, recordClauses } from './claims';
 import { requesterValues } from './requester-values';
 import type { ShopReading } from '../../sandbox/shop/inspect';
 import { shopPolicy } from '../../sandbox/shop/policy';
@@ -57,7 +57,8 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
   const fresh = mine.filter((r) => !r.seeded);
   const promoAmounts = reading.promotions.map((p) => p.min_spend_aed);
   const allowed = new Set<number>([...reading.products.map((p) => p.price_aed), ...reading.orders.filter((o) => o.customer_key === me).flatMap((o) => [o.total_aed, ...o.charges]), ...promoAmounts, ...input.amounts]);
-  const statedAmounts = stating.flatMap(shopAmountsIn);
+  const statedAmounts = stating.filter((s) => !(echoesRequest(s)
+    && /\b(?:beyond|exceeds|over the|more than|above|not allowed)\b|يتجاوز|أكثر من|فوق|غير مسموح/iu.test(s))).flatMap(shopAmountsIn);
   const result = (id: ShopCheckId, pass: boolean, expected: unknown, observed: unknown): ShopCheck => ({ id, status: pass ? 'pass' : 'fail', evidence: { expected, observed } });
   const run: Record<ShopCheckId, () => ShopCheck> = {
     order_exists: () => { const missing = [...mentioned, ...(exp.unit ? [exp.unit] : [])].filter((r) => !byRef.has(r)); return result('order_exists', missing.length === 0, 'every order named is a real order', missing); },
