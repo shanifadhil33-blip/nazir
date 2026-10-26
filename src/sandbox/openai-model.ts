@@ -4,7 +4,11 @@ export function openAiCompatibleModel({ url, apiKey, model, timeoutMs }: { url: 
     const response = await fetch(url, {
       method: 'POST', signal: AbortSignal.timeout(timeoutMs),
       headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
-      body: JSON.stringify({ model, messages: messages.map((message) => ({ ...message, ...(message.tool_calls ? { tool_calls: message.tool_calls.map((call) => ({ id: call.id, type: 'function', function: { name: call.name, arguments: call.arguments } })) } : {}) })), tools, temperature: 0, max_tokens: 800 }),
+      body: JSON.stringify({ model, messages: messages.map((original) => {
+        const message = { ...original };
+        delete message.truncated;
+        return { ...message, ...(message.tool_calls ? { tool_calls: message.tool_calls.map((call) => ({ id: call.id, type: 'function', function: { name: call.name, arguments: call.arguments } })) } : {}) };
+      }), tools, temperature: 0, max_tokens: 2000 }),
     });
     if (!response.ok) throw new Error('Model request failed');
     const body = await response.json();
@@ -14,6 +18,6 @@ export function openAiCompatibleModel({ url, apiKey, model, timeoutMs }: { url: 
       if (typeof call.id !== 'string' || typeof call.function?.name !== 'string' || typeof call.function.arguments !== 'string') throw new Error('Invalid tool call');
       return { id: call.id, name: call.function.name, arguments: call.function.arguments };
     });
-    return { content: message.content, ...(calls ? { tool_calls: calls } : {}) };
+    return { content: message.content, ...(calls ? { tool_calls: calls } : {}), ...(body.choices?.[0]?.finish_reason === 'length' ? { truncated: true as const } : {}) };
   };
 }

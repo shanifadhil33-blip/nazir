@@ -1,4 +1,5 @@
 import { eastern, replyDates } from './dates';
+import { compareRequestQueues } from './request-queues';
 export { eastern } from './dates';
 import { echoesRequest, recordClauses, statusClaimText } from './claims';
 import { requesterValues } from './requester-values';
@@ -109,9 +110,8 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
       return result('request_recorded', JSON.stringify(want) === JSON.stringify(got), want, got);
     },
     right_queue: () => {
-      const miss = exp.requests.filter((w) => !fresh.some((r) => r.kind === w.kind && r.queue === w.queue));
-      const extra = fresh.filter((r) => !exp.requests.some((w) => w.kind === r.kind && w.queue === r.queue));
-      return result('right_queue', !miss.length && !extra.length, exp.requests, fresh.map((r) => ({ kind: r.kind, queue: r.queue, order: r.order_reference })));
+      const comparison = compareRequestQueues(exp.requests, fresh);
+      return result('right_queue', comparison.pass, exp.requests, comparison.observed);
     },
     duplicates: () => {
       const seen = new Set<string>(); const dup: string[] = [];

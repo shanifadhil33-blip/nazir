@@ -9,7 +9,7 @@ it('maps tool calls and content and sends the expected request', async () => {
   const result = await model({ messages: [{ role: 'assistant', content: null, tool_calls: [{ id: 'prior', name: 'get_service_policy', arguments: '{}' }] }], tools: toolManifest });
   expect(result).toEqual({ content: null, tool_calls: [{ id: 'one', name: 'get_service_policy', arguments: '{}' }] });
   const options = fetchMock.mock.calls[0]![1];
-  expect(JSON.parse(options.body)).toMatchObject({ temperature: 0, max_tokens: 800, model: 'test', messages: [{ tool_calls: [{ type: 'function', function: { name: 'get_service_policy', arguments: '{}' } }] }] });
+  expect(JSON.parse(options.body)).toMatchObject({ temperature: 0, max_tokens: 2000, model: 'test', messages: [{ tool_calls: [{ type: 'function', function: { name: 'get_service_policy', arguments: '{}' } }] }] });
   fetchMock.mockResolvedValueOnce(Response.json({ choices: [{ message: { content: 'Hello' } }] }));
   expect(await model({ messages: [], tools: toolManifest })).toEqual({ content: 'Hello' });
 });

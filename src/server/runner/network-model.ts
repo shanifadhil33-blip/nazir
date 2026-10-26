@@ -35,6 +35,6 @@ export function networkChatModel(driver: TransactionDriver,context: ModelContext
     }
     const result=await chain.chat({ purpose:'agent',task:'test_run',messages,tools,conversationId:context.conversationId,workspaceId:context.workspaceId,deadlineMs:context.remainingMs() });
     context.onCall(result.meta);
-    return { content:result.content,...(result.tool_calls ? { tool_calls:result.tool_calls } : {}) };
+    return { content:result.content,...(result.tool_calls ? { tool_calls:result.tool_calls } : {}),...(result.truncated ? { truncated:true as const } : {}) };
   } };
 }

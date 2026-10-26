@@ -114,16 +114,26 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       try { const response=await bounded(base(request)); active(); return response; }
       catch (error) { if (error instanceof AiChainExhausted) reason ??= error.attempts.length && error.attempts.every((a) => a.reason==='cap_reached' || a.reason==='no_key') && error.attempts.some((a) => a.reason==='cap_reached') ? 'daily_cap' : 'provider_exhausted'; throw error; }
     };
+    let agentReplyCutOff = false;
     for (const content of c.resident_turns) {
       if (reason || lost) break;
       active();
       transcript.push({ role:'user',content });
       const result=await rt.run({ model,version:resolved.version,messages:transcript,sandbox:{ driver:fencedDriver,tenant,requesterKey:c.persona.requester_key },conversationKey:cid });
       transcript=result.transcript.filter((m) => m.role!=='system'); reply=result.reply; toolCalls.push(...(result.toolCalls as ToolEvents));
+      if (transcript.some((m) => m.truncated)) { agentReplyCutOff = true; break; }
     }
     if (lost) return;
     try { packReading=await bounded(rt.read(inspectionDriver,tenant)); } catch { reason ??= 'reading_failed'; return; }
     if (reason) return;
+    if (agentReplyCutOff) {
+      const summary = { en: 'Agent reply cut off', ar: 'انقطع رد الوكيل' };
+      records = rt.checks({ scenario: c, reply: '', reading: null }).map((check) => ({
+        ...packRecord(rt, c, { ...check, status: 'inconclusive', evidence: { expected: c.expected, observed: { truncated: true, reason: summary } } }), summary,
+      }));
+      verdict = { status: 'inconclusive', reason: 'agent_reply_cut_off', results: { records, truncated: true } };
+      return;
+    }
     try {
       records=[...rt.checks({ scenario:c,reply,reading:packReading }).map((k) => packRecord(rt,c,k)), ...guardEscalationChecks(toolCalls)];
       verdict={ ...combineVerdicts(records,null),results:{ records } };

@@ -2,7 +2,7 @@ import type { Message, ToolCall } from '../../sandbox/agent';
 import { capValue, chainOrder, providerRegistry, type Env, type Family } from './providers';
 import { matchesSchema, type Tool } from './schema';
 import type { AiStateStore, Attempt, Cooldown, Reason, Task } from './store';
-export type ChatResponse = { content: string | null; tool_calls?: ToolCall[] };
+export type ChatResponse = { content: string | null; tool_calls?: ToolCall[]; truncated?: true };
 export type CallMeta = { provider: string; model: string; family: Family; attempts: Attempt[]; failover: boolean; failoverReason: Reason | null };
 export type ChatRequest = {
   purpose: 'agent' | 'judge'; task: Task; messages: Message[]; tools?: Tool[]; maxTokens?: number; temperature?: number;
@@ -42,8 +42,9 @@ function parseReply(body: unknown): ChatResponse | null {
       calls.push({ id: call.id, name: call.function.name, arguments: call.function.arguments });
     }
   }
+  const truncated = body.choices[0]?.finish_reason === 'length';
   if (!message.content?.trim() && !calls?.length) return null;
-  return { content: message.content, ...(calls?.length ? { tool_calls: calls } : {}) };
+  return { content: message.content, ...(calls?.length ? { tool_calls: calls } : {}), ...(truncated ? { truncated: true } : {}) };
 }
 function validTools(reply: ChatResponse, tools: Tool[]): boolean {
   return (reply.tool_calls ?? []).every((call) => {
@@ -115,7 +116,11 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
                   const response = await fetcher(provider.url, {
                     method: 'POST', signal: controller.signal,
                     headers: { 'Content-Type': 'application/json', ...(provider.keyEnv ? { Authorization: `Bearer ${env[provider.keyEnv]}` } : {}) },
-                    body: JSON.stringify({ model, messages: request.messages.map((m) => ({ ...m, ...(m.tool_calls ? { tool_calls: m.tool_calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })) } : {}) })), ...(request.tools?.length ? { tools: request.tools, tool_choice: 'auto' } : {}), max_tokens: request.maxTokens ?? 800, temperature: request.temperature ?? 0 }),
+                    body: JSON.stringify({ model, messages: request.messages.map((m) => {
+                      const message = { ...m };
+                      delete message.truncated;
+                      return { ...message, ...(message.tool_calls ? { tool_calls: message.tool_calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })) } : {}) };
+                    }), ...(request.tools?.length ? { tools: request.tools, tool_choice: 'auto' } : {}), max_tokens: request.maxTokens ?? (request.purpose === 'agent' ? 2000 : 800), temperature: request.temperature ?? 0 }),
                   });
                   status = response.status;
                   const text = await response.text();
