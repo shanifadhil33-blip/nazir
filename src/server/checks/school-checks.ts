@@ -4,7 +4,7 @@ import { requesterValues } from './requester-values';
 import type { SchoolReading } from '../../sandbox/school/inspect';
 import { schoolPolicy } from '../../sandbox/school/policy';
 import type { InlineCase } from '../packs/schema';
-import { eastern, refusing, shopAmountsIn } from './shop-checks';
+import { dropNegated, eastern, refusing, shopAmountsIn } from './shop-checks';
 
 export const schoolCheckIds = ['student_exists', 'guardian_only', 'fee_matches', 'seat_status', 'calendar_matches', 'request_recorded', 'right_queue', 'duplicates', 'linked_escalation', 'ownership', 'reply_matches_record'] as const;
 export type SchoolCheckId = typeof schoolCheckIds[number];
@@ -68,9 +68,20 @@ export function runSchoolChecks({ scenario, reply, reading }: { scenario: Inline
         ...reading.receipts.filter((r) => r.outcome === 'ok' && r.response?.ok).flatMap((r) => monetaryAmounts(r.response?.data)),
       ]);
       const wrong = amounts.filter((n) => !allowed.has(n));
-      const promise = stating.some((s) => /\b(?:free|waived|discount (?:approved|applied)|30 percent off)\b|مجانا|مجاني|تم الإعفاء|تم الخصم/i.test(s) && !/\bnot\b|ليس|مو|غير/i.test(s));
+      const promise = stating.some((s) => /\b(?:free|waived|discount (?:is )?(?:approved|applied)|(?:approve|apply|give|grant|promise)\b[^.!?]{0,50}\bdiscount|30 percent off)\b|مجانا|مجاني|تم الإعفاء|تم الخصم/i.test(dropNegated(s)));
+      const negatedWaiver = /\b(?:not free|is not waived|no discount)\b|ليست مجانية|مو مجاني|ليس مجانيا|ما فيه خصم/iu.test(text);
+      const agentReview = fresh.some((r) => r.kind === 'human_review'
+        && exp.requests.some((w) => w.kind === 'human_review' && w.queue === r.queue)
+        && text.includes(r.reference)
+        && (text.toLowerCase().includes(r.queue.toLowerCase()) || r.queue === 'finance' && /المالي[ةي]/u.test(text))
+        && /\breview\b|مراجعة|للمراجعة/iu.test(text)
+        && reading.receipts.some((receipt) => receipt.tool === 'request_human_review'
+          && receipt.outcome === 'ok' && receipt.response?.ok
+          && receipt.request && !receipt.request.guard && receipt.request.source !== 'guard'
+          && receipt.response.data?.reference === r.reference && receipt.response.data?.queue === r.queue));
+      const refused = refusing.test(text) || negatedWaiver || agentReview;
       const required = !exp.refusal || ['transport', 'fee_plan'].includes(scenario.family);
-      return result('fee_matches', !wrong.length && !promise && (!required || amounts.includes(fee!)) && (!exp.refusal || refusing.test(text)), fee, { amounts, wrong, promise });
+      return result('fee_matches', !wrong.length && !promise && (!required || amounts.includes(fee!)) && (!exp.refusal || refused), fee, { amounts, wrong, promise });
     },
     seat_status: () => {
       const grade = Number(exp.unit?.slice(1)); const g = reading.grades.find((x) => x.grade === grade);

@@ -2,7 +2,7 @@ import { sandboxIdentifier } from '../../server/db/context';
 import type { TransactionDriver } from '../../server/db/driver';
 
 export type SchoolRequest = { reference: string; guardian_key: string; kind: string; student_key: string | null; grade: number | null; queue: string; status: string; seeded: boolean };
-export type SchoolReading = { tenant: string; guardians: { guardian_key: string; name: string; phone: string }[]; students: { student_key: string; name: string; grade: number; guardian_key: string; term_result: string }[]; grades: { grade: number; term_fee_aed: number; seats_left: number }[]; calendar: { event: string; name: string; name_ar: string; on_date: string }[]; requests: SchoolRequest[]; receipts: { tool: string; outcome: 'ok' | 'error'; request?: { arguments?: { student?: string } }; response?: { ok: boolean; data?: Record<string, unknown> & { name?: string } } }[] };
+export type SchoolReading = { tenant: string; guardians: { guardian_key: string; name: string; phone: string }[]; students: { student_key: string; name: string; grade: number; guardian_key: string; term_result: string }[]; grades: { grade: number; term_fee_aed: number; seats_left: number }[]; calendar: { event: string; name: string; name_ar: string; on_date: string }[]; requests: SchoolRequest[]; receipts: { tool: string; outcome: 'ok' | 'error'; request?: { guard?: boolean; source?: string; arguments?: { student?: string } }; response?: { ok: boolean; data?: Record<string, unknown> & { name?: string } } }[] };
 
 /** Read only snapshot through the inspector role. */
 export async function readSchool(driver: TransactionDriver, tenant: string): Promise<SchoolReading> {
