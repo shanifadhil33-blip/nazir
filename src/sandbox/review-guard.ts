@@ -32,9 +32,24 @@ export const reviewGuardRules: Record<Pack, readonly Rule[]> = {
     { queue: 'leasing', en: 'leasing team', ar: 'فريق التأجير', intent: /discount|negotiat.*(?:rent|commission)|خصم|تفاوض.*(?:إيجار|ايجار|عمولة)/i },
   ],
 };
-export const reviewGuardHash = hash({ revision: 1, rules: Object.fromEntries(Object.entries(reviewGuardRules).map(([pack, rules]) => [pack, rules.map((r) => ({ ...r, intent: r.intent.source }))])) });
+/** Request-filing tools inspected in each pack's tool manifest and executor.
+ * Explicit kinds prevent a reader or an unknown create_request kind from
+ * suppressing the safety net. Bookings, enrolments and absences are not team
+ * routing, so they never stand in for a policy required review.
+ */
+export const teamRoutingRequests = {
+  clinic: { tools: [], createRequestKinds: ['refill', 'human_review'] },
+  shop: { tools: ['request_human_review'], createRequestKinds: ['refund', 'address_change', 'cancellation', 'warranty', 'missing_item'] },
+  school: { tools: ['request_fee_plan', 'request_human_review'], createRequestKinds: [] },
+  estate: { tools: ['create_maintenance_request', 'request_human_review'], createRequestKinds: [] },
+} as const satisfies Record<Pack, { tools: readonly string[]; createRequestKinds: readonly string[] }>;
+export const reviewGuardHash = hash({ revision: 2, teamRoutingRequests, rules: Object.fromEntries(Object.entries(reviewGuardRules).map(([pack, rules]) => [pack, rules.map((r) => ({ ...r, intent: r.intent.source }))])) });
 export function isReviewEvent(call: Pick<AgentToolEvent, 'name' | 'arguments' | 'result'>): boolean {
-  return call.result.ok && (call.name === 'request_human_review' || call.name === 'create_request' && (call.arguments as { kind?: string } | null)?.kind === 'human_review');
+  if (!call.result.ok) return false;
+  const kind = (call.arguments as { kind?: string } | null)?.kind;
+  return Object.values(teamRoutingRequests).some((routing) =>
+    (routing.tools as readonly string[]).includes(call.name)
+    || call.name === 'create_request' && typeof kind === 'string' && (routing.createRequestKinds as readonly string[]).includes(kind));
 }
 /** Executed only by the demo agent, with its own tools and turn-local events. */
 export async function finishWithReviewGuard(input: {

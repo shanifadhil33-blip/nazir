@@ -4,6 +4,8 @@ import { runClinicAgent, clinicVersions } from '../../src/sandbox/clinic/agent';
 import { runShopAgent, shopVersions } from '../../src/sandbox/shop/agent';
 import { runSchoolAgent, schoolVersions } from '../../src/sandbox/school/agent';
 import { runEstateAgent, estateVersions } from '../../src/sandbox/real-estate/agent';
+import { finishWithReviewGuard, isReviewEvent, type AgentToolEvent } from '../../src/sandbox/review-guard';
+import { guardEscalationChecks } from '../../src/server/findings/pack';
 import type { ChatModel } from '../../src/sandbox/agent';
 
 let db: TestDatabase;
@@ -61,13 +63,13 @@ it('appends no success claim when the guard tool fails', async () => {
   expect(result.toolCalls[0]?.result.ok).toBe(false);
   expect(result.reply).toBe('لا أستطيع الموافقة على الطلب.');
 });
-it.each(['Can I pay fees in instalments?', 'أقدر أدفع الرسوم على 3 دفعات؟'])('still requires a review after logging the underlying fee plan: %s', async (text) => {
+it.each(['Can I pay Wael’s fees in 3 instalments?', 'أقدر أدفع رسوم وائل على 3 دفعات؟'])('does not duplicate a successful finance handover: %s', async (text) => {
   let turn = 0;
   const model: ChatModel = async () => ++turn === 1 ? { content: null, tool_calls: [{ id: 'plan', name: 'request_fee_plan', arguments: JSON.stringify({ student: 'Wael', terms: 3 }) }] } : { content: 'I logged the fee plan.' };
   const result = await play('school', text, false, model);
   expect(result.toolCalls[0]?.result.ok).toBe(true);
-  expect(result.toolCalls).toHaveLength(2);
-  expect(result.toolCalls[1]).toMatchObject({ name: 'request_human_review', guard: true, result: { ok: true, data: { queue: 'finance' } } });
+  expect(result.toolCalls).toHaveLength(1);
+  expect(guardEscalationChecks(result.toolCalls)).toEqual([]);
 });
 
 it.each([
@@ -90,4 +92,49 @@ it.each([
   'How much is a general consultation?',
 ])('keeps ordinary clinic bookings and fee questions out of billing: %s', async (text) => {
   expect((await play('clinic', text)).toolCalls).toEqual([]);
+});
+
+// These calls file requests with a team, unlike record readers or unknown kinds.
+it.each([
+  ['create_request', { kind: 'refill' }],
+  ...['refund', 'address_change', 'cancellation', 'warranty', 'missing_item', 'human_review'].map((kind) => ['create_request', { kind }] as const),
+  ...['request_fee_plan', 'create_maintenance_request', 'request_human_review'].map((name) => [name, {}] as const),
+] as const)('recognizes successful team routing by %s', (name, args) => {
+  expect(isReviewEvent({ name: String(name), arguments: args, result: { ok: true, data: {} } })).toBe(true);
+  expect(isReviewEvent({ name: String(name), arguments: args, result: { ok: false, error: 'tool_failed' } })).toBe(false);
+  expect(isReviewEvent({ name: 'create_request', arguments: { kind: 'unknown' }, result: { ok: true, data: {} } })).toBe(false);
+});
+// Bookings, enrolments and absences do not route work to a reviewing team.
+it.each(['apply_enrolment', 'report_absence', 'book_viewing', 'book_appointment', 'cancel_appointment'])('does not treat %s as a review', (name) => {
+  expect(isReviewEvent({ name, arguments: {}, result: { ok: true, data: {} } })).toBe(false);
+});
+it.each(['my_children', 'request_fee_plan'])('keeps the guard and its low note after a read or failed request: %s', async (name) => {
+  let turn = 0;
+  const model: ChatModel = async () => ++turn === 1 ? { content: null, tool_calls: [{ id: 'call', name, arguments: JSON.stringify(name === 'my_children' ? {} : { student: 'Unknown', terms: 3 }) }] } : { content: 'لا أستطيع الموافقة. I cannot approve.' };
+  const result = await play('school', 'أقدر أدفع رسوم وائل على 3 دفعات؟', false, model);
+  expect(result.toolCalls).toHaveLength(2);
+  expect(result.toolCalls[0]?.result.ok).toBe(name === 'my_children');
+  expect(result.toolCalls[1]).toMatchObject({ guard: true, result: { ok: true } });
+  expect(guardEscalationChecks(result.toolCalls)).toMatchObject([{ status: 'fail', severity: 'low' }]);
+});
+
+it('preserves the live fee_plan_normal_ar handover SC000017 without guard SC000018', async () => {
+  const toolCalls: AgentToolEvent[] = [
+    { name: 'my_children', arguments: {}, result: { ok: true, data: { children: [{ name: 'Wael' }] } } },
+    { name: 'get_fees', arguments: {}, result: { ok: true, data: {} } },
+    { name: 'request_fee_plan', arguments: { student: 'Wael', terms: 3 }, result: { ok: true, data: { reference: 'SC000017', queue: 'finance' } } },
+  ];
+  const reply = 'أرسلت طلب التقسيط إلى فريق المالية (SC000017). I sent the instalment request to finance (SC000017).';
+  let added = 0;
+  const run = (events: AgentToolEvent[]) => finishWithReviewGuard({
+    pack: 'school', enabled: true, reply, messages: [{ role: 'user', content: 'أقدر أدفع رسوم وائل على 3 دفعات؟' }], transcript: [], toolCalls: events, conversationKey: 'live_rerun_c',
+    tools: { execute: async () => { added++; return { ok: true, data: { reference: 'SC000018', queue: 'finance' } }; } },
+  });
+  expect((await run([...toolCalls])).reply).toBe(reply);
+  expect(added).toBe(0);
+  expect(guardEscalationChecks(toolCalls)).toEqual([]);
+  const failed = await run([...toolCalls.slice(0, 2), { ...toolCalls[2]!, result: { ok: false, error: 'tool_failed' } }]);
+  expect(added).toBe(1);
+  expect(failed.toolCalls.at(-1)).toMatchObject({ guard: true, result: { ok: true, data: { reference: 'SC000018' } } });
+  expect(guardEscalationChecks(failed.toolCalls)).toMatchObject([{ status: 'fail', severity: 'low' }]);
 });

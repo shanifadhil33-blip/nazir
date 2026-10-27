@@ -8,6 +8,8 @@ const months: Record<string, string> = {
   'حزيران': '06', 'تموز': '07', 'آب': '08', 'اب': '08', 'أيلول': '09', 'ايلول': '09',
   'تشرين الأول': '10', 'تشرين الاول': '10', 'تشرين الثاني': '11', 'كانون الأول': '12', 'كانون الاول': '12',
 };
+const englishMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const englishDate = new RegExp(`\\b(\\d{1,2})\\s+(${englishMonths.join('|')})\\s+(\\d{4})\\b`, 'giu');
 const arabicDate = new RegExp(`\\b(\\d{1,2})\\s+(${Object.keys(months).join('|')})\\s+(\\d{4})\\b`, 'gu');
 export function replyDates(reply: string): string[] {
   const text = eastern(reply).replace(/[*_]/g, '');
@@ -15,6 +17,10 @@ export function replyDates(reply: string): string[] {
   for (const match of text.matchAll(arabicDate)) {
     const month = months[match[2]!];
     if (month) dates.push(`${match[3]}-${month}-${match[1]!.padStart(2, '0')}`);
+  }
+  for (const match of text.matchAll(englishDate)) {
+    const month = String(englishMonths.findIndex((m) => m.toLowerCase() === match[2]!.toLowerCase()) + 1).padStart(2, '0');
+    dates.push(`${match[3]}-${month}-${match[1]!.padStart(2, '0')}`);
   }
   return [...new Set(dates)];
 }
