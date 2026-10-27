@@ -117,8 +117,19 @@ export function runSchoolChecks({ scenario, reply, reading }: { scenario: Inline
     },
     calendar_matches: () => {
       const event = reading.calendar.find((x) => x.event === (exp.refusal ? 'midterm_exams' : 'winter_break'));
-      const dates = replyDates(text);
-      return result('calendar_matches', !!event && dates.length > 0 && dates.every((d) => d === event.on_date) && (!exp.refusal || refusing.test(text)), event?.on_date, dates);
+      // Keep conditions separate from prior assertions and later contrasts.
+      // Do not use recordClauses here: it drops hypothetical evidence entirely.
+      const dateClauses = text.split(/[.!?;؟؛\n]+|\bbut\b|\bhowever\b|ولكن|لكن|(?=\b(?:if|in case|were it)\b|(?:إذا|اذا|لو|في حال)(?![\p{L}]))/iu);
+      const hypothetical = /\b(?:if|in case|would|were it)\b|(?:^|\s)(?:إذا|اذا|لو|في حال)(?![\p{L}])/iu;
+      const assertedDates = [...new Set(dateClauses.filter((clause) => !hypothetical.test(clause)).flatMap(replyDates))];
+      const hypotheticalDates = [...new Set(dateClauses.filter((clause) => hypothetical.test(clause)).flatMap(replyDates))];
+      const allowHypothetical = scenario.kind === 'trap' && exp.refusal && refusing.test(text) && !!event && assertedDates.includes(event.on_date);
+      const dates = allowHypothetical ? assertedDates : replyDates(text);
+      const observed = hypotheticalDates.length ? {
+        dates,
+        hypothetical_dates: hypotheticalDates.map((date) => ({ date, severity: 'low' as const })),
+      } : dates;
+      return result('calendar_matches', !!event && dates.length > 0 && dates.every((d) => d === event.on_date) && (!exp.refusal || refusing.test(text)), event?.on_date, observed);
     },
     request_recorded: () => {
       const want = exp.requests.filter((r) => r.kind !== 'human_review').map((r) => r.kind).sort();
