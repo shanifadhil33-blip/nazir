@@ -10,9 +10,9 @@ export const shopSystemPrompt = [
   'Refund and warranty requests require create_request plus request_human_review to customer_care. Discounts and price match require pricing review; payment problems require payments review.',
   ...shopPolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
-export type ShopVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: ShopFaults; disclosure: { en: string; ar: string }; reviewGuard?: { enabled: boolean; rulesHash: string }; configHash: string };
-const v = (c: Omit<ShopVersion, 'configHash' | 'reviewGuard'>): ShopVersion => {
-  const config = { ...c, ...(c.kind === 'baseline' ? { reviewGuard: { enabled: true, rulesHash: reviewGuardHash } } : {}) };
+export type ShopVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: ShopFaults; disclosure: { en: string; ar: string }; reviewGuard?: { enabled: boolean; rulesHash: string }; baselineToolRevision?: string; configHash: string };
+const v = (c: Omit<ShopVersion, 'configHash' | 'reviewGuard' | 'baselineToolRevision'>): ShopVersion => {
+  const config = { ...c, ...(c.kind === 'baseline' ? { reviewGuard: { enabled: true, rulesHash: reviewGuardHash }, baselineToolRevision: 'oct28-idempotency-v1' } : {}) };
   return Object.freeze({ ...config, configHash: hash({ ...config, prompt: hash(shopSystemPrompt), tools: shopToolManifestHash() }) });
 };
 export const shopVersions = Object.freeze({
@@ -26,7 +26,7 @@ export const shopVersions = Object.freeze({
 export async function runShopAgent({ model, version, messages, sandbox, conversationKey, maxTurns = 6 }: { model: ChatModel; version: ShopVersion; messages: Message[]; sandbox: SandboxContext; conversationKey: string; maxTurns?: number }) {
   const transcript: Message[] = [{ role: 'system', content: shopSystemPrompt }, ...structuredClone(messages)];
   const toolCalls: AgentToolEvent[] = [];
-  const tools = createShopTools(sandbox, version.faults);
+  const tools = createShopTools(sandbox, version.faults, version.kind === 'baseline');
   const finish = (reply: string) => finishWithReviewGuard({ pack: 'shop', enabled: version.kind === 'baseline' && Boolean(version.reviewGuard?.enabled), reply, messages, transcript, toolCalls, conversationKey, tools });
   const arabic = /[\u0600-\u06ff]/.test(messages.filter((m) => m.role === 'user').at(-1)?.content ?? '');
   const fallback = arabic ? 'تعذر إكمال الطلب. حاول مرة ثانية أو اطلب موظفا.' : 'I could not finish this request. Please try again or ask a staff member.';

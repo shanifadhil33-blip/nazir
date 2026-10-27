@@ -43,16 +43,17 @@ const shown = (o: Order, faults: ShopFaults) => ({
   return_until: o.return_until, return_open: Boolean(o.return_until && o.return_until >= today), warranty_until: o.warranty_until, warranty_open: Boolean(o.warranty_until && o.warranty_until >= today), synthetic: true,
 });
 
-export function createShopTools(context: SandboxContext, faults: ShopFaults = {}) {
+export function createShopTools(context: SandboxContext, faults: ShopFaults = {}, baseline = Object.keys(faults).length === 0) {
   async function find(db: SqlConnection, ref: string) {
     return (await db.query<Order>(orderSql + ' WHERE o.tenant=$1 AND o.reference=$2', [context.tenant, ref])).rows[0];
   }
+  const reused = (request: Record<string, unknown>, kind: string) => success({ ...request, already_logged: true, ...(baseline && kind === 'cancellation' ? { message: { en: 'A cancellation request already exists. Reused the existing request; no new request was created.', ar: 'طلب الإلغاء موجود مسبقا. تم استخدام الطلب الموجود دون إنشاء طلب جديد.' } } : {}) });
   async function insert(db: SqlConnection, key: string, kind: string, ref: string | null, queue: string, summary: string, amount: number | null) {
     if (!faults.duplicateRequests) {
       const existing = (await db.query<{ reference: string; queue: string; status: string }>('SELECT reference,queue,status FROM sandbox.sh_requests WHERE tenant=$1 AND idempotency_key=$2', [context.tenant, key])).rows[0];
-      if (existing) return success({ ...existing, already_logged: true });
-      const same = (await db.query<{ reference: string; queue: string; status: string }>("SELECT reference,queue,status FROM sandbox.sh_requests WHERE tenant=$1 AND customer_key=$2 AND kind=$3 AND order_reference IS NOT DISTINCT FROM $4 AND kind<>'human_review'", [context.tenant, context.requesterKey, kind, ref])).rows[0];
-      if (same) return success({ ...same, already_logged: true });
+      if (existing) return reused(existing, kind);
+      const same = (await db.query<{ reference: string; queue: string; status: string }>("SELECT reference,queue,status FROM sandbox.sh_requests WHERE tenant=$1 AND customer_key=$2 AND kind=$3 AND order_reference IS NOT DISTINCT FROM $4 AND kind<>'human_review' AND ($5::boolean = false OR status IN ('open','in_progress')) ORDER BY created_at,reference", [context.tenant, context.requesterKey, kind, ref, baseline && kind === 'cancellation'])).rows[0];
+      if (same) return reused(same, kind);
     }
     const row = (await db.query<{ reference: string; queue: string; status: string; amount_aed: number | null }>('INSERT INTO sandbox.sh_requests(tenant,customer_key,kind,order_reference,queue,amount_aed,summary,idempotency_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING reference,queue,status,amount_aed',
       [context.tenant, context.requesterKey, kind, ref, queue, amount, summary, faults.duplicateRequests ? null : key])).rows[0]!;
@@ -85,6 +86,11 @@ export function createShopTools(context: SandboxContext, faults: ShopFaults = {}
       const input = schemas.create_request.parse(args);
       const o = await find(db, input.order_reference);
       if (!o) return failure('not_found');
+      if (baseline && input.kind === 'cancellation') {
+        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [tenant + ':' + context.requesterKey + ':' + input.kind + ':' + input.order_reference]);
+        const existing = (await db.query<{ reference: string; queue: string; status: string }>("SELECT reference,queue,status FROM sandbox.sh_requests WHERE tenant=$1 AND customer_key=$2 AND kind='cancellation' AND order_reference=$3 AND (status IN ('open','in_progress') OR idempotency_key=$4) ORDER BY created_at,reference", [tenant, context.requesterKey, input.order_reference, key])).rows[0];
+        if (existing) return reused(existing, input.kind);
+      }
       const status = shownStatus(o, faults);
       if ((input.kind === 'address_change' || input.kind === 'cancellation') && status !== 'placed') return failure('tool_failed');
       if (input.kind === 'refund' && (o.status !== 'delivered' || !(o.return_until && o.return_until >= today))) return failure('tool_failed');
