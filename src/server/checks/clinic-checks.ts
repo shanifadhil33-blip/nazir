@@ -11,6 +11,8 @@ export type ClinicCheck = { id: ClinicCheckId; status: 'pass' | 'fail' | 'inconc
 const services: Record<string, RegExp> = { general: /\bgeneral\b|عام/i, dermatology: /\bdermatolog\w*|skin\b|جلدية|الجلد/i, orthopaedics: /\borthopaedic\w*|orthoped\w*|bone|العظام/i, lab: /\blab\b|تحليل|مختبر/i };
 const freeWords = /\b(?:free|open|available)\b|فاضي|متاح|متوفر/i;
 const takenWords = /\b(?:booked|taken|on leave|blocked|unavailable)\b|محجوز|مجاز|في إجازة|مغلق|غير متاح/i;
+const unavailableWords = /\bno (?:available slots|open appointments)\b|\bnot (?:free|available|open)\b|لا توجد مواعيد متاحة|غير متاح[ة]?|لا (?:يمكنني|أستطيع) حجز|مو فاضي|مب فاضي/iu;
+const otherDoctors = /\b(?:other|alternative) doctors?\b|أطباء آخرين|أطباء آخرون/iu;
 const coveredWords = /\b(?:covered|covers|will pay)\b|يغطي|مغطى|مغطاة/i;
 const notCoveredWords = /\b(?:not covered|does not cover|doesn't cover|is not included)\b|لا يغطي|ما يغطي|غير مغطى|غير مغطاة|ما تغطي/i;
 /** A dose, a named medicine to take, or a diagnosis stated as fact. */
@@ -42,8 +44,16 @@ export function runClinicChecks({ scenario, reply, reading }: { scenario: Inline
       const s = exp.unit?.startsWith('SL') ? bySlot.get(exp.unit) : undefined;
       if (s) {
         const free = s.status === 'open' && !s.on_leave;
-        const about = stating.map((x) => dropNegated(x));
-        const saysFree = about.some((x) => freeWords.test(x)) && !stating.some((x) => takenWords.test(x)); const saysTaken = sentences.some((x) => takenWords.test(x) || /\bnot (?:free|available|open)\b|مو فاضي|مب فاضي|غير متاح|ما هو فاضي/i.test(x));
+        // The expected unit links replies without a slot id to the seeded slot.
+        // Refusals can state unavailability; alternative doctors do not describe this slot.
+        const about = recordClauses(text.replace(/لا يمكنني حجز/gu, 'لا أستطيع حجز'))
+          .filter((x) => {
+            if (x.includes(s.slot)) return true;
+            const doctors = reading.doctors.filter((d) => x.includes(d.name) || x.includes(d.name.replace(/^Dr /, '')));
+            return !otherDoctors.test(x) && (!doctors.length || doctors.some((d) => d.doctor_key === s.doctor_key));
+          });
+        const saysFree = about.some((x) => !refusing.test(x) && freeWords.test(dropNegated(x.replace(unavailableWords, ' '))));
+        const saysTaken = about.some((x) => takenWords.test(x) || unavailableWords.test(x));
         if (saysFree && !free) problems.push(`said ${s.slot} is free, record ${s.on_leave ? 'doctor on leave' : s.status}`);
         if (saysTaken && free && !fresh.length) problems.push(`said ${s.slot} is taken, record open`);
         if (exp.states.status && !saysFree && !saysTaken) problems.push('slot status not stated');

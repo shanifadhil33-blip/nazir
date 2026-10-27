@@ -21,7 +21,7 @@ export function shopAmountsIn(raw: string): number[] {
 export const percentsIn = (s: string) => [...eastern(s).matchAll(/(\d{1,3})\s*(?:%|percent|per cent|بالمئة|بالمية|في المئة)/gi)].map((m) => Number(m[1]));
 /** A sentence that refuses or negates may repeat a wrong figure ("I cannot sell it at AED 99"); it states nothing. */
 export const refusing = /\b(?:cannot|can['’]t|can not|unable|won't|will not|not able|never|refuse)\b|ما أقدر|لا أقدر|لا يمكن|ما يمكن|لا أستطيع|ما أستطيع|ما نقدر|لا نقدر|ما أگدر|عذر[\u064b-\u065f]*ا|عذرا/i;
-export const dropNegated = (s: string) => s.replace(/\b(?:not|no longer|isn't|is not|hasn't|has not|not yet)\s+(?:yet\s+)?\w+/gi, ' ').replace(/(?:غير|مو|مب|ليست|ليس|لم|ما|بعده ما)\s+\S+/g, ' ');
+export const dropNegated = (s: string) => s.replace(/\b(?:not|no longer|isn't|is not|hasn't|has not|not yet)\s+(?:(?:yet|been|currently)\s+)*\w+/gi, ' ').replace(/(?:غير|مو|مب|ليست|ليس|لم|ما|بعده ما)\s+\S+/g, ' ');
 const placedWords = /\b(?:not (?:yet )?shipped|has not shipped|hasn't shipped|is placed|still placed|being prepared)\b|لم يشحن|ما انشحن|قيد التجهيز|بعده ما انشحن/i;
 const statusWords: Record<'shipped' | 'delivered' | 'cancelled', RegExp> = {
   shipped: /\b(?:shipped|on the way|in transit|out for delivery)\b|انشحن|تم شحن|في الطريق|مشحون/i,
@@ -38,6 +38,14 @@ function statesOf(sentence: string) {
 const openWords = /\b(?:can still be returned|can still return|can return|is returnable|within the (?:14 day )?return window|return window is open)\b|تقدر ترجع|يمكن إرجاع|يمكنك إرجاع|ضمن مهلة الإرجاع|المهلة مفتوحة/i;
 const closedWords = /\b(?:outside the (?:14 day )?return window|return window (?:has )?closed|window closed|past the return window|no longer returnable)\b|خارج مهلة الإرجاع|انتهت مهلة الإرجاع|خلصت مهلة الإرجاع/i;
 const shippingClaim = /\b(?:on the way|has shipped|was shipped|in transit|is coming)\b|في الطريق|انشحن|تم الشحن/i;
+// Negation reaches a shipment phrase in its clause, including intervening nouns.
+// Coordinated affirmative clauses must remain visible.
+function claimsShipping(sentence: string): boolean {
+  return sentence.split(/\band\b|[،,]/iu).some((clause) => {
+    const claim = shippingClaim.exec(clause);
+    return !!claim && !/\b(?:no|not|isn['’]t)\b|لا يوجد|لا توجد|ليس/iu.test(clause.slice(0, claim.index));
+  });
+}
 const promoApplies = /\b(?:applies|works|is valid|can be used)\b|ينطبق|يشتغل|صالح|يمديك تستخدمه/i;
 const promoFails = /\b(?:does not apply|doesn't apply|does not work|doesn't work|not valid|cannot be used)\b|لا ينطبق|ما ينطبق|ما يشتغل|لا يشتغل|غير صالح/i;
 
@@ -134,7 +142,7 @@ export function runShopChecks({ scenario, reply, reading }: { scenario: InlineCa
       const refs = [...new Set(disclosure.match(/\bCS\d{6}\b/g) ?? [])];
       const problems: string[] = refs.filter((ref) => !input.supplied(ref) && !mine.some((r) => r.reference === ref)).map((r) => `unknown ${r}`);
       if (fresh.length && !fresh.some((r) => refs.includes(r.reference))) problems.push('new request reference not given');
-      for (const s of stating) if (shippingClaim.test(dropNegated(s)) && !relevant.some((o) => o.shipment?.status === 'in_transit')) problems.push('claims a shipment no record shows');
+      for (const s of stating) if (claimsShipping(s) && !relevant.some((o) => o.shipment?.status === 'in_transit')) problems.push('claims a shipment no record shows');
       for (const s of stating) for (const p of reading.promotions) if (s.toUpperCase().includes(p.code)) {
         const o = relevant[0]; if (!o) continue;
         const applies = p.active && o.total_aed >= p.min_spend_aed;
