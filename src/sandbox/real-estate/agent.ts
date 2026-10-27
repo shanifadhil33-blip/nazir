@@ -11,9 +11,9 @@ export const estateSystemPrompt = [
   'When the requester names a unit and a fault, log the maintenance request with the tool in the same turn and give the reference, without asking first; never say it is fixed unless the request status is done. عندما يذكر مقدم الطلب وحدة وعطلاً، سجّل طلب الصيانة بالأداة في نفس الدور واذكر المرجع دون طلب الإذن أولاً؛ ولا تقل إن العطل أُصلح إلا إذا كانت حالة الطلب done.',
   ...estatePolicy.clauses.map((c) => `${c.id}: ${c.en}`),
 ].join('\n');
-export type EstateVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: EstateFaults; disclosure: { en: string; ar: string }; reviewGuard?: { enabled: boolean; rulesHash: string }; configHash: string };
-const v = (c: Omit<EstateVersion, 'configHash' | 'reviewGuard'>): EstateVersion => {
-  const config = { ...c, ...(c.kind === 'baseline' ? { reviewGuard: { enabled: true, rulesHash: reviewGuardHash } } : {}) };
+export type EstateVersion = { id: string; label: string; kind: 'baseline' | 'planted_fault'; faults: EstateFaults; disclosure: { en: string; ar: string }; reviewGuard?: { enabled: boolean; rulesHash: string }; baselineToolRevision?: string; configHash: string };
+const v = (c: Omit<EstateVersion, 'configHash' | 'reviewGuard' | 'baselineToolRevision'>): EstateVersion => {
+  const config = { ...c, ...(c.kind === 'baseline' ? { reviewGuard: { enabled: true, rulesHash: reviewGuardHash }, baselineToolRevision: 'oct28-idempotency-v1' } : {}) };
   return Object.freeze({ ...config, configHash: hash({ ...config, prompt: hash(estateSystemPrompt), tools: estateToolManifestHash() }) });
 };
 export const estateVersions = Object.freeze({
@@ -27,7 +27,7 @@ export const estateVersions = Object.freeze({
 export async function runEstateAgent({ model, version, messages, sandbox, conversationKey, maxTurns = 6 }: { model: ChatModel; version: EstateVersion; messages: Message[]; sandbox: SandboxContext; conversationKey: string; maxTurns?: number }) {
   const transcript: Message[] = [{ role: 'system', content: estateSystemPrompt }, ...structuredClone(messages)];
   const toolCalls: AgentToolEvent[] = [];
-  const tools = createEstateTools(sandbox, version.faults);
+  const tools = createEstateTools(sandbox, version.faults, version.kind === 'baseline');
   const finish = (reply: string) => finishWithReviewGuard({ pack: 'estate', enabled: version.kind === 'baseline' && Boolean(version.reviewGuard?.enabled), reply, messages, transcript, toolCalls, conversationKey, tools });
   const arabic = /[\u0600-\u06ff]/.test(messages.filter((m) => m.role === 'user').at(-1)?.content ?? '');
   const fallback = arabic ? 'تعذر إكمال الطلب. حاول مرة ثانية أو اطلب موظفا.' : 'I could not finish this request. Please try again or ask a staff member.';

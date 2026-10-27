@@ -21,13 +21,13 @@ export const reviewGuardRules: Record<Pack, readonly Rule[]> = {
     { queue: 'pricing', en: 'pricing team', ar: 'فريق التسعير', intent: /price match|match.*price|discount|(?:make|create).*code|مطابقة.*سعر|طابق.*سعر|خصم/i },
   ],
   school: [
-    { queue: 'safeguarding', en: 'safeguarding team', ar: 'فريق حماية الطفل', intent: /bully|bullied|bullying|child.*(?:harm|unsafe|safety)|تنمر|سلامة.*طفل|(?:طفل|ابن|ولد).*(?:أذى|اذى|خطر|ضرب)/i },
+    { queue: 'safeguarding', en: 'safeguarding team', ar: 'فريق حماية الطفل', intent: /(?=[^.!?\n]*\b(?:name|phone|contact|number)\b)(?=[^.!?\n]*\b(?:child|boy|girl|parent|father|mother)\b)[^.!?\n]*\b(?:push(?:ed)?|hit|hurt)\b|(?=[^.!؟\n]*(?:اسم|رقم|هاتف|تواصل))(?=[^.!؟\n]*(?:طفل|ولد|بنت|أب|ابو|والد|أم|امها))[^.!؟\n]*(?:دف|ضرب|أذى|اذى)|bully|bullied|bullying|child.*(?:harm|unsafe|safety)|تنمر|سلامة.*طفل|(?:طفل|ابن|ولد).*(?:أذى|اذى|خطر|ضرب)/i },
     { queue: 'finance', en: 'finance team', ar: 'فريق المالية', intent: /discount|waiv|fee plan|instalment|installment|خصم|إعفاء|اعفاء|تقسيط|أقساط|اقساط|(?:أدفع|ادفع|رسوم).*دفعات/i },
     { queue: 'admissions', en: 'admissions team', ar: 'فريق القبول', intent: /(?:reserve|book|enrol).*full (?:grade|class)|(?:احجز|حجز|سجل).*(?:صف|الصف).*(?:مكتمل|ممتلئ)/i },
     { queue: 'front_office', en: 'front office team', ar: 'فريق مكتب الاستقبال', intent: /(?:change|different|someone else).*pick.?up|(?:تغيير|غير|بدل).*استلام/i },
   ],
   estate: [
-    { queue: 'legal_review', en: 'legal review team', ar: 'فريق المراجعة القانونية', intent: /(?:my (?:Dubai )?landlord|my tenant).*(?:evict|dispute|eviction notice)|(?:evict|dispute).*(?:me|my)|(?:المالك|المؤجر).*(?:إخلاء|اخلاء|أطلع|اطلع|نزاع)|نزاع.*(?:إيجار|ايجار)/i },
+    { queue: 'legal_review', en: 'legal review team', ar: 'فريق المراجعة القانونية', intent: /\beviction\b[^.!?\n]*(?:illegal|ignore)|(?:الإخلاء|الاخلاء|إخلاء|اخلاء)[^.!؟\n]*(?:غير قانوني|أتجاهل|اتجاهل)|(?:my (?:Dubai )?landlord|my tenant).*(?:evict|dispute|eviction notice)|(?:evict|dispute).*(?:me|my)|(?:المالك|المؤجر).*(?:إخلاء|اخلاء|أطلع|اطلع|نزاع)|نزاع.*(?:إيجار|ايجار)/i },
     { queue: 'accounts', en: 'accounts team', ar: 'فريق الحسابات', intent: /(?:refund|return).*(?:my|deposit)|(?:my|deposit).*refund|bounced cheque|change.*payment|(?:وافق|رد|استرجاع|استرداد).*تأمين|شيك.*(?:مرتجع|رجع)|تغيير.*(?:دفع|دفعات)/i },
     { queue: 'leasing', en: 'leasing team', ar: 'فريق التأجير', intent: /discount|negotiat.*(?:rent|commission)|خصم|تفاوض.*(?:إيجار|ايجار|عمولة)/i },
   ],

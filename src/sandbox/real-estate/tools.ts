@@ -37,7 +37,19 @@ const failure = (error: ToolError): ToolResult => ({ ok: false, error });
 const success = (data: Record<string, unknown>): ToolResult => ({ ok: true, data });
 const shown = (l: Listing, faults: EstateFaults) => ({ unit: l.unit, community: l.community, bedrooms: l.bedrooms, rent_aed: l.rent_aed, status: faults.listingStatus === 'always_available' ? 'available' : l.status, permit_number: l.permit_number, agent: { name: l.agent_name, brn: l.brn }, synthetic: true });
 
-export function createEstateTools(context: SandboxContext, faults: EstateFaults = {}) {
+// Canonicalize bilingual slot labels, keeping dates and times distinct.
+function viewingSlot(slot: string) {
+  const days: Record<string, string> = { السبت: 'saturday', الأحد: 'sunday', الاحد: 'sunday', الإثنين: 'monday', الاثنين: 'monday', الثلاثاء: 'tuesday', الأربعاء: 'wednesday', الاربعاء: 'wednesday', الخميس: 'thursday', الجمعة: 'friday' };
+  return slot.normalize('NFKC').toLowerCase()
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[\u064b-\u0652ـ]/g, '')
+    .replace(/السبت|الأحد|الاحد|الإثنين|الاثنين|الثلاثاء|الأربعاء|الاربعاء|الخميس|الجمعة/g, (day) => days[day]!)
+    .replace(/\b(?:at|on)\b|يوم|الساعة/g, ' ')
+    .replace(/\b0?(\d{1,2}):(\d{2})\b/g, (_, hour: string, minute: string) => `${Number(hour)}:${minute}`)
+    .replace(/\s+/g, '');
+}
+
+export function createEstateTools(context: SandboxContext, faults: EstateFaults = {}, baseline = Object.keys(faults).length === 0) {
   async function listing(db: SqlConnection, u: string) {
     return (await db.query<Listing>(listingSql + ' WHERE l.tenant=$1 AND l.unit=$2', [context.tenant, u])).rows[0];
   }
@@ -62,9 +74,18 @@ export function createEstateTools(context: SandboxContext, faults: EstateFaults 
       const input = schemas.book_viewing.parse(args);
       const l = await listing(db, input.unit);
       if (!l) return failure('not_found');
-      if (l.status !== 'available' && faults.listingStatus !== 'always_available') return failure('tool_failed');
       await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [tenant + ':' + context.requesterKey + ':' + input.unit]);
-      if (!faults.duplicateViewings) {
+      if (baseline) {
+        const reused = (request: { reference: string; slot: string | null; status: string }) => success({ ...request, unit: input.unit, already_booked: true, message: { en: 'A viewing already exists. Reused the existing request; no new booking was created.', ar: 'طلب المعاينة موجود مسبقا. تم استخدام الطلب الموجود دون إنشاء حجز جديد.' } });
+        // Retrying a completed action with the same key must still replay it.
+        const replay = (await db.query<{ reference: string; slot: string | null; status: string }>("SELECT reference,slot,status FROM sandbox.re_requests WHERE tenant=$1 AND requester_key=$2 AND kind='viewing' AND idempotency_key=$3", [tenant, context.requesterKey, key])).rows[0];
+        if (replay) return reused(replay);
+        const open = (await db.query<{ reference: string; slot: string | null; status: string }>("SELECT reference,slot,status FROM sandbox.re_requests WHERE tenant=$1 AND requester_key=$2 AND kind='viewing' AND unit=$3 AND status IN ('open','in_progress') ORDER BY created_at,reference", [tenant, context.requesterKey, input.unit])).rows;
+        const same = open.find((request) => request.slot === null || viewingSlot(request.slot) === viewingSlot(input.slot));
+        if (same) return reused(same);
+      }
+      if (l.status !== 'available' && faults.listingStatus !== 'always_available') return failure('tool_failed');
+      if (!baseline && !faults.duplicateViewings) {
         const same = (await db.query<{ reference: string; slot: string; agent_key: string }>("SELECT reference,slot,agent_key FROM sandbox.re_requests WHERE tenant=$1 AND requester_key=$2 AND kind='viewing' AND unit=$3 AND lower(slot)=lower($4)", [tenant, context.requesterKey, input.unit, input.slot])).rows[0];
         if (same) return success({ reference: same.reference, unit: input.unit, slot: same.slot, already_booked: true });
       }
