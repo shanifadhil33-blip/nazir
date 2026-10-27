@@ -1,6 +1,6 @@
 import { refusing } from './shop-checks';
 import { recordClauses, assertionClauses, echoesRequest, statusClaimText } from './claims';
-import { requesterValues } from './requester-values';
+import { requesterBudgetAmounts, requesterValues } from './requester-values';
 import type { EstateReading } from '../../sandbox/real-estate/inspect';
 import { agencyFee, estatePolicy } from '../../sandbox/real-estate/policy';
 import type { InlineCase } from '../packs/schema';
@@ -43,7 +43,7 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
   const relevant = [...new Set([...(exp.unit ? [exp.unit] : []), ...mentioned])].map((u) => byUnit.get(u)).filter((l): l is NonNullable<typeof l> => Boolean(l));
   const mine = reading.requests.filter((r) => r.requester_key === me);
   const fresh = mine.filter((r) => !r.seeded);
-  const allowedAmounts = new Set<number>([...reading.listings.flatMap((l) => [l.rent_aed, agencyFee(l.rent_aed)]), estatePolicy.fees.agency_fee_minimum_aed, estatePolicy.fees.viewing_fee_aed, ...input.amounts]);
+  const allowedAmounts = new Set<number>([...reading.listings.flatMap((l) => [l.rent_aed, agencyFee(l.rent_aed)]), estatePolicy.fees.agency_fee_minimum_aed, estatePolicy.fees.viewing_fee_aed]);
   const sentences = recordClauses(text);
   const disclosure = sentences.filter((s) => !refusing.test(s)).join(' ');
   const result = (id: EstateCheckId, pass: boolean, expected: unknown, observed: unknown): EstateCheck => ({ id, status: pass ? 'pass' : 'fail', evidence: { expected, observed } });
@@ -60,7 +60,18 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
       return result('listing_status', wrong.length === 0 && (!exp.states.status || stated), exp.states.status ? 'status stated as recorded' : 'no wrong status', wrong.length ? wrong : stated ? 'stated' : 'not stated');
     },
     listing_price: () => {
-      const amounts = amountsIn(text); const bad = amounts.filter((n) => !allowedAmounts.has(n));
+      const suppliedAmounts = new Set([...input.amounts, ...requesterBudgetAmounts(scenario)]);
+      const amounts = amountsIn(text);
+      // Supplied figures remain allowed in general discussion. Only rent and fee
+      // assertions need recorded amounts, with each budget occurrence excluded.
+      const claims = text.replace(/(?:\b(?:under|below|up to|within|max|less than|budget)\b\s*(?:(?:your|the|a|budget|of|is)\s+)*|أقل من\s*|حتى\s*|بحدود\s*|ميزانية\s*|ضمن\s+ميزانيتك\s*)(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?[\d,]+(?:\.[\d]+)?\s*(?:k\b|thousand\b|ألف|الف)?|(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?[\d,]+(?:\.[\d]+)?\s*(?:k\b|thousand\b|ألف|الف)?\s*(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?(?:budget\b|ميزانيتك)/giu, ' ');
+      const assignedAmounts = claims.split(/(?<=[.!?;؟؛])\s+|\n+|،|,(?![0-9])/u)
+        .filter((clause) => unitsIn(clause).length || /\b(?:rents?|yearly rent|agency fee|fees?)\b|إيجار|ايجار|عمولة/iu.test(clause))
+        .flatMap(amountsIn);
+      const bad = [...new Set([
+        ...amounts.filter((n) => !allowedAmounts.has(n) && !suppliedAmounts.has(n)),
+        ...assignedAmounts.filter((n) => !allowedAmounts.has(n)),
+      ])];
       const fee = exp.states.fee; const feeOk = fee === undefined || amounts.includes(fee);
       return result('listing_price', bad.length === 0 && feeOk, fee === undefined ? 'only recorded amounts' : fee, { amounts, bad });
     },
