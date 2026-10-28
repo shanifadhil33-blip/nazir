@@ -56,7 +56,6 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   });
   const tenant = data.sandbox_tenant, channel = createInspectionChannel(inspectionDriver);
   const end = now()+conversationTimeoutMs;
-  let judging=false;
   let lost=false,reason: string | undefined, stopped=false;
   let transcript: Message[]=[],reply='',reading: StateReading | undefined;
   const toolCalls: ToolEvents=[];
@@ -67,12 +66,23 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
   const active = () => { if (lost || stopped) throw new Error('Attempt stopped'); if (now()>=end) { reason='timeout'; throw new Error('Attempt timeout'); } };
   // A lock fences each sandbox transaction against takeover and cancellation.
   const fence = async (db: SqlConnection) => {
+    active();
+    // Bound lock waits and SQL on the server too, so a timed-out tool cannot
+    // retain the conversation fence and block finalization indefinitely.
+    const remaining = String(Math.max(1, Math.ceil(end-now())));
+    await db.query("SELECT set_config('statement_timeout',$1,true),set_config('lock_timeout',$1,true)",[remaining]);
     await db.query('SET LOCAL ROLE nazir_worker');
     await db.query("SELECT set_config('app.workspace_id',$1,true)",[wid]);
     const match = (await db.query("SELECT id FROM nazir.conversations WHERE id=$1 AND status='running' AND lease_owner=$2 AND attempt=$3 AND lease_expires_at>clock_timestamp() FOR UPDATE",[cid,workerId,attempt])).rows[0];
     if (!match) { lost=true; throw new Error('Lease lost'); }
   };
-  const fencedDriver: TransactionDriver = { transaction: (fn) => driver.transaction(async (db) => { active(); await fence(db); active(); return fn(db); }) };
+  const fencedDriver: TransactionDriver = { transaction: (fn) => driver.transaction(async (db) => {
+    active();
+    await fence(db); active();
+    const result = await fn(db);
+    active(); // A late tool result rolls back instead of committing after timeout.
+    return result;
+  }) };
   let timer: ReturnType<typeof setTimeout> | undefined;
   let beatBusy=false;
   const beat = setInterval(() => {
@@ -84,7 +94,10 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     }).catch(() => { lost=true; }).finally(() => { beatBusy=false; });
   },leaseSeconds*1000/3);
   let verdict: Verdict = { status:'inconclusive',reason:'reading_missing',results:[] };
-  const deadline = new Promise<never>((_,reject) => { timer=setTimeout(() => { if(!judging) { reason='timeout'; stopped=true; } reject(new Error('Attempt timeout')); },conversationTimeoutMs); });
+  // Every awaited stage shares one wall-clock deadline, including tools,
+  // knowledge lookup and judging. Never leave a rejected deadline unobserved
+  // while an unbounded agent/tool promise is still pending.
+  const deadline = new Promise<never>((_,reject) => { timer=setTimeout(() => { reason='timeout'; stopped=true; reject(new Error('Attempt timeout')); },conversationTimeoutMs); });
   const bounded = <T>(p: Promise<T>) => Promise.race([p,deadline]);
   const runtime = runtimeForSeed(data.scenario.starting_state);
   let packReading: unknown;
@@ -120,6 +133,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       active();
       transcript.push({ role:'user',content });
       const result=await rt.run({ model,version:resolved.version,messages:transcript,sandbox:{ driver:fencedDriver,tenant,requesterKey:c.persona.requester_key },conversationKey:cid });
+      active();
       transcript=result.transcript.filter((m) => m.role!=='system'); reply=result.reply; toolCalls.push(...(result.toolCalls as ToolEvents));
       if (transcript.some((m) => m.truncated)) { agentReplyCutOff = true; break; }
     }
@@ -138,7 +152,6 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       records=[...rt.checks({ scenario:c,reply,reading:packReading }).map((k) => packRecord(rt,c,k)), ...guardEscalationChecks(toolCalls)];
       verdict={ ...combineVerdicts(records,null),results:{ records } };
       if (!data.manifest.recordsOnly) {
-        judging=true;
         const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
         const knowledge=await searchKnowledgeForWorker(driver,wid,c.resident_turns.join(' '),agentId);
         const input=buildPackJudgeInput({ pack:rt.pack,policyRules:rt.policyRules,clause:rt.clause(c.source_clause),scenario:c,reply,facts:rt.facts(packReading,c).judge,notes:judgeNotes(data.manifest.lessons,c.family),knowledge }),seed=`${cid}:${attempt}`;
@@ -148,8 +161,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
           const judge=judgeFactory?judgeFactory(context):networkJudge(driver,context);
           semantic=await bounded(judge({ input:input as ReturnType<typeof buildJudgeInput>,agentFamilies,seed }));
         } catch { semantic=unavailable(input,seed); }
-        if(reason==='budget_reached' || reason==='timeout') reason=undefined;
-        judging=false;
+        if(reason==='budget_reached') reason=undefined;
         verdict={ ...combineVerdicts(records,semantic),results:{ records,semantic } };
       }
       packFindings=buildPackFindings({ runtime:rt,scenarioRow:data.scenario as unknown as { id:string; stable_key:string; content_hash:string; language:string; family:string },scenario:c,reply,transcript,toolCalls,reading:packReading,records,semantic,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,version:resolved.version,lessons:data.manifest.lessons });
@@ -177,7 +189,6 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     const result = await bounded(externalConversation(row, turns, cid, data.scenario.language === 'ar' ? 'ar' : 'en', reserveCall, externalTransport));
     transcript=result.transcript; reply=result.reply;
     if (!data.manifest.recordsOnly) {
-      judging=true;
       const context: ModelContext = { workspaceId:wid,conversationId:cid,onCall:(meta) => { metas.push(meta); },reserveCall,remainingMs:() => Math.max(1,end-now()) };
       const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
       const knowledge=await searchKnowledgeForWorker(driver,wid,turns.join(' '),agentId,3,runtime?.id ?? 'government');
@@ -188,12 +199,11 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       const seed=`${cid}:${attempt}`;
       try { semantic=await bounded((judgeFactory ? judgeFactory(context) : networkJudge(driver,context))({ input,agentFamilies:['unknown'],seed })); }
       catch { semantic=unavailable(input,seed); }
-      if(reason==='budget_reached' || reason==='timeout') reason=undefined;
-      judging=false;
+      if(reason==='budget_reached') reason=undefined;
     }
     verdict=semantic?.status==='contradicted' ? { status:'failed',results:{ records,semantic } } : { status:'inconclusive',reason:'external_agent_no_records_link',results:{ records,semantic } };
   };
-  try {
+  const attemptWork = async () => {
     if (external) await externalAttempt();
     // A non Government pack drives its own sandbox, checks and judge; Government keeps the exact path below.
     else if (runtime) await packAttempt(runtime);
@@ -234,6 +244,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
           active();
           transcript.push({ role:'user',content });
           const result=await runServiceAgent({ model,version,messages:transcript,sandbox:{ driver:fencedDriver,tenant,requesterKey:data.scenario.persona.requester_key },conversationKey:cid });
+          active();
           transcript=result.transcript.filter((m) => m.role!=='system'); reply=result.reply; toolCalls.push(...result.toolCalls);
         }
         if (!lost) {
@@ -245,7 +256,6 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
               records=recordChecksEvaluator(evaluationInput).results as RecordCheck[];
               verdict=await bounded(Promise.resolve(evaluate(evaluationInput)));
               if(!data.manifest.recordsOnly) {
-                judging=true;
                 // Cited owner knowledge for the judge; any failure means none, never a failed conversation.
                 const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
                 const knowledge=await searchKnowledgeForWorker(driver,wid,data.scenario.persona.resident_turns.join(' '),agentId);
@@ -257,8 +267,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
                   semantic=await bounded(judge({ input,agentFamilies,seed }));
                 } catch { semantic=unavailable(input,seed); }
                 // A judge budget refusal belongs to the semantic result, not a retry.
-                if(reason==='budget_reached' || reason==='timeout') reason=undefined;
-                judging=false;
+                if(reason==='budget_reached') reason=undefined;
                 verdict={ ...combineVerdicts(records,semantic),results:{ records,semantic } };
               }
             }
@@ -268,7 +277,9 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       }
     }
     }
-  } catch (e) { reason ??= external ? e instanceof Coded ? e.code : 'external_unreachable' : 'reading_failed'; }
+  };
+  try { await bounded(attemptWork()); }
+  catch (e) { reason ??= external ? e instanceof Coded ? e.code : 'external_unreachable' : 'reading_failed'; }
   finally { clearTimeout(timer); clearInterval(beat); stopped=true; }
   if (lost) return { ...claim,lost:true };
   if (!verdict || !['passed','failed','inconclusive'].includes(verdict.status)) { reason ??= 'bad_evaluator'; verdict={ status:'inconclusive',reason,results:[] }; }
@@ -291,7 +302,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     if (reading) await db.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading,attempt) VALUES($1,$2,'inspection_channel',$3,$4)",[wid,cid,JSON.stringify(reading),attempt]);
     if (packReading) await db.query("INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading,attempt) VALUES($1,$2,'inspection_channel',$3,$4)",[wid,cid,JSON.stringify({ pack:runtime!.id,...(packReading as object) }),attempt]);
     const meta=metas.at(-1);
-    const summary={ results:data.manifest.recordsOnly?verdict.results ?? {}:{ records,semantic },records,semantic,calls:metas.map((m) => ({ provider:m.provider,model:m.model,failover:m.failover })) };
+    const summary={ ...(reason==='timeout' ? { timeout: { en:'Conversation exceeded its time limit.',ar:'تجاوزت المحادثة المهلة المحددة.' },timeoutMs:conversationTimeoutMs } : {}),results:data.manifest.recordsOnly?verdict.results ?? {}:{ records,semantic },records,semantic,calls:metas.map((m) => ({ provider:m.provider,model:m.model,failover:m.failover })) };
     await db.query(`UPDATE nazir.conversations SET status=$4,inconclusive_reason=CASE WHEN $4 IN ('inconclusive','queued') THEN $5 ELSE NULL END,last_error=$5,available_at=$6,finished_at=CASE WHEN $7 THEN NULL ELSE clock_timestamp() END,result_summary=$8,model_provider=$9,model_id=$10,failover=$11,model_calls=model_calls || $12::jsonb,lease_owner=NULL,lease_expires_at=NULL WHERE id=$1 AND lease_owner=$2 AND attempt=$3 AND status='running'`,[cid,workerId,attempt,retry?'queued':status,resultReason,new Date(now()+30000*attempt),retry,retry?null:JSON.stringify(summary),meta?.provider ?? null,meta?.model ?? null,metas.some((m) => m.failover),JSON.stringify(metas.map((m) => ({ attempt,provider:m.provider,model:m.model,family:m.family,failover:m.failover })))]);
     if(!retry && (external || packReading || (evaluationInput && reading)) && status!=='inconclusive') {
       const findings=external ? semantic?.status === 'contradicted' ? [externalReplyFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',severity:data.scenario.severity ?? 'high',reply,semantic })] : [] : runtime?packFindings:buildFindings({ ...evaluationInput!,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
