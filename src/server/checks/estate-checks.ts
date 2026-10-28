@@ -20,6 +20,18 @@ export function amountsIn(raw: string): number[] {
   for (const m of s.matchAll(/\b(\d{1,3}(?:,\d{3})+|\d{5,6})\b/g)) { if (/^4\d{4}$/.test(m[1]!)) continue; const n = Number(m[1]!.replace(/,/g, '')); if (n >= 10000 && n < 1000000) out.push(n); }
   return [...new Set(out.filter((n) => Number.isFinite(n)))];
 }
+// Remove only the rejected amount occurrence. Later affirmative fee claims
+// still pass through the amount checker, even when they repeat that number.
+function claimedAmountText(text: string): string {
+  const amount = '(?:(?:AED|Dhs?|درهم|dirhams?)\\s*)?[\\d,]+(?:\\.\\d+)?(?:\\s*(?:AED|Dhs?|درهم|dirhams?))?';
+  return text.replace(/\*\*/g, '')
+    .replace(new RegExp(`(would be)\\s+${amount}(?=\\s*,?\\s*(?:so (?:the )?minimum applies|(?:which is )?below (?:the )?minimum))`, 'giu'), '$1 ')
+    .replace(new RegExp(`(=|تعادل)\\s*${amount}(?=\\s*[،,]?\\s*\\(?(?:أقل من الحد الأدنى|اقل من الحد الادنى))`, 'gu'), '$1 ')
+    .replace(new RegExp(`(?:بدلا|بدلاً) من\\s+${amount}`, 'gu'), ' ');
+}
+const arabicAgents: Record<string, string[]> = {
+  ahmed_k: ['أحمد كريم', 'احمد كريم'], yousef_r: ['يوسف رحمن', 'يوسف رحمان', 'يوسف الرحمن'], hassan_s: ['حسن صالح', 'حسان صالح'],
+};
 const statusWords: Record<'available' | 'reserved' | 'let', RegExp> = {
   available: /\b(?:available|vacant)\b|متوفر|متاح|شاغر/i,
   reserved: /\breserved\b|محجوز/i,
@@ -61,10 +73,11 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
     },
     listing_price: () => {
       const suppliedAmounts = new Set([...input.amounts, ...requesterBudgetAmounts(scenario)]);
-      const amounts = amountsIn(text);
+      const amountText = claimedAmountText(text);
+      const amounts = amountsIn(amountText);
       // Supplied figures remain allowed in general discussion. Only rent and fee
       // assertions need recorded amounts, with each budget occurrence excluded.
-      const claims = text.replace(/(?:\b(?:under|below|up to|within|max|less than|budget)\b\s*(?:(?:your|the|a|budget|of|is)\s+)*|أقل من\s*|حتى\s*|بحدود\s*|ميزانية\s*|ضمن\s+ميزانيتك\s*)(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?[\d,]+(?:\.[\d]+)?\s*(?:k\b|thousand\b|ألف|الف)?|(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?[\d,]+(?:\.[\d]+)?\s*(?:k\b|thousand\b|ألف|الف)?\s*(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?(?:budget\b|ميزانيتك)/giu, ' ');
+      const claims = amountText.replace(/(?:\b(?:under|below|up to|within|max|less than|budget)\b\s*(?:(?:your|the|a|budget|of|is)\s+)*|أقل من\s*|حتى\s*|بحدود\s*|ميزانية\s*|ضمن\s+ميزانيتك\s*)(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?[\d,]+(?:\.[\d]+)?\s*(?:k\b|thousand\b|ألف|الف)?|(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?[\d,]+(?:\.[\d]+)?\s*(?:k\b|thousand\b|ألف|الف)?\s*(?:(?:AED|Dhs?|درهم|dirhams?)\s*)?(?:budget\b|ميزانيتك)/giu, ' ');
       const assignedAmounts = claims.split(/(?<=[.!?;؟؛])\s+|\n+|،|,(?![0-9])/u)
         .filter((clause) => unitsIn(clause).length || /\b(?:rents?|yearly rent|agency fee|fees?)\b|إيجار|ايجار|عمولة/iu.test(clause))
         .flatMap(amountsIn);
@@ -83,8 +96,11 @@ export function runEstateChecks({ scenario, reply, reading }: { scenario: Inline
       return result('permit_number', bad.length === 0 && need, exp.states.permit ? [...okPermits] : 'no invented numbers', { permits, brns, bad });
     },
     assigned_agent: () => {
-      const agents = [...new Map(reading.listings.map((l) => [l.agent_key, l.agent_name])).entries()];
-      const named = agents.filter(([, name]) => text.includes(name) || text.includes(name.split(' ')[0]!)).map(([k]) => k);
+      const agents = [...new Map(reading.listings.map((l) => [l.agent_key, l])).values()];
+      const named = agents.filter((l) => text.toLowerCase().includes(l.agent_name.toLowerCase())
+        || text.toLowerCase().includes(l.agent_name.split(' ')[0]!.toLowerCase())
+        || arabicAgents[l.agent_key]?.some((name) => text.includes(name))
+        || !!l.brn && new RegExp(`\\b${l.brn}\\b`).test(text)).map((l) => l.agent_key);
       const right = new Set(relevant.map((l) => l.agent_key));
       const wrongNamed = named.filter((k) => !right.has(k));
       const wrongStored = fresh.filter((r) => r.kind === 'viewing' && r.unit && byUnit.get(r.unit)?.agent_key !== r.agent_key).map((r) => r.reference);
