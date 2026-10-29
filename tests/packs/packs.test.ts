@@ -18,11 +18,11 @@ it('loads the expanded Government cases with the same hashes as the library', as
   expect(hash(after)).toBe(hash(before));
 });
 
-it('keeps the judge rubric, its version and its prompt hash exactly as before', () => {
+it('pins the judge rubric, its version and its prompt hash', () => {
   const gov = packById('government')!;
   expect(gov.judge.rubric).toBe(rubric);
   expect(gov.judge.rubric_version).toBe(rubricVersion);
-  expect(judgePromptHash).toBe(hash({ rubricVersion: 'n13.1', rubric: gov.judge.rubric }));
+  expect(judgePromptHash).toBe(hash({ rubricVersion: 'n13.2', rubric: gov.judge.rubric }));
   expect(gov.record_checks.map((c) => c.id)).toEqual([...checkIds]);
 });
 

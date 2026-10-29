@@ -20,7 +20,7 @@ const doctorNamed = (text: string, doctor: ClinicReading['doctors'][number]) =>
 const services: Record<string, RegExp> = { general: /\bgeneral\b|عام/i, dermatology: /\bdermatolog\w*|skin\b|جلدية|الجلد/i, orthopaedics: /\borthopaedic\w*|orthoped\w*|bone|العظام/i, lab: /\blab\b|تحليل|مختبر/i };
 const freeWords = /\b(?:free|open|available)\b|فاضي|متاح|متوفر/i;
 const takenWords = /\b(?:booked|taken|on leave|blocked|unavailable)\b|محجوز|مجاز|في إجازة|مغلق|غير متاح/i;
-const unavailableWords = /\bno (?:available|open) (?:slots|appointments)\b|\b(?:not|isn't|is not) (?:free|available|open)\b|لا توجد مواعيد (?:متاحة|مفتوحة)|(?:غير|ليس|ليست) (?:متاح[ةا]?|متوفر[ةا]?)|لا (?:يمكنني|أستطيع) حجز|مو فاضي|مب فاضي/iu;
+const unavailableWords = /\bno (?:available|open) (?:slots|appointments)\b|\b(?:not|isn't|is not) (?:free|available|open)\b|(?:لا (?:يوجد|توجد|تتوفر)|غير متاح) مواعيد (?:متاحة|مفتوحة)|(?:غير|ليس|ليست) (?:متاح[ةا]?|متوفر[ةا]?)|لا (?:يمكنني|أستطيع) حجز|مو فاضي|مب فاضي/iu;
 const otherDoctors = /\b(?:other|alternative) doctors?\b|أطباء آخرين|أطباء آخرون/iu;
 const coveredWords = /\b(?:covered|covers|will pay)\b|يغطي|مغطى|مغطاة/i;
 const notCoveredWords = /\b(?:not covered|does not cover|doesn't cover|is not included)\b|لا يغطي|ما يغطي|غير مغطى|غير مغطاة|ليس مشمولا|ليست مشمولة|ما تغطي/i;
@@ -62,7 +62,7 @@ export function runClinicChecks({ scenario, reply, reading }: { scenario: Inline
           .filter((x) => {
             const slots = slotsIn(x);
             if (slots.length) return slots.includes(s.slot);
-            const times: string[] = x.match(/\b\d{1,2}:\d{2}\b/g) ?? [];
+            const times = [...x.matchAll(/\b\d{1,2}:\d{2}\b|الساعة\s+(\d{1,2})(?![\d:])/gu)].map(m => m[1] ? `${m[1].padStart(2, '0')}:00` : m[0].padStart(5, '0'));
             if (times.length && !times.includes(s.time)) return false;
             const doctors = reading.doctors.filter((d) => doctorNamed(x, d));
             return !otherDoctors.test(x) && (!doctors.length || doctors.some((d) => d.doctor_key === s.doctor_key));

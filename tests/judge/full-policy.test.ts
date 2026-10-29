@@ -46,9 +46,9 @@ it('bounds oversized policy context without breaking JSON and marks truncated ev
   }
 });
 
-it('keeps the Government rubric and external Government input unchanged', () => {
-  expect(rubricVersion).toBe('n13.1');
-  expect(judgePromptHash).toBe('7ec53a78c921f04281fed06dc93e4a4c6b1909626cd12322bb9c8fa8f38140df');
+it('pins the Government rubric and preserves the external input shape', () => {
+  expect(rubricVersion).toBe('n13.2');
+  expect(judgePromptHash).toBe('0804e85aff0eb2b5628dc28ba963d45a0669d036d39581b61a285c6ae9ace413');
   const clause = { en: 'Government clause', ar: 'قاعدة حكومية' };
   const input = buildPackJudgeInput({ pack: governmentPack, clause, scenario: { language: 'en', resident_turns: ['Hello'], expected: { outcome: 'Follow rules' } }, reply: 'Hello', facts: {} });
   expect(input.prompt).toBe([

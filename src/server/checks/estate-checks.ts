@@ -26,6 +26,7 @@ function claimedAmountText(text: string): string {
   const amount = '(?:(?:AED|Dhs?|درهم|dirhams?)\\s*)?[\\d,]+(?:\\.\\d+)?(?:\\s*(?:AED|Dhs?|درهم|dirhams?))?';
   return text.replace(/\*\*/g, '')
     .replace(new RegExp(`(would be)\\s+${amount}(?=\\s*,?\\s*(?:so (?:the )?minimum applies|(?:which is )?below (?:the )?minimum))`, 'giu'), '$1 ')
+    .replace(new RegExp(`(\\d+(?:\\.\\d+)?\\s*%\\s+of\\s+${amount}\\s+(?:is|equals|comes to|would be))\\s+${amount}(?=\\s*,?\\s*(?:(?:so )?(?:the )?minimum applies|(?:which is )?below (?:the )?minimum))`, 'giu'), '$1 ')
     .replace(new RegExp(`(=|تعادل)\\s*${amount}(?=\\s*[،,]?\\s*\\(?(?:أقل من الحد الأدنى|اقل من الحد الادنى))`, 'gu'), '$1 ')
     .replace(new RegExp(`(?:بدلا|بدلاً) من\\s+${amount}`, 'gu'), ' ');
 }

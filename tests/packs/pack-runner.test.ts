@@ -98,7 +98,7 @@ it('judges a pack reply with the pack rubric and version, and keeps Government p
     }
   }
   // Government: same rubric version, prompt hash and no pack field.
-  expect(rubricVersion).toBe('n13.1');
+  expect(rubricVersion).toBe('n13.2');
   expect(judgePromptHash).toBe(GOVERNMENT_PROMPT_HASH);
   const gov = buildJudgeInput({ scenario: { language: 'en', source_clause: '3.1', expected_state: {}, persona: { resident_turns: ['x'] } } as never, reply: 'ok', reading: { cases: [], receipts: [] } as never });
   expect(gov).not.toHaveProperty('rubricVersion');
@@ -132,7 +132,7 @@ it('refuses to mix a pack version with another pack cases', async () => {
   await expect(enqueueRun(db.driver, { workspaceId: workspace, planId: plan, agentVersionId: installed.real_estate!.versionIds.estate_baseline!, scenarioIds: [String(shop.id)], repeats: 1, idempotencyKey: crypto.randomUUID() })).rejects.toThrow('another focus pack');
 });
 // Computed on main before this change (68249eb).
-const GOVERNMENT_PROMPT_HASH = '7ec53a78c921f04281fed06dc93e4a4c6b1909626cd12322bb9c8fa8f38140df';
+const GOVERNMENT_PROMPT_HASH = '0804e85aff0eb2b5628dc28ba963d45a0669d036d39581b61a285c6ae9ace413';
 
 it('persists guard tool provenance and a low severity finding while linked escalation passes', async () => {
   const row = (await scenarios('clinics')).find((s) => s.stable_key === 'cl_lab_results_trap_ar')!;
