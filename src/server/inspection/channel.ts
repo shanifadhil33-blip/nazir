@@ -4,10 +4,11 @@ import type { SqlConnection, TransactionDriver } from '../db/driver';
 
 export type InspectedCase = { id: string; reference: string; requesterKey: string; category: string; queue: string; status: string; priorRequestRef: string | null; escalation: { id?: string; queue: string; status: string } | null };
 export type InspectedEscalation = { id: string; queue: string; status: string };
-export type InspectedReceipt = { id: string; tool: string; outcome: 'ok' | 'error'; error: string | null; createdAt: string };
+export type PolicyClause = { id: string; en: string; ar: string };
+export type InspectedReceipt = { id: string; tool: string; outcome: 'ok' | 'error'; error: string | null; createdAt: string; policy?: PolicyClause[] };
 export type StateReading = { tenant: string; takenAt: string; cases: InspectedCase[]; receipts: InspectedReceipt[]; tenantFaults?: { tool: string }[] };
 type CaseRow = { id: string; reference: string; requester_key: string; category: string; queue: string; status: string; prior_request_ref: string | null; escalation_id: string | null; escalation_queue: string | null; escalation_status: string | null };
-type ReceiptRow = { id: string; tool: string; outcome: 'ok' | 'error'; error: string | null; created_at: Date | string };
+type ReceiptRow = { id: string; tool: string; outcome: 'ok' | 'error'; error: string | null; created_at: Date | string; policy_data?: { clause?: PolicyClause; clauses?: PolicyClause[] } | null };
 const iso = (value: Date | string) => new Date(value).toISOString();
 const caseQuery = `SELECT c.id,c.reference,c.requester_key,c.category,c.queue,c.status,c.prior_request_ref,e.id AS escalation_id,e.queue AS escalation_queue,e.status AS escalation_status
  FROM sandbox.cases c LEFT JOIN sandbox.escalations e ON e.tenant=c.tenant AND e.case_id=c.id`;
@@ -30,11 +31,12 @@ export function createInspectionChannel(driver: TransactionDriver) {
     if ((filter.limit !== null && (!Number.isInteger(filter.limit) || filter.limit < 1 || filter.limit > 10000)) || (filter.since && filter.sinceId)) throw new Error('Invalid receipt filter');
     if (filter.sinceId && !/^[a-f0-9-]{36}$/i.test(filter.sinceId)) throw new Error('Invalid receipt cursor');
     if (filter.since && !Number.isFinite(Date.parse(filter.since))) throw new Error('Invalid receipt time');
-    const rows = await db.query<ReceiptRow>(`SELECT id,tool,outcome,response->>'error' AS error,created_at FROM sandbox.tool_receipts
+    const rows = await db.query<ReceiptRow>(`SELECT id,tool,outcome,response->>'error' AS error,created_at,
+      CASE WHEN tool='get_service_policy' AND outcome='ok' THEN response->'data' END AS policy_data FROM sandbox.tool_receipts
       WHERE tenant=$1 AND ($2::timestamptz IS NULL OR created_at>$2)
       AND ($3::uuid IS NULL OR (created_at,id)>(SELECT created_at,id FROM sandbox.tool_receipts WHERE tenant=$1 AND id=$3))
       ORDER BY created_at,id LIMIT $4`, [tenant, filter.since ?? null, filter.sinceId ?? null, filter.limit]);
-    return rows.rows.map((row): InspectedReceipt => ({ id: row.id, tool: row.tool, outcome: row.outcome, error: row.error, createdAt: iso(row.created_at) }));
+    return rows.rows.map((row): InspectedReceipt => ({ id: row.id, tool: row.tool, outcome: row.outcome, error: row.error, createdAt: iso(row.created_at), ...(row.policy_data ? { policy: (row.policy_data.clauses ?? (row.policy_data.clause ? [row.policy_data.clause] : [])).map(({ id, en, ar }) => ({ id, en, ar })) } : {}) }));
   }
   return {
     readCase: (tenant: string, reference: string) => read(tenant, async (db) => {

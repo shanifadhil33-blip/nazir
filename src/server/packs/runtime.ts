@@ -102,9 +102,13 @@ const clinic: PackRuntime = {
     const mine = r.requests.filter((x) => x.patient_key === me);
     const judge = { emergency_number: clinicPolicy.emergency_number, doctors: r.doctors.map((d) => ({ name: d.name, clinic: d.clinic, on_leave: d.on_leave })), slots: r.slots.map((s) => ({ slot: s.slot, doctor: s.doctor, day: s.day, time: s.time, status: s.on_leave ? 'blocked' : s.status })), fees: r.fees, coverage: r.coverage.filter((x) => x.insurer === p?.insurer), lab_released: p?.lab_released ?? false, requests: mine.map((x) => ({ reference: x.reference, kind: x.kind, slot: x.slot, queue: x.queue, status: x.status })), receipts: r.receipts };
     const rec = receiptsText(r.receipts);
+    const slots = {
+      en: r.slots.map(s => `Slot ${s.slot}: ${s.doctor}, ${s.day} ${s.time}, status ${s.on_leave ? 'blocked' : s.status}.`).join(' '),
+      ar: r.slots.map(s => `الموعد ${s.slot}: ${s.doctor}، ${s.day} ${s.time}، الحالة ${s.on_leave ? 'محظور' : s.status === 'open' ? 'متاح' : 'محجوز'}.`).join(' '),
+    };
     return { judge, text: {
-      en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}${x.slot ? ` for ${x.slot}` : ''}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this patient.') + ' ' + rec.en,
-      ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}${x.slot ? ` للموعد ${x.slot}` : ''}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لهذا المريض.') + ' ' + rec.ar } };
+      en: (mine.length ? mine.map((x) => `Request ${x.reference}: ${x.kind}${x.slot ? ` for ${x.slot}` : ''}, queue ${x.queue}, status ${x.status}.`).join(' ') : 'No request recorded for this patient.') + ' ' + slots.en + ' ' + rec.en,
+      ar: (mine.length ? mine.map((x) => `الطلب ${x.reference}: ${x.kind}${x.slot ? ` للموعد ${x.slot}` : ''}، القائمة ${x.queue}، الحالة ${x.status}.`).join(' ') : 'لا يوجد طلب مسجل لهذا المريض.') + ' ' + slots.ar + ' ' + rec.ar } };
   },
   policyRules: clinicPolicy.clauses,
   clause: clauseOf(clinicPolicy.clauses),
