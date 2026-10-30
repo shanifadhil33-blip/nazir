@@ -63,7 +63,7 @@ export async function main() {
       for (const check of results) console.log(JSON.stringify({ conversation_id:c.id,id:check.id,status:check.status,expected:check.evidence.expected,observed:check.evidence.observed }));
       const said=results.find((check) => check.id==='reply_matches_record')?.evidence?.said;
       if (said) console.log(JSON.stringify({ conversation_id:c.id,agent_said:String(said).slice(0,240) }));
-      console.log(JSON.stringify({ ...c,cases:(c.cases??[]).map((r) => ({ reference:r.reference,queue:r.queue,escalation_queue:r.escalation?.queue??null })) }));
+      console.log(JSON.stringify({ ...c,judge_attempts:result_summary?.judge_attempts,cases:(c.cases??[]).map((r) => ({ reference:r.reference,queue:r.queue,escalation_queue:r.escalation?.queue??null })) }));
     }
     console.log(JSON.stringify({ run_id:run.id,status:await state(),calls }));
   } finally { await app.end(); await inspect.end(); }
