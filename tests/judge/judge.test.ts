@@ -16,9 +16,10 @@ const reply='Your case remains open.';
 const answer={verdict:'supported',issue:'none',evidence_span:reply,reason:'Matches the records.'};
 const input={reply,prompt:'Evaluate the reply.'};
 function setup(answers:unknown[]) {
-  const store=memoryAiStore();
+  let clock=0;
+  const store=memoryAiStore(()=>clock);
   const fetch=vi.fn<typeof globalThis.fetch>(async () => Response.json({choices:[{message:{content:typeof answers[0]==='string'?answers.shift():JSON.stringify(answers.shift())}}]}));
-  return { fetch,store,chain:createAiChain({store,fetch,env:{GEMINI_API_KEY:'fake',REQUESTY_API_KEY:'fake',ZAI_API_KEY:'fake'},now:()=>0,sleep:async()=>{} }) };
+  return { fetch,store,chain:createAiChain({store,fetch,env:{GEMINI_API_KEY:'fake',REQUESTY_API_KEY:'fake',ZAI_API_KEY:'fake'},now:()=>clock,sleep:async(ms)=>{clock+=ms;} }) };
 }
 const run=(chain:ReturnType<typeof setup>['chain'],text=reply) => judgeReply({chain,input:{...input,reply:text},seed:'test',agentFamilies:['nvidia_nemotron']});
 it.each([...Object.values(agentVersions),resolveRepairVersion('planted_wrong_queue',[{op:'restore_routing',category:'complaint'}]),resolveRepairVersion('planted_false_submit',[{op:'remove_create_case_fault'},{op:'remove_false_submit_claim'}])])('projects service evidence without version metadata $id',version => {

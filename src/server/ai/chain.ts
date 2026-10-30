@@ -75,96 +75,107 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
       // Read once per chat; local entries also cover concurrent chats in this process.
       try { for (const row of await timed(store.activeCooldowns(), remaining())) remember(row); }
       catch (error) { if (!(error instanceof TimeLimit)) throw new Error('AI state unavailable'); }
-      for (const entry of plan) {
-        const { provider, model, family } = entry;
-        let at = now(), status: number | null = null;
-        let reason: Reason = 'invalid_response', outcome: Attempt['outcome'] = 'skipped';
-        let reply: ChatResponse | null = null;
-        const cooling = () => [provider.id + '/*', provider.id + '/' + model].some((key) => (cooldowns.get(key)?.until ?? 0) > now());
-        if (remaining() <= 0) reason = 'deadline';
-        else if (forcedDown.has(provider.id) || forcedDown.has(provider.id + '/' + model)) { reason = 'forced_down'; outcome = 'error'; }
-        else if ((provider.keyEnv && !env[provider.keyEnv]) || (provider.needsEnv && !env[provider.needsEnv])) reason = 'no_key';
-        else if (cooling()) reason = 'cooling';
-        else {
-          let queue = queues.get(provider.id);
-          if (!queue) { queue = { tail: Promise.resolve(), starts: new Map() }; queues.set(provider.id,queue); }
-          const previous = queue.tail;
-          let release!: () => void;
-          queue.tail = new Promise<void>((resolve) => { release = resolve; });
-          let acquired = false;
-          try {
-            await timed(previous, remaining()); acquired = true;
-            const spacingKey = provider.perModelSpacing ? model : '*';
-            for (;;) {
-              const wait = (queue.starts.get(spacingKey) ?? -Infinity) + provider.minSpacingMs - now();
-              if (wait <= 0) break;
-              await timed(sleep(wait), remaining());
-            }
-            if (remaining() <= 0) throw new TimeLimit();
-            if (cooling()) reason = 'cooling';
-            else if (!await timed(store.reserve(request.task,provider.id,model,taskCaps[request.task],provider.cap),remaining())) reason = 'cap_reached';
-            else {
-              at = now(); outcome = 'error';
-              queue.starts.set(spacingKey, at);
-              const controller = new AbortController();
-              // A judge reads a longer prompt than an agent turn; Requesty Gemma took 8 to 10 s on 19 Oct and timed out at 12 s.
-              const limit = Math.min(request.purpose==='judge' ? provider.judgeTimeoutMs ?? provider.timeoutMs : provider.timeoutMs,remaining());
-              let timeout = false;
-              const timer = setTimeout(() => { timeout = true; controller.abort(); }, Math.max(0,limit));
-              try {
-                const body = await timed((async () => {
-                  const response = await fetcher(provider.url, {
-                    method: 'POST', signal: controller.signal,
-                    headers: { 'Content-Type': 'application/json', ...(provider.keyEnv ? { Authorization: `Bearer ${env[provider.keyEnv]}` } : {}) },
-                    body: JSON.stringify({ model, messages: request.messages.map((m) => {
-                      const message = { ...m };
-                      delete message.truncated;
-                      return { ...message, ...(message.tool_calls ? { tool_calls: message.tool_calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })) } : {}) };
-                    }), ...(request.tools?.length ? { tools: request.tools, tool_choice: 'auto' } : {}), max_tokens: request.maxTokens ?? (request.purpose === 'agent' ? 2000 : 800), temperature: request.temperature ?? 0 }),
-                  });
-                  status = response.status;
-                  const text = await response.text();
-                  if (!response.ok) {
-                    const safe = redactProviderText(text,env);
-                    reason = status === 429 ? (/per.day|daily|neurons|free-models-per-day|quota/i.test(safe) ? 'day_used' : 'rate_limited') : status === 402 ? 'payment_required' : status === 401 || status === 403 ? 'auth_failed' : status >= 500 ? 'http_5xx' : 'invalid_response';
-                    return null;
-                  }
-                  try { return parseReply(JSON.parse(text)); } catch { return null; }
-                })(),limit);
-                if (remaining() <= 0) reason = 'deadline';
-                else if (body) {
-                  reply = body;
-                  if (!validTools(body,request.tools ?? [])) reason = 'invalid_tool_args';
-                  else {
-                    let validation: string | null = null;
-                    try { validation = request.validate?.(body) ?? null; } catch { validation = 'invalid_response'; }
-                    reason = validation === null ? 'ok' : validation === 'invalid_tool_args' ? 'invalid_tool_args' : 'invalid_response';
-                    if (reason === 'ok') outcome = 'ok';
-                  }
-                }
-              } catch (error) {
-                reason = remaining() <= 0 ? 'deadline' : error instanceof TimeLimit || timeout || (error instanceof Error && /TimeoutError|AbortError/.test(error.name)) ? 'timeout' : 'network';
-              } finally { clearTimeout(timer); controller.abort(); }
-              const duration = cooldownDuration(reason);
-              if (duration) {
-                const c: Cooldown = { provider: provider.id, model: duration === 86400000 ? '*' : model, until: now() + duration, reason };
-                remember(c); await store.cool(c);
+      // Both judge passes share the original deadline, scheduler, caps and cooldowns.
+      for (let pass = 0; pass < (request.purpose === 'judge' ? 2 : 1); pass++) {
+        if (pass > 0 && !plan.some(({ provider, model }) => {
+          if (forcedDown.has(provider.id) || forcedDown.has(provider.id + '/' + model)) return false;
+          if ((provider.keyEnv && !env[provider.keyEnv]) || (provider.needsEnv && !env[provider.needsEnv])) return false;
+          if ([provider.id + '/*', provider.id + '/' + model].some((key) => (cooldowns.get(key)?.until ?? 0) > now())) return false;
+          const spacingKey = provider.perModelSpacing ? model : '*';
+          const wait = Math.max(0, (queues.get(provider.id)?.starts.get(spacingKey) ?? -Infinity) + provider.minSpacingMs - now());
+          return remaining() >= wait + (provider.judgeTimeoutMs ?? provider.timeoutMs);
+        })) break;
+        for (const entry of plan) {
+          const { provider, model, family } = entry;
+          let at = now(), status: number | null = null;
+          let reason: Reason = 'invalid_response', outcome: Attempt['outcome'] = 'skipped';
+          let reply: ChatResponse | null = null;
+          const cooling = () => [provider.id + '/*', provider.id + '/' + model].some((key) => (cooldowns.get(key)?.until ?? 0) > now());
+          if (remaining() <= 0) reason = 'deadline';
+          else if (forcedDown.has(provider.id) || forcedDown.has(provider.id + '/' + model)) { reason = 'forced_down'; outcome = 'error'; }
+          else if ((provider.keyEnv && !env[provider.keyEnv]) || (provider.needsEnv && !env[provider.needsEnv])) reason = 'no_key';
+          else if (cooling()) reason = 'cooling';
+          else {
+            let queue = queues.get(provider.id);
+            if (!queue) { queue = { tail: Promise.resolve(), starts: new Map() }; queues.set(provider.id,queue); }
+            const previous = queue.tail;
+            let release!: () => void;
+            queue.tail = new Promise<void>((resolve) => { release = resolve; });
+            let acquired = false;
+            try {
+              await timed(previous, remaining()); acquired = true;
+              const spacingKey = provider.perModelSpacing ? model : '*';
+              for (;;) {
+                const wait = (queue.starts.get(spacingKey) ?? -Infinity) + provider.minSpacingMs - now();
+                if (wait <= 0) break;
+                await timed(sleep(wait), remaining());
               }
+              if (remaining() <= 0) throw new TimeLimit();
+              if (cooling()) reason = 'cooling';
+              else if (!await timed(store.reserve(request.task,provider.id,model,taskCaps[request.task],provider.cap),remaining())) reason = 'cap_reached';
+              else {
+                at = now(); outcome = 'error';
+                queue.starts.set(spacingKey, at);
+                const controller = new AbortController();
+                // A judge reads a longer prompt than an agent turn; Requesty Gemma took 8 to 10 s on 19 Oct and timed out at 12 s.
+                const limit = Math.min(request.purpose==='judge' ? provider.judgeTimeoutMs ?? provider.timeoutMs : provider.timeoutMs,remaining());
+                let timeout = false;
+                const timer = setTimeout(() => { timeout = true; controller.abort(); }, Math.max(0,limit));
+                try {
+                  const body = await timed((async () => {
+                    const response = await fetcher(provider.url, {
+                      method: 'POST', signal: controller.signal,
+                      headers: { 'Content-Type': 'application/json', ...(provider.keyEnv ? { Authorization: `Bearer ${env[provider.keyEnv]}` } : {}) },
+                      body: JSON.stringify({ model, messages: request.messages.map((m) => {
+                        const message = { ...m };
+                        delete message.truncated;
+                        return { ...message, ...(message.tool_calls ? { tool_calls: message.tool_calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })) } : {}) };
+                      }), ...(request.tools?.length ? { tools: request.tools, tool_choice: 'auto' } : {}), max_tokens: request.maxTokens ?? (request.purpose === 'agent' ? 2000 : 800), temperature: request.temperature ?? 0 }),
+                    });
+                    status = response.status;
+                    const text = await response.text();
+                    if (!response.ok) {
+                      const safe = redactProviderText(text,env);
+                      reason = status === 429 ? (/per.day|daily|neurons|free-models-per-day|quota/i.test(safe) ? 'day_used' : 'rate_limited') : status === 402 ? 'payment_required' : status === 401 || status === 403 ? 'auth_failed' : status >= 500 ? 'http_5xx' : 'invalid_response';
+                      return null;
+                    }
+                    try { return parseReply(JSON.parse(text)); } catch { return null; }
+                  })(),limit);
+                  if (remaining() <= 0) reason = 'deadline';
+                  else if (body) {
+                    reply = body;
+                    if (!validTools(body,request.tools ?? [])) reason = 'invalid_tool_args';
+                    else {
+                      let validation: string | null = null;
+                      try { validation = request.validate?.(body) ?? null; } catch { validation = 'invalid_response'; }
+                      reason = validation === null ? 'ok' : validation === 'invalid_tool_args' ? 'invalid_tool_args' : 'invalid_response';
+                      if (reason === 'ok') outcome = 'ok';
+                    }
+                  }
+                } catch (error) {
+                  reason = remaining() <= 0 ? 'deadline' : error instanceof TimeLimit || timeout || (error instanceof Error && /TimeoutError|AbortError/.test(error.name)) ? 'timeout' : 'network';
+                } finally { clearTimeout(timer); controller.abort(); }
+                const duration = cooldownDuration(reason);
+                if (duration) {
+                  const c: Cooldown = { provider: provider.id, model: duration === 86400000 ? '*' : model, until: now() + duration, reason };
+                  remember(c); await store.cool(c);
+                }
+              }
+            } catch (error) {
+              if (error instanceof TimeLimit) reason = 'deadline';
+              else throw new Error('AI state unavailable');
+            } finally {
+              if (acquired) release(); else void previous.then(release);
             }
-          } catch (error) {
-            if (error instanceof TimeLimit) reason = 'deadline';
-            else throw new Error('AI state unavailable');
-          } finally {
-            if (acquired) release(); else void previous.then(release);
           }
+          const attempt: Attempt = { provider: provider.id, model, family, outcome, reason, httpStatus: status, latencyMs: Math.max(0,Math.round(now() - at)) };
+          attempts.push(attempt);
+          await store.record({ ...attempt, at, task: request.task, purpose: request.purpose, failover: attempts.slice(0, -1).some((item) => item.reason !== 'no_key'), attemptNo: attempts.length, workspaceId: request.workspaceId, conversationId: request.conversationId });
+          // A provider with no key configured is not a failover: the chain simply starts at the first configured model.
+          const tried = attempts.filter((item) => item.reason !== 'no_key');
+          if (outcome === 'ok' && reply) return { ...reply, meta: { provider: provider.id, model, family, attempts, failover: tried.length > 1, failoverReason: tried.length > 1 ? tried[0]!.reason : null } };
+          if (reason === 'deadline') break;
         }
-        const attempt: Attempt = { provider: provider.id, model, family, outcome, reason, httpStatus: status, latencyMs: Math.max(0,Math.round(now() - at)) };
-        attempts.push(attempt);
-        await store.record({ ...attempt, at, task: request.task, purpose: request.purpose, failover: attempts.slice(0, -1).some((item) => item.reason !== 'no_key'), attemptNo: attempts.length, workspaceId: request.workspaceId, conversationId: request.conversationId });
-        // A provider with no key configured is not a failover: the chain simply starts at the first configured model.
-        const tried = attempts.filter((item) => item.reason !== 'no_key');
-        if (outcome === 'ok' && reply) return { ...reply, meta: { provider: provider.id, model, family, attempts, failover: tried.length > 1, failoverReason: tried.length > 1 ? tried[0]!.reason : null } };
-        if (reason === 'deadline') break;
       }
       throw new AiChainExhausted(attempts);
     },
