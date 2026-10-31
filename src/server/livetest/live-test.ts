@@ -9,6 +9,7 @@ import { recoverStale } from '../runner/recover';
 import { assertRunCap, maxRunsPerUserPerDay, runStarter } from '../runner/run-cap';
 import { providerRegistry } from '../ai/providers';
 import { enqueueRun } from '../runner/enqueue';
+import { conversationBudget } from './budget';
 
 export type LiveSide = { run_id: string; role: 'clean' | 'planted'; status: string; reply: string | null; cases: { reference: string; queue: string | null }[]; failed_checks: { id: string; en: string; ar: string }[]; reason: string | null; note: { en: string; ar: string } | null };
 type Env = Record<string, string | undefined>;
@@ -109,12 +110,15 @@ export async function readLiveSides(driver: TransactionDriver, memberId: string,
   return sides;
 }
 
-export type StepDeps = { inspectionDriver: () => TransactionDriver; run: (input: { driver: TransactionDriver; inspectionDriver: TransactionDriver; runId: string }) => Promise<unknown> };
-export async function stepLiveTest(driver: TransactionDriver, memberId: string, runId: unknown, deps: StepDeps, env: Env = process.env) {
+/** budgetMs is the time this step may give its one conversation (see budget.ts). */
+export type StepDeps = { inspectionDriver: () => TransactionDriver; run: (input: { driver: TransactionDriver; inspectionDriver: TransactionDriver; runId: string; budgetMs: number }) => Promise<unknown> };
+export async function stepLiveTest(driver: TransactionDriver, memberId: string, runId: unknown, deps: StepDeps, env: Env = process.env, now: () => number = Date.now) {
+  const startedAt = now();
   if (typeof runId !== 'string') throw new Coded(400, 'validation', 'Check the details and try again.');
   const workspaceId = await liveRunWorkspace(driver, memberId, runId);
   await recoverStale(driver, workspaceId, runId);
   if (!liveTestReady(env)) throw new Coded(503, 'live_test_unavailable', 'The live test is not connected here yet. Nothing was queued.');
-  await deps.run({ driver, inspectionDriver: deps.inspectionDriver(), runId });
+  const budgetMs = conversationBudget(startedAt, now());
+  if (budgetMs) await deps.run({ driver, inspectionDriver: deps.inspectionDriver(), runId, budgetMs });
   return (await readLiveSides(driver, memberId, [runId]))[0]!;
 }

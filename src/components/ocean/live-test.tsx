@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Lang, Messages } from './copy';
+import { driveSteps } from './step-loop';
 
 export type LiveSide = { run_id: string; role: 'clean' | 'planted'; status: string; reply: string | null; cases: { reference: string; queue: string | null }[]; failed_checks: { id: string; en: string; ar: string }[]; reason: string | null; note?: { en: string; ar: string } | null };
 const done = (s: string) => ['passed', 'failed', 'inconclusive', 'cancelled'].includes(s);
@@ -14,6 +15,8 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
   const [state, setState] = useState<'idle' | 'running' | 'done' | 'unavailable' | 'failed' | 'limit' | 'cap'>('idle');
   const [capLine, setCapLine] = useState('');
   const dialog = useRef<HTMLDivElement>(null);
+  const closed = useRef(false);
+  useEffect(() => { closed.current = false; return () => { closed.current = true; }; }, []);
   useEffect(() => {
     dialog.current?.querySelector<HTMLElement>('textarea')?.focus();
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -33,13 +36,24 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
     }
     const body = await start.json() as { runs: { run_id: string; role: 'clean' | 'planted' }[] };
     setSides(body.runs.map((r) => ({ ...r, status: 'running', reply: null, cases: [], failed_checks: [], reason: null, note: null })));
-    const results = await Promise.all(body.runs.map(async (r) => {
-      const step = await fetch(`/api/workspaces/${workspaceId}/live-test/step`, { method: 'POST', headers, body: JSON.stringify({ run_id: r.run_id }) }).catch(() => null);
-      const side = step?.ok ? await step.json().catch(() => null) as LiveSide | null : null;
-      if (side) setSides((all) => all.map((s) => s.run_id === side.run_id ? side : s));
-      return side;
+    // Each side is stepped until it finishes. Both sides share the tab's step lock, so only one step request is in flight.
+    const ends = await Promise.all(body.runs.map((r) => {
+      let last = 'running';
+      return driveSteps(async () => {
+        if (closed.current) return 'stop';
+        const step = await fetch(`/api/workspaces/${workspaceId}/live-test/step`, { method: 'POST', headers, body: JSON.stringify({ run_id: r.run_id }) }).catch(() => null);
+        // No answer or a server error is retried with backoff; a refusal (4xx) or "not connected" (503) ends this side.
+        if (!step?.ok) return !step || (step.status >= 500 && step.status !== 503) ? 'error' : 'stop';
+        const side = await step.json().catch(() => null) as LiveSide | null;
+        if (!side) return 'error';
+        if (!closed.current) setSides((all) => all.map((s) => s.run_id === side.run_id ? side : s));
+        if (done(side.status)) return 'done';
+        const moved = side.status !== last;
+        last = side.status;
+        return moved ? 'progress' : 'idle';
+      });
     }));
-    setState(results.every((s) => s && done(s.status)) ? 'done' : 'failed');
+    if (!closed.current) setState(ends.every((e) => e === 'done') ? 'done' : 'failed');
   }
 
   const label = (s: string) => ({ passed: t.passed, failed: t.failed, inconclusive: t.inconclusive, queued: t.queued, running: t.running_s, cancelled: t.cancelled } as Record<string, string>)[s] ?? t.queued;
