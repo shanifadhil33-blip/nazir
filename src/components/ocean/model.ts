@@ -59,7 +59,13 @@ export type ScreenModel = {
   suiteLabel?: string;
   sample: boolean;
   outcomes?: { id: string; label: string; flaky: boolean }[];
+  /** True when the workspace has no saved report yet. */
+  empty?: boolean;
+  /** Set only while a real workspace has no runs: which agent and which Focus Pack the first Quick check uses. */
+  firstStep?: FirstStep | null;
 };
+
+export type FirstStep = { agent: string; pack: string };
 
 export function seatFromRoles(roles: readonly string[]): Seat {
   if (roles.includes('service_owner')) return 'owner';
@@ -83,6 +89,17 @@ export function canApprove(roles: readonly string[], shared = false) {
 /** Matches plan.approve: an owner or a quality reviewer may run a recheck. */
 export function canRunRecheck(roles: readonly string[], shared = false) {
   return !shared && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
+}
+
+/** Matches plan.propose: an owner or a quality reviewer may start a Quick check. The server checks the role again. */
+export function canRunQuickCheck(roles: readonly string[], shared = false) {
+  return !shared && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
+}
+
+/** The first step card belongs to a real workspace that has never started a run. Demo, preview and shared report views never show it. */
+export function firstStepFor(input: { runs: number | null; demo: boolean; preview: boolean; shared: boolean; agent: string; pack: string }): FirstStep | null {
+  if (input.preview || input.demo || input.shared || input.runs === null || input.runs > 0) return null;
+  return { agent: input.agent, pack: input.pack };
 }
 
 export function canCompose(seat: Seat, shared = false) {
@@ -245,4 +262,5 @@ export const emptyModel = (copy: Messages, agentName: string): ScreenModel => ({
   fixes: [],
   coverage: fill(copy.ui.coverageOne, { count: '0' }),
   sample: false,
+  empty: true,
 });

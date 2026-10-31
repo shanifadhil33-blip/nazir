@@ -27,6 +27,26 @@ it('creates exactly one real workspace across concurrent and repeated calls', as
     .toEqual([{ id: ids[0], name: 'My workspace', kind: 'real' }]);
 });
 
+it('sets up the Government Focus Pack and the built in sample agent exactly once, as the new owner', async () => {
+  const user = await newUser();
+  const first = await ensureHomeWorkspace(db.driver, user.id);
+  expect(await ensureHomeWorkspace(db.driver, user.id)).toBe(first);
+  const [again] = await Promise.all([ensureHomeWorkspace(db.driver, user.id), ensureHomeWorkspace(db.driver, user.id)]);
+  expect(again).toBe(first);
+  const owner = (await db.owner.query<{ id: string }>('SELECT id FROM nazir.members WHERE workspace_id=$1', [first])).rows;
+  expect(owner).toHaveLength(1);
+  expect((await db.owner.query('SELECT name FROM nazir.agents WHERE workspace_id=$1', [first])).rows).toEqual([{ name: 'Fictional Service Agent' }]);
+  expect((await db.owner.query('SELECT kind,config,created_by FROM nazir.agent_versions WHERE workspace_id=$1', [first])).rows)
+    .toEqual([{ kind: 'baseline', config: { registry_id: 'baseline' }, created_by: owner[0]!.id }]);
+  expect((await db.owner.query('SELECT focus_pack,name,language FROM nazir.agent_settings WHERE workspace_id=$1', [first])).rows)
+    .toEqual([{ focus_pack: 'government', name: null, language: 'en' }]);
+  expect((await db.owner.query("SELECT count(*)::int AS n FROM nazir.audit_events WHERE workspace_id=$1 AND action='workspace.seeded'", [first])).rows[0]).toEqual({ n: 1 });
+  // An existing workspace is never seeded again on a later sign in.
+  await db.owner.query('DELETE FROM nazir.agent_settings WHERE workspace_id=$1', [first]);
+  await ensureHomeWorkspace(db.driver, user.id);
+  expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.agent_settings WHERE workspace_id=$1', [first])).rows[0]).toEqual({ n: 0 });
+});
+
 it('prefers a workspace the user owns over one they only belong to', async () => {
   const user = await newUser();
   const member = await createWorkspace(db.driver, user.id, { name: 'Member workspace' });

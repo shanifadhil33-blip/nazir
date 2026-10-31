@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { TransactionDriver } from '../db/driver';
 import { authCall } from './adapter';
 import { TooMany } from '../http/errors';
+import { seedHomeWorkspace } from './home-seed';
 import type { Membership } from './shape';
 
 /** userId must come from the session, never the request body. */
@@ -17,7 +18,10 @@ export async function ensureHomeWorkspace(driver: TransactionDriver, userId: str
     const memberships = await authCall<Omit<Membership, 'roleLabels'>>(locked, 'auth_memberships', [userId], userId);
     const home = memberships.find((membership) => membership.roles.includes('service_owner')) ?? memberships[0];
     if (home) return home.workspaceId;
-    return (await createWorkspace(locked, userId, { name: 'My workspace' })).workspaceId;
+    const created = await createWorkspace(locked, userId, { name: 'My workspace' });
+    // Same transaction and lock: the Government pack and sample agent are set up exactly once, with the workspace.
+    await seedHomeWorkspace(sql, created.memberId);
+    return created.workspaceId;
   });
 }
 /** Abuse cap: one person may belong to at most this many workspaces. */
