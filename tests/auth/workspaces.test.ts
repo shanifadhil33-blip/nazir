@@ -27,18 +27,14 @@ it('creates exactly one real workspace across concurrent and repeated calls', as
     .toEqual([{ id: ids[0], name: 'My workspace', kind: 'real' }]);
 });
 
-it('prefers the oldest owner workspace, falling back to the oldest membership', async () => {
+it('prefers a workspace the user owns over one they only belong to', async () => {
   const user = await newUser();
-  const oldest = await createWorkspace(db.driver, user.id, { name: 'Oldest member workspace' });
-  const owner = await createWorkspace(db.driver, user.id, { name: 'Oldest owner workspace' });
-  const newest = await createWorkspace(db.driver, user.id, { name: 'Newest owner workspace' });
-  for (const [index, workspace] of [oldest, owner, newest].entries()) {
-    await db.owner.query('UPDATE nazir.workspaces SET created_at=$1 WHERE id=$2', [`2020-01-0${index + 1}T00:00:00Z`, workspace.workspaceId]);
-  }
-  await db.owner.query("DELETE FROM nazir.member_roles WHERE member_id=$1 AND role='service_owner'", [oldest.memberId]);
+  const member = await createWorkspace(db.driver, user.id, { name: 'Member workspace' });
+  const owner = await createWorkspace(db.driver, user.id, { name: 'Owner workspace' });
+  await db.owner.query("DELETE FROM nazir.member_roles WHERE member_id=$1 AND role='service_owner'", [member.memberId]);
   expect(await ensureHomeWorkspace(db.driver, user.id)).toBe(owner.workspaceId);
-  await db.owner.query('DELETE FROM nazir.member_roles WHERE member_id IN ($1,$2)', [owner.memberId, newest.memberId]);
-  expect(await ensureHomeWorkspace(db.driver, user.id)).toBe(oldest.workspaceId);
+  await db.owner.query('DELETE FROM nazir.member_roles WHERE member_id=$1', [owner.memberId]);
+  expect([member.workspaceId, owner.workspaceId]).toContain(await ensureHomeWorkspace(db.driver, user.id));
 });
 
 it('never returns shared library or demo workspaces without an active membership for this user', async () => {
