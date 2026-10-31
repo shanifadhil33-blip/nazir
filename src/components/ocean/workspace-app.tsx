@@ -8,6 +8,7 @@ import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
 import type { Measured } from './screen';
 import { LiveTestPanel } from './live-test';
+import { driveSteps } from './step-loop';
 import { AgentSettingsPanel, defaultSettings, type PackView, type SettingsView } from './agent-settings';
 
 /** runs is null when the count is not known, for example on a single report page. */
@@ -178,31 +179,36 @@ export function WorkspaceApp({
 
   // Runs queued from chat are driven one conversation per request, only while this page is open.
   // A step that dies (time limit, dropped database) is retried after a pause; the server retries a stalled test once and then ends it, so the run still finishes.
+  // Steps are spaced out and paused while the tab is hidden (see step-loop.ts), so an open tab does not keep the server busy.
   async function drive(runIds: string[]) {
-    const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const clear = () => setExtra((items) => items.filter((item) => item.id !== 'drive-progress'));
     const show = (runId: string, body: string) => setExtra((items) => [...items.filter((item) => item.id !== 'drive-progress'), { id: 'drive-progress', kind: 'note', title: copy.ui.note, body, cancel: { kind: 'run', id: runId } }]);
+    const stopWith = (body: string) => { clear(); setStatus(null); push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body }); };
     for (const runId of runIds.slice(0, 4)) {
-      let failures = 0, idle = 0, last = -1;
-      for (let n = 0; n < 400 && idle < 40; n++) {
-        if (stopped.current.has(runId)) break;
+      let last = -1, halt = false, lastError: { status?: number; payload: unknown } = { payload: null };
+      const end = await driveSteps(async () => {
+        if (stopped.current.has(runId)) return 'stop';
         const response = await fetch(`/api/workspaces/${workspaceId}/runs/${runId}/step`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
-        if (stopped.current.has(runId)) break;
+        if (stopped.current.has(runId)) return 'stop';
         if (!response?.ok) {
-          if (response?.status !== 503 && (!response || response.status >= 500) && failures < 3) { failures++; show(runId, copy.ui.runRetrying); await pause(5000 * failures); continue; }
           const payload = await response?.json().catch(() => null);
-          clear(); setStatus(null); push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: response?.status === 503 ? copy.ui.runWaiting : readError(payload, copy) }); return;
+          lastError = { status: response?.status, payload };
+          if (response?.status !== 503 && (!response || response.status >= 500)) { show(runId, copy.ui.runRetrying); return 'error'; }
+          halt = true; stopWith(response?.status === 503 ? copy.ui.runWaiting : readError(payload, copy)); return 'stop';
         }
-        failures = 0;
         const p = await response.json().catch(() => null) as { done: boolean; passed: number; failed: number; inconclusive: number; waiting: number; notes?: { en: string; ar: string }[] } | null;
-        if (!p) return;
+        if (!p) { halt = true; return 'stop'; }
         const finished = p.passed + p.failed + p.inconclusive;
         const notes = (p.notes ?? []).map((note) => note[lang] || note.en).join(' ');
-        if (p.done || p.waiting === 0) { setStatus(null); clear(); push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: [fill(copy.ui.runDone, { passed: String(p.passed), failed: String(p.failed), inconclusive: String(p.inconclusive) }), notes].filter(Boolean).join(' ') }); break; }
+        if (p.done || p.waiting === 0) { setStatus(null); clear(); push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: [fill(copy.ui.runDone, { passed: String(p.passed), failed: String(p.failed), inconclusive: String(p.inconclusive) }), notes].filter(Boolean).join(' ') }); return 'done'; }
         setStatus('running'); show(runId, [fill(copy.ui.runProgress, { done: String(finished), total: String(finished + p.waiting) }), notes].filter(Boolean).join(' '));
-        // Nothing moved: a retry is waiting, or a stalled step's lease has not run out yet. Wait before asking again.
-        if (finished === last) { idle++; await pause(Math.min(15000, 3000 * idle)); } else { idle = 0; last = finished; }
-      }
+        // Nothing moved: a retry is waiting, a step ran out of its time budget, or a stalled step's lease has not run out yet.
+        if (finished === last) return 'idle';
+        last = finished;
+        return 'progress';
+      });
+      if (halt) return;
+      if (end === 'errors') { stopWith(lastError.status === 503 ? copy.ui.runWaiting : readError(lastError.payload, copy)); return; }
     }
   }
 

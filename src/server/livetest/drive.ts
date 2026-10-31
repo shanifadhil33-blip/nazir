@@ -6,6 +6,7 @@ import { Coded, NotFound, runReasonLine, type ErrorCode } from '../http/errors';
 import { caseResults, type CaseResult, type ReportConversation } from '../reports/build';
 import { recoverStale } from '../runner/recover';
 import { liveTestReady, type StepDeps } from './live-test';
+import { conversationBudget } from './budget';
 
 export type RunNote = { code: ErrorCode; en: string; ar: string };
 export type RunProgress = { run_id: string; status: string; done: boolean; passed: number; failed: number; inconclusive: number; waiting: number; results?: CaseResult[]; notes: RunNote[] };
@@ -31,8 +32,12 @@ async function progress(driver: TransactionDriver, workspaceId: string, runId: s
   });
 }
 
-/** Runs one queued conversation of a run the member's workspace owns. Only roles that start runs may drive one. */
-export async function stepRun(driver: TransactionDriver, memberId: string, runId: unknown, deps: StepDeps, env: Record<string, string | undefined> = process.env) {
+/**
+ * Runs one queued conversation of a run the member's workspace owns. Only roles that start runs may drive one.
+ * The work is bounded by the step budget (budget.ts): when too little time is left, nothing is claimed and the next call continues.
+ */
+export async function stepRun(driver: TransactionDriver, memberId: string, runId: unknown, deps: StepDeps, env: Record<string, string | undefined> = process.env, now: () => number = Date.now) {
+  const startedAt = now();
   if (typeof runId !== 'string' || !/^[0-9a-f-]{36}$/i.test(runId)) throw new Coded(400, 'validation', 'Check the details and try again.');
   const workspaceId = await withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
@@ -45,6 +50,8 @@ export async function stepRun(driver: TransactionDriver, memberId: string, runId
   const before = await progress(driver, workspaceId, runId);
   if (before.done) return before;
   if (!liveTestReady(env)) throw new Coded(503, 'live_test_unavailable', 'The live test is not connected here yet. Nothing was queued.');
-  await deps.run({ driver, inspectionDriver: deps.inspectionDriver(), runId });
+  const budgetMs = conversationBudget(startedAt, now());
+  if (!budgetMs) return before;
+  await deps.run({ driver, inspectionDriver: deps.inspectionDriver(), runId, budgetMs });
   return progress(driver, workspaceId, runId);
 }
