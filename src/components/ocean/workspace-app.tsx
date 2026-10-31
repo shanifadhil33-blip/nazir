@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fill, messagesFor, type Lang, type Messages } from './copy';
-import { canApprove, canRunRecheck, emptyModel, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
+import { canApprove, canRunRecheck, emptyModel, firstStepFor, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
 import type { Measured } from './screen';
 import { LiveTestPanel } from './live-test';
 import { AgentSettingsPanel, defaultSettings, type PackView, type SettingsView } from './agent-settings';
 
-type Bundle = { latest: ReportBody; previous: ReportBody | null; agentName: string; sample: boolean } | 'sample';
+/** runs is null when the count is not known, for example on a single report page. */
+type Bundle = { latest: ReportBody; previous: ReportBody | null; agentName: string; sample: boolean; runs?: number | null } | 'sample';
 
 type Membership = {
   workspaceId: string;
@@ -48,6 +49,7 @@ export function WorkspaceApp({
   const [settings, setSettings] = useState<SettingsView | null>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
   const [liveOpen, setLiveOpen] = useState(false);
+  const [runStarted, setRunStarted] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [packs, setPacks] = useState<PackView[] | null>(null);
   const thread = useRef<string | null>(null);
@@ -106,10 +108,11 @@ export function WorkspaceApp({
       if (cancel) return;
       if (!listResponse.ok) { setNotice(readError(listBody, current)); setPhase('denied'); return; }
       const reports = (listBody.reports ?? []) as { body: ReportBody }[];
+      const runs = typeof listBody.runs === 'number' ? listBody.runs : null;
       if (reports[0]?.body) {
-        setBundle({ latest: reports[0].body, previous: reports[1]?.body ?? null, agentName: membership.workspaceName, sample: nextDemo });
+        setBundle({ latest: reports[0].body, previous: reports[1]?.body ?? null, agentName: membership.workspaceName, sample: nextDemo, runs });
       } else if (nextDemo) setBundle('sample');
-      else setBundle({ latest: emptyBody(), previous: null, agentName: membership.workspaceName, sample: false });
+      else setBundle({ latest: emptyBody(), previous: null, agentName: membership.workspaceName, sample: false, runs });
       setPhase('ready');
     }
     load().catch(() => { if (!cancel) { setNotice(messagesFor(langRef.current).ui.nothingChanged); setPhase('denied'); } });
@@ -160,7 +163,7 @@ export function WorkspaceApp({
       if (done && payload?.tool === 'decide_repair') push({ id: crypto.randomUUID(), kind: 'applied', title: copy.ui.fixApplied, body: text });
       else if (done && payload?.tool === 'rerun_tests') push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: text });
       else push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.reply, body: text });
-      if (done && (payload?.tool === 'start_run' || payload?.tool === 'rerun_tests')) void drive(runIdsIn(payload?.data));
+      if (done && (payload?.tool === 'start_run' || payload?.tool === 'rerun_tests')) { setRunStarted(true); void drive(runIdsIn(payload?.data)); }
     } catch {
       setExtra((items) => items.filter((item) => item.id !== 'applying'));
       if (controller.signal.aborted) push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.stopped });
@@ -236,7 +239,12 @@ export function WorkspaceApp({
     </div>;
   }
 
-  const view: ScreenModel = { ...model, agentName: settings?.name || model.agentName, status: status ?? model.status, events: [...model.events, ...extra] };
+  const packNames = copy.settings.packNames as Record<string, string>;
+  const firstStep = firstStepFor({
+    runs: bundle && bundle !== 'sample' ? bundle.runs ?? null : null, demo, preview, shared,
+    agent: settings?.name || copy.ui.sampleAgent, pack: packNames[settings?.focus_pack ?? 'government'] ?? packNames.government!,
+  });
+  const view: ScreenModel = { ...model, agentName: settings?.name || model.agentName, status: status ?? model.status, events: [...model.events, ...extra], firstStep: runStarted ? null : firstStep };
   const shown: SettingsView = settings ?? { ...defaultSettings(view.agentName), can_edit: preview && seat === 'owner' };
 
   async function saveSettings(body: unknown): Promise<SettingsView | null> {
@@ -260,7 +268,8 @@ export function WorkspaceApp({
 
 function deriveModel(bundle: Bundle | null, copy: Messages, lang: Lang, preview: boolean): ScreenModel {
   if (preview || bundle === 'sample') return sampleModel(copy);
-  if (bundle && bundle.latest.counts.conversations === 0 && bundle.latest.findings.length === 0 && !bundle.sample) return emptyModel(copy, bundle.agentName);
+  // A saved report of a run with no conversations is still a report; only a workspace with none gets the first report message.
+  if (bundle && bundle.latest.counts.conversations === 0 && bundle.latest.findings.length === 0 && !bundle.sample) return { ...emptyModel(copy, bundle.agentName), empty: !bundle.latest.run.id };
   if (bundle) return modelFromReports(bundle.latest, bundle.previous, copy, lang, bundle.agentName, bundle.sample);
   return emptyModel(copy, copy.name);
 }

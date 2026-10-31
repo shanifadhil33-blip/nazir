@@ -99,6 +99,9 @@ it.each([HomePage, WorkspacesPage])('creates one workspace for a new signed in u
       expect(params).toEqual(['session-user', 'My workspace']);
       return create();
     }
+    // The new owner seeds the Government pack and the sample agent in the same transaction.
+    if (sql.includes('nazir.member_roles')) return { rows: [{ role: 'service_owner' }] };
+    if (sql.includes('INSERT INTO nazir.agents')) return { rows: [{ id: 'sample-agent' }] };
     return { rows: [] };
   });
   fake.runtimeDriver.mockReturnValue({ transaction: (work) => work({ query } as SqlConnection) } satisfies TransactionDriver);
@@ -106,6 +109,7 @@ it.each([HomePage, WorkspacesPage])('creates one workspace for a new signed in u
     await expect(Page()).rejects.toMatchObject({ digest: 'NEXT_REDIRECT;replace;/w/new-workspace;307;' });
   }
   expect(create).toHaveBeenCalledTimes(1);
+  expect(query.mock.calls.filter(([sql]) => sql.includes('nazir.save_agent_settings'))).toHaveLength(1);
 });
 it.each([
   ['Privacy', PrivacyPage], ['Terms', TermsPage],

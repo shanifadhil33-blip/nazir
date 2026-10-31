@@ -122,7 +122,14 @@
     "quickCheck": "Quick check (16 tests)",
     "fullSuite": "Full suite",
     "quickHeader": "Quick check, {count} tests",
-    "fullHeader": "Full suite, {count} tests"
+    "fullHeader": "Full suite, {count} tests",
+    "firstStepTitle": "Your first step",
+    "firstStepBody": "Nazir will test {agent} with the {pack} Focus Pack.",
+    "firstStepQuick": "A Quick check runs 16 tests, 8 in English and 8 in Arabic, and gives you your first report.",
+    "firstStepAction": "Run Quick check",
+    "firstStepViewer": "A service owner or a service quality reviewer can run the first Quick check.",
+    "sampleAgent": "the built in sample agent",
+    "firstReport": "Run a Quick check to get your first report."
   },
   "sample": {
     "agent": "Harbor permits desk",

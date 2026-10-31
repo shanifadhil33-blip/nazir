@@ -19,6 +19,7 @@ export const errorLines = {
   too_many: { en: 'You have reached the limit for now.', ar: 'بلغت الحد المسموح حاليا.' },
   workspace_limit: { en: 'You can belong to at most 10 workspaces. Remove one to add another.', ar: 'يمكنك الانتماء إلى عشر مساحات عمل على الأكثر. أزل واحدة لتضيف غيرها.' },
   not_found: { en: 'The record was not found.', ar: 'لم يعثر على السجل.' },
+  no_report: { en: 'Run a Quick check to get your first report.', ar: 'شغل فحصا سريعا لتحصل على تقريرك الأول.' },
   validation: { en: 'Check the details and try again.', ar: 'تحقق من التفاصيل ثم أعد المحاولة.' },
   internal_error: { en: 'Something went wrong.', ar: 'حدث خلل ما.' },
   approval_required: { en: 'An exact approval from an allowed role is required.', ar: 'تلزم موافقة صريحة من دور مسموح له.' },

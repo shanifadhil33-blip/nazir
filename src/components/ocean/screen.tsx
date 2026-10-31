@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { fill, type Lang, type Messages } from './copy';
 import { AgentAvatar } from './agent-settings';
-import { canApprove, canCompose, canRunRecheck, dubaiStamp, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
+import { canApprove, canCompose, canRunQuickCheck, canRunRecheck, dubaiStamp, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
 import { ScoreFigure } from './score-figure';
 
 const bars = ['safety', 'accuracy', 'rules', 'recovery'] as const;
@@ -112,6 +112,7 @@ export function WorkspaceScreen({
   const recheck = canRunRecheck(roles, shared);
   const recheckReady = model.failures.some((item) => Boolean(item.proposalId));
   const compose = canCompose(seat, shared);
+  const quick = canRunQuickCheck(roles, shared);
   const active = model.failures[Math.min(tab, Math.max(0, model.failures.length - 1))];
   const labelFor = (item: FailureCase) => lang === 'ar' ? item.tabAr : item.tab;
   let step = 0;
@@ -169,6 +170,14 @@ export function WorkspaceScreen({
           <span className="nz-compact-counts">{copy.ui.pass} {model.metrics.pass} · {copy.ui.fail} {model.metrics.fail} · {copy.ui.critical} {model.metrics.critical}</span>
         </button>
         <div className="nz-scroll">
+          {model.firstStep ? <div className="nz-card nz-card-suite" data-state="first-step">
+            <div>
+              <strong>{copy.ui.firstStepTitle}</strong>
+              <p>{fill(copy.ui.firstStepBody, { agent: model.firstStep.agent, pack: model.firstStep.pack })}</p>
+              <p>{copy.ui.firstStepQuick}</p>
+              {quick ? <div className="nz-actions"><button type="button" className="nz-btn nz-btn-teal" data-action="first-quick" disabled={pending} onClick={() => onReplay('quick')}>{copy.ui.firstStepAction}</button></div> : <p className="nz-note" data-note="first-step-viewer">{copy.ui.firstStepViewer}</p>}
+            </div>
+          </div> : null}
           <ol className="nz-timeline">
             {model.events.map((event) => {
               const number = event.kind === 'user' ? null : ++step;
@@ -186,7 +195,7 @@ export function WorkspaceScreen({
               </li>;
             })}
           </ol>
-          {model.events.length === 0 ? <p className="nz-empty">{copy.ui.noReport}</p> : null}
+          {model.events.length === 0 && !model.firstStep ? <p className="nz-empty">{copy.ui.noReport}</p> : null}
         </div>
         {compose ? <form className="nz-composer" onSubmit={(event) => { event.preventDefault(); if (!pending && draft.trim().length >= 2) { onSend(draft.trim()); setDraft(''); } }}>
           <button type="button" className="nz-icon-btn" data-action="attach" aria-label={copy.ui.attach}><Icon name="link" /></button>
@@ -224,6 +233,7 @@ export function WorkspaceScreen({
       </div>
       <section className="nz-panel nz-report" id="nz-report" aria-label={copy.ui.report}>
         <h2>{copy.ui.report}</h2>
+        {model.empty ? <p className="nz-empty" data-state="first-report">{copy.ui.firstReport}</p> : <>
         {model.suiteLabel ? <p>{model.suiteLabel}</p> : null}
         {model.before ? <div className="nz-report-scores">
           <div><p>{copy.ui.before}</p><ScoreFigure value={model.before.score} ring="coral" /></div>
@@ -253,6 +263,7 @@ export function WorkspaceScreen({
         {pdfHref ? <a className="nz-btn nz-btn-teal" href={pdfHref} download>{copy.ui.downloadPdf}</a> : null}
         {copied ? <p role="status">{copy.ui.linkCopied}</p> : null}
         {copyError ? <p role="status">{copy.ui.linkFailed}</p> : null}
+        </>}
         {demo ? <p className="nz-footer">{copy.sample.footer}</p> : null}
       </section>
       {screen === 'failures' ? <button type="button" className="nz-backdrop nz-only-phone" aria-label={copy.ui.close} onClick={() => onScreen('chat')} /> : null}

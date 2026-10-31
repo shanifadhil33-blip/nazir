@@ -1,7 +1,7 @@
 import 'server-only';
 import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Forbidden, NotFound } from '../http/errors';
+import { Coded, errorLines, Forbidden, NotFound } from '../http/errors';
 import { packById } from '../packs/catalog';
 import { countsOf, reportRunDate, reportTestTitle, type ReportBody, type ReportConversation } from './build';
 import type { PdfExtras } from './pdf';
@@ -12,6 +12,8 @@ export async function readPdfReport(driver: TransactionDriver, memberId: string,
   await withMember(driver, memberId, async (sql) => {
     const { rows } = await sql.query<{ role: string }>('SELECT role FROM nazir.member_roles WHERE member_id=nazir.current_member_id()');
     if (!rows.some((r) => r.role === 'service_owner' || r.role === 'quality_reviewer')) throw new Forbidden();
+    // A workspace with no saved report gets the plain first report message, whatever id was asked for.
+    if (!(await sql.query('SELECT id FROM nazir.list_reports() LIMIT 1')).rows.length) throw new Coded(404, 'no_report', errorLines.no_report.en);
   });
   const body = await readFullReport(driver, memberId, reportId);
   const extras = await withMember(driver, memberId, async (sql): Promise<Omit<PdfExtras, 'fontBytes'>> => {
