@@ -1,0 +1,9 @@
+# B1: Sign in button (Nazir, Next.js App Router, NextAuth v5)
+Problem: on / the Sign in control is a next/link to /api/auth/signin?callbackUrl=/. Tapping it leaves the old landing card frozen for seconds (client nav attempt, NextAuth default page hop, Google, callback, / then /w/<id>) with nothing showing it is working.
+Do exactly this, no other scope, keep the current card design and the Privacy and Terms links:
+1. In src/app/page.tsx replace the Sign in Link with a <form action={serverAction}> whose server action ('use server') calls signIn('google', { redirectTo: '/w' }) imported from '@/auth'. This posts straight to Google with no NextAuth page.
+2. The submit button is a small client component (e.g. src/components/sign-in-button.tsx) using useFormStatus: idle label = en.signIn, pending label "Signing you in" plus Arabic "جار تسجيل الدخول" (add keys signingIn to messages/en.json and messages/ar.json; keep the i18n key parity tests passing). While pending: disabled, aria-busy="true", aria-live polite text. Style it as a clear pill button using existing CSS variables in src/app/globals.css (add a small .nz-signin class, focus visible ring, min 44px tall). No dashes in any user facing copy.
+3. src/app/w/page.tsx: when not signed in, redirect to '/' instead of the NextAuth sign in page.
+4. Add src/app/w/loading.tsx and src/app/w/[workspaceId]/loading.tsx: lightweight server rendered shell with a visible bilingual "Opening your workspace" / "جار فتح مساحة العمل" status (role="status"), no client JS.
+5. Add vitest tests for: page form action calls signIn with google and redirectTo '/w'; button pending state labels EN and AR; /w unauthenticated redirects to '/'; loading files render the status text. Follow existing test patterns in tests/.
+Do not change env, auth config, vercel.json, or any other route. Do not commit. Run pnpm typecheck and pnpm test and fix failures you introduced.

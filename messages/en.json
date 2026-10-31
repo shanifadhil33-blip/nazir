@@ -5,6 +5,8 @@
   "privacy": "Privacy",
   "terms": "Terms",
   "signIn": "Sign in",
+  "signingIn": "Signing you in",
+  "openingWorkspace": "Opening your workspace",
   "ui": {
     "subtitle": "Tests government service chatbots in Arabic and English.",
     "sampleData": "Sample data",
