@@ -1,8 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { SqlConnection, TransactionDriver } from '../src/server/db/driver';
-const fake = vi.hoisted(() => ({ auth: vi.fn(), runtimeDriver: vi.fn() }));
-vi.mock('../src/auth', () => ({ auth: fake.auth }));
+const fake = vi.hoisted(() => ({ auth: vi.fn(), signIn: vi.fn(), runtimeDriver: vi.fn(), pending: false }));
+vi.mock('../src/auth', () => ({ auth: fake.auth, signIn: fake.signIn }));
+vi.mock('react-dom', async (orig) => ({ ...(await orig<typeof import('react-dom')>()), useFormStatus: () => ({ pending: fake.pending }) }));
+import { SignInButton } from '../src/components/sign-in-button';
+import WorkspaceLoading from '../src/app/w/loading';
+import WorkspaceIdLoading from '../src/app/w/[workspaceId]/loading';
 vi.mock('../src/server/db/runtime', () => ({ runtimeDriver: fake.runtimeDriver }));
 import HomePage from '../src/app/page';
 import WorkspacesPage from '../src/app/w/page';
@@ -28,14 +32,42 @@ it('Marks Arabic name and banner with their language and direction', async () =>
 it('keeps the signed out landing card and sign in callback link', async () => {
   const html = renderToStaticMarkup(await HomePage());
   expect(html).toContain('<main class="nz-legal">');
-  expect(html).toContain('href="/api/auth/signin?callbackUrl=/"');
+  expect(html).not.toContain('/api/auth/signin');
+  expect(html).toContain('class="nz-signin"');
   expect(html).toContain('href="/privacy"');
   expect(html).toContain('href="/terms"');
   expect(fake.runtimeDriver).not.toHaveBeenCalled();
 });
 
-it('redirects signed out visitors at the workspace index to sign in', async () => {
-  await expect(WorkspacesPage()).rejects.toMatchObject({ digest: 'NEXT_REDIRECT;replace;/api/auth/signin?callbackUrl=/;307;' });
+it('submits the landing form to Google with the workspace index as the destination', async () => {
+  const tree = await HomePage() as { props: { children: Array<{ type?: string; props?: { children?: unknown } }> } };
+  const nav = tree.props.children.find((c) => c?.type === 'nav')!;
+  const form = (nav.props!.children as Array<{ type?: string; props: { action: () => Promise<void> } }>).find((c) => c?.type === 'form')!;
+  await form.props.action();
+  expect(fake.signIn).toHaveBeenCalledWith('google', { redirectTo: '/w' });
+});
+
+it('shows idle and pending sign in labels in English and Arabic', () => {
+  expect(renderToStaticMarkup(<SignInButton />)).toContain('>Sign in<');
+  fake.pending = true;
+  const html = renderToStaticMarkup(<SignInButton />);
+  fake.pending = false;
+  expect(html).toContain('Signing you in');
+  expect(html).toContain('جار تسجيل الدخول');
+  expect(html).toContain('disabled=""');
+  expect(html).toContain('aria-busy="true"');
+  expect(html).toContain('aria-live="polite"');
+});
+
+it.each([['w', WorkspaceLoading], ['workspace', WorkspaceIdLoading]])('renders the %s loading status in both languages', (_n, Loading) => {
+  const html = renderToStaticMarkup(<Loading />);
+  expect(html).toContain('role="status"');
+  expect(html).toContain('Opening your workspace');
+  expect(html).toContain('جار فتح مساحة العمل');
+});
+
+it('redirects signed out visitors at the workspace index to the landing page', async () => {
+  await expect(WorkspacesPage()).rejects.toMatchObject({ digest: 'NEXT_REDIRECT;replace;/;307;' });
   expect(fake.runtimeDriver).not.toHaveBeenCalled();
 });
 

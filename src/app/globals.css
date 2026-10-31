@@ -326,7 +326,14 @@ a { color: var(--teal); }
   border-radius: 20px;
   border: 1px solid var(--line);
 }
-.nz-legal nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.nz-legal nav { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.nz-legal nav form { display: contents; }
+.nz-signin { min-height: 44px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--teal); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.nz-signin:hover:not(:disabled) { background: var(--sea-mid); }
+.nz-signin:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.nz-signin:disabled { opacity: .75; cursor: progress; }
+.nz-loading { max-width: 42rem; margin: 24px auto; padding: 24px; background: var(--card); border-radius: 20px; border: 1px solid var(--line); color: var(--ink); }
+.nz-loading p { margin: 0 0 6px; }
 
 @keyframes nz-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes nz-fill { from { transform: scaleX(0); } to { transform: scaleX(var(--p)); } }
