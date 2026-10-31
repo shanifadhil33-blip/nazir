@@ -194,7 +194,7 @@ a { color: var(--teal); }
 .nz-side { display: flex; flex-direction: column; gap: 16px; }
 .nz-agent { margin: 0 0 4px; color: var(--ink-muted); }
 .nz-score-block, .nz-score-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.nz-score-num { margin: 0; font-size: 64px; line-height: 1; }
+.nz-score-num { margin: 0; font-size: 64px; line-height: 1; white-space: nowrap; flex-shrink: 0; }
 .nz-out { margin: 0; color: var(--ink-muted); font-size: 12px; }
 .nz-ring { width: 56px; height: 56px; flex: none; }
 .nz-ring-track, .nz-ring-value { fill: none; stroke-width: 5; }
@@ -355,9 +355,11 @@ a { color: var(--teal); }
     border-radius: 12px;
     padding: 8px 12px;
   }
+  .nz-compact > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+  .nz-compact > div { flex-shrink: 0; }
   .nz-compact .nz-score-num { font-size: 32px; }
   .nz-compact .nz-ring { width: 40px; height: 40px; }
-  .nz-compact-counts { color: var(--ink-muted); font-size: 12px; }
+  .nz-compact-counts { color: var(--ink-muted); font-size: 14px; }
   .nz-columns[data-screen="chat"] .nz-side,
   .nz-columns[data-screen="chat"] .nz-report,
   .nz-columns[data-screen="score"] .nz-log,
