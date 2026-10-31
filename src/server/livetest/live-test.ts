@@ -4,11 +4,13 @@ import { createHash } from 'node:crypto';
 import { requireRole } from '../auth/guard';
 import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
-import { Coded, NotFound, TooMany, errorLines } from '../http/errors';
+import { Coded, NotFound, TooMany, errorLines, runReasonLine } from '../http/errors';
+import { recoverStale } from '../runner/recover';
+import { assertRunCap, maxRunsPerUserPerDay, runStarter } from '../runner/run-cap';
 import { providerRegistry } from '../ai/providers';
 import { enqueueRun } from '../runner/enqueue';
 
-export type LiveSide = { run_id: string; role: 'clean' | 'planted'; status: string; reply: string | null; cases: { reference: string; queue: string | null }[]; failed_checks: { id: string; en: string; ar: string }[]; reason: string | null };
+export type LiveSide = { run_id: string; role: 'clean' | 'planted'; status: string; reply: string | null; cases: { reference: string; queue: string | null }[]; failed_checks: { id: string; en: string; ar: string }[]; reason: string | null; note: { en: string; ar: string } | null };
 type Env = Record<string, string | undefined>;
 
 /** The in app test needs the inspection channel and at least one usable free provider. Without them nothing is queued. */
@@ -42,9 +44,12 @@ export async function startLiveTest(driver: TransactionDriver, memberId: string,
 
     return { workspaceId: w.id };
   });
+  const startedBy = await runStarter(driver, memberId);
   return withWorker(driver, prepared.workspaceId, async (sql) => {
     const recent = Number((await sql.query<{ n: string }>("SELECT count(*) AS n FROM nazir.runs WHERE idempotency_key LIKE $1 AND created_at>now()-interval '10 minutes'", [liveKey(memberId) + '%'])).rows[0]!.n);
     if (recent >= 6) throw new TooMany();
+    // Both sides count toward the daily run cap, so a pair is refused whole, before the complaint copy is made.
+    await assertRunCap(sql, startedBy, maxRunsPerUserPerDay - (planted ? 1 : 0));
     const scenario = await sql.query<{ id: string }>('SELECT nazir.live_test_scenario($1,$2,$3) AS id', [memberId, language, complaint]).then((r) => r.rows[0]!.id, () => { throw new Coded(409, 'live_test_unavailable', 'The live test is not connected here yet. Nothing was queued.'); });
     const plan = (await sql.query<{ id: string }>("SELECT id FROM nazir.plans WHERE status='approved' AND budget_calls>=16 ORDER BY budget_calls DESC,created_at,id LIMIT 1")).rows[0];
     const versions = (await sql.query<{ id: string; registry: string }>("SELECT id,config->>'registry_id' AS registry FROM nazir.agent_versions WHERE config->>'registry_id' IN ('repair','baseline','planted_wrong_queue') ORDER BY created_at,id")).rows;
@@ -58,7 +63,7 @@ export async function startLiveTest(driver: TransactionDriver, memberId: string,
     if (planted) sides.push({ role: 'planted', version: ids.fault! });
     const runs = [];
     for (const side of sides) {
-      const run = await enqueueRun(driver, { workspaceId: prepared.workspaceId, planId: ids.plan, agentVersionId: side.version, scenarioIds: [ids.scenario], repeats: 1, idempotencyKey: `${liveKey(memberId)}${stamp}:${side.role}` });
+      const run = await enqueueRun(driver, { workspaceId: prepared.workspaceId, planId: ids.plan, agentVersionId: side.version, scenarioIds: [ids.scenario], repeats: 1, idempotencyKey: `${liveKey(memberId)}${stamp}:${side.role}`, startedBy });
       runs.push({ run_id: run.id, role: side.role });
     }
     await withWorker(driver, prepared.workspaceId, (sql) => sql.query('SELECT nazir.live_test_retire($1)', [ids.scenario]));
@@ -79,6 +84,11 @@ async function liveRunWorkspace(driver: TransactionDriver, memberId: string, run
   }));
 }
 
+function noteFor(reason: string | null) {
+  const line = runReasonLine(reason);
+  return line ? { en: line.en, ar: line.ar } : null;
+}
+
 export async function readLiveSides(driver: TransactionDriver, memberId: string, runIds: string[]): Promise<LiveSide[]> {
   const uuid = /^[0-9a-f-]{36}$/i;
   const ids = [...new Set(runIds)].filter((id) => uuid.test(id)).slice(0, 2);
@@ -93,7 +103,7 @@ export async function readLiveSides(driver: TransactionDriver, memberId: string,
       const reading = row.cid ? (await sql.query<{ cases: { reference: string; queue?: string }[] | null }>("SELECT reading->'cases' AS cases FROM nazir.state_readings WHERE conversation_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1", [row.cid])).rows[0]?.cases ?? [] : [];
       return { run_id: id, role: row.key.endsWith(':planted') ? 'planted' : 'clean', status: row.status ?? 'queued', reply: reply ? reply.slice(0, 600) : null,
         cases: (reading ?? []).map((c) => ({ reference: c.reference, queue: c.queue ?? null })),
-        failed_checks: (row.summary?.records ?? []).filter((c) => c.status === 'fail').map((c) => ({ id: c.id, en: c.summary?.en ?? '', ar: c.summary?.ar ?? '' })), reason: row.reason };
+        failed_checks: (row.summary?.records ?? []).filter((c) => c.status === 'fail').map((c) => ({ id: c.id, en: c.summary?.en ?? '', ar: c.summary?.ar ?? '' })), reason: row.reason, note: noteFor(row.reason) };
     }));
   }
   return sides;
@@ -102,7 +112,8 @@ export async function readLiveSides(driver: TransactionDriver, memberId: string,
 export type StepDeps = { inspectionDriver: () => TransactionDriver; run: (input: { driver: TransactionDriver; inspectionDriver: TransactionDriver; runId: string }) => Promise<unknown> };
 export async function stepLiveTest(driver: TransactionDriver, memberId: string, runId: unknown, deps: StepDeps, env: Env = process.env) {
   if (typeof runId !== 'string') throw new Coded(400, 'validation', 'Check the details and try again.');
-  await liveRunWorkspace(driver, memberId, runId);
+  const workspaceId = await liveRunWorkspace(driver, memberId, runId);
+  await recoverStale(driver, workspaceId, runId);
   if (!liveTestReady(env)) throw new Coded(503, 'live_test_unavailable', 'The live test is not connected here yet. Nothing was queued.');
   await deps.run({ driver, inspectionDriver: deps.inspectionDriver(), runId });
   return (await readLiveSides(driver, memberId, [runId]))[0]!;

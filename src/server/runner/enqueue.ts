@@ -11,18 +11,21 @@ import { hash, rulePackHash } from '../../sandbox/demo-rule-pack';
 import { Coded, errorLines } from '../http/errors';
 import { capValue } from '../ai/providers';
 import { estimateRun, type EstimateRules } from './estimate';
+import { assertRunCap, type RunStarter } from './run-cap';
 import { chainOrder, providerRegistry } from '../ai/providers';
 import { rubricVersion, judgePromptHash } from '../judge/rubric';
 export const runnerVersion = 'n13';
 // The manifest shape version. runner_version stays n13 because migration 0012 triggers key on it.
 export const manifestVersion = 'n29';
-export async function enqueueRun(driver: TransactionDriver, input: { workspaceId: string; planId: string; agentVersionId: string; scenarioIds: string[]; repeats?: number; size?: PlanSize; idempotencyKey: string; recordsOnly?: boolean; order?: string[]; repeatsFor?: Record<string, number>; lessons?: FrozenLesson[] }) {
+/** startedBy is set when a signed in person starts the run; it counts toward their daily run cap. Scripts and fixtures leave it out. */
+export async function enqueueRun(driver: TransactionDriver, input: { workspaceId: string; planId: string; agentVersionId: string; scenarioIds: string[]; repeats?: number; size?: PlanSize; idempotencyKey: string; recordsOnly?: boolean; order?: string[]; repeatsFor?: Record<string, number>; lessons?: FrozenLesson[]; startedBy?: RunStarter }) {
   const repeats = input.repeats ?? 3;
   if (!input.idempotencyKey.trim() || input.idempotencyKey.length>200 || !Number.isInteger(repeats) || repeats<1 || repeats>3 || !input.scenarioIds.length || new Set(input.scenarioIds).size!==input.scenarioIds.length || Object.values(input.repeatsFor ?? {}).some((n) => !Number.isInteger(n) || n<1 || n>3) || (input.order && input.order.some((id) => !input.scenarioIds.includes(id)))) throw new Error('Invalid enqueue');
   return withWorker(driver,input.workspaceId,async (db) => {
     await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[input.workspaceId+':'+input.idempotencyKey]);
     const existing = (await db.query<{ id: string }>('SELECT id FROM nazir.runs WHERE idempotency_key=$1',[input.idempotencyKey])).rows[0];
     if (existing) return existing;
+    if (input.startedBy) await assertRunCap(db, input.startedBy);
     const external = (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_worker()')).rows[0];
     if (external && !external.tested_at) throw new Coded(409, 'external_not_ready', errorLines.external_not_ready.en);
     const plan = (await db.query<{ rule_pack_version_id: string; budget_calls: number; stop_rules: EstimateRules & { records_only?: boolean; size?: PlanSize; quick_version?: string } }>("SELECT rule_pack_version_id,budget_calls,stop_rules FROM nazir.plans WHERE id=$1 AND status='approved'",[input.planId])).rows[0];
@@ -53,7 +56,7 @@ export async function enqueueRun(driver: TransactionDriver, input: { workspaceId
     const manifest = { ...(external ? { externalAgent: { revision: external.revision } } : {}), size, testCount: scenarios.length, ...(size === 'quick' ? { quickVersion: plan.stop_rules.quick_version ?? pack.quick.version } : {}), repeatCount: repeats, estimatedCalls, registry_id: version.id, configHash: version.configHash, systemPromptHash: version.systemPromptHash, toolManifestHash: version.toolManifestHash, rulePackHash: packed ? packed.runtime.rulesHash : rulePackHash(), scenarios: scenarios.map((s) => ({ id:s.id,hash:s.content_hash,attempts:attemptsFor[s.id] })), runnerVersion, recordsOnly:external ? false : input.recordsOnly ?? plan.stop_rules.records_only ?? false, ...(packed ? { rubricVersion: packed.runtime.pack.judge.rubric_version, judgePromptHash: hash(packed.runtime.pack.judge), pack: packed.runtime.id } : { rubricVersion, judgePromptHash }), judgeChainOrder:chainOrder(providerRegistry(process.env),'judge','nvidia_nemotron').map((e) => ({provider:e.provider.id,model:e.model,family:e.family})), aiChainOrder: chainOrder(providerRegistry(process.env),'agent').map((e) => ({ provider:e.provider.id,model:e.model })), manifestVersion, ...(input.lessons?.length ? { lessons:input.lessons } : {}), ...(input.repeatsFor ? { repeatsFor:input.repeatsFor } : {}), ...(version.kind==='repair' ? { repair:{ parent_registry_id:row.config.parent_registry_id,patch:row.config.patch,executable_hash:row.config.executable_hash } } : {}) };
     const run = (await db.query<{ id: string }>("INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,status,frozen_manifest,runner_version,calls_budget,idempotency_key,repeat_count) VALUES($1,$2,$3,$4,'queued',$5,$6,$7,$8,$9) RETURNING id",[input.workspaceId,input.planId,input.agentVersionId,plan.rule_pack_version_id,JSON.stringify(manifest),runnerVersion,plan.budget_calls,input.idempotencyKey,repeats])).rows[0]!;
     for (const s of scenarios) for (let repeat=1;repeat<=attemptsFor[s.id]!;repeat++) await db.query(input.order?"INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,status,idempotency_key,agent_version_id,scenario_hash,attempt_number,created_at) VALUES($1,$2,$3,$4,'queued',$5,$6,$7,$8,clock_timestamp())":"INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,status,idempotency_key,agent_version_id,scenario_hash,attempt_number) VALUES($1,$2,$3,$4,'queued',$5,$6,$7,$8)",[input.workspaceId,run.id,s.id,s.language,`${s.stable_key}:${s.language}:${repeat}`,input.agentVersionId,s.content_hash,repeat]);
-    await db.query("SELECT nazir.append_audit('run_enqueued','run',$1,$2)",[run.id,JSON.stringify({ manifest_hash:hash(manifest),scenario_count:scenarios.length,repeats })]);
+    await db.query("SELECT nazir.append_audit('run_enqueued','run',$1,$2)",[run.id,JSON.stringify({ manifest_hash:hash(manifest),scenario_count:scenarios.length,repeats,...(input.startedBy ? { started_by:input.startedBy.memberId } : {}) })]);
     return run;
   });
 }

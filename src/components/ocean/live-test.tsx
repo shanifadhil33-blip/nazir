@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Lang, Messages } from './copy';
 
-export type LiveSide = { run_id: string; role: 'clean' | 'planted'; status: string; reply: string | null; cases: { reference: string; queue: string | null }[]; failed_checks: { id: string; en: string; ar: string }[]; reason: string | null };
+export type LiveSide = { run_id: string; role: 'clean' | 'planted'; status: string; reply: string | null; cases: { reference: string; queue: string | null }[]; failed_checks: { id: string; en: string; ar: string }[]; reason: string | null; note?: { en: string; ar: string } | null };
 const done = (s: string) => ['passed', 'failed', 'inconclusive', 'cancelled'].includes(s);
 
 export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onClose }: { copy: Messages; lang: Lang; workspaceId: string; sample: boolean; reportHref: string; onClose: () => void }) {
@@ -11,7 +11,8 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
   const [text, setText] = useState(t.prepared);
   const [planted, setPlanted] = useState(true);
   const [sides, setSides] = useState<LiveSide[]>([]);
-  const [state, setState] = useState<'idle' | 'running' | 'done' | 'unavailable' | 'failed' | 'limit'>('idle');
+  const [state, setState] = useState<'idle' | 'running' | 'done' | 'unavailable' | 'failed' | 'limit' | 'cap'>('idle');
+  const [capLine, setCapLine] = useState('');
   const dialog = useRef<HTMLDivElement>(null);
   useEffect(() => {
     dialog.current?.querySelector<HTMLElement>('textarea')?.focus();
@@ -25,9 +26,13 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
     setState('running'); setSides([]);
     const headers = { 'content-type': 'application/json', 'accept-language': lang };
     const start = await fetch(`/api/workspaces/${workspaceId}/live-test`, { method: 'POST', headers, body: JSON.stringify({ language: lang, complaint: text, planted }) }).catch(() => null);
-    if (!start?.ok) { const code = (await start?.json().catch(() => null))?.error?.code; setState(code === 'live_test_unavailable' ? 'unavailable' : code === 'too_many' ? 'limit' : 'failed'); return; }
+    if (!start?.ok) {
+      const error = (await start?.json().catch(() => null))?.error as { code?: string; message?: string } | undefined;
+      if (error?.code === 'daily_run_cap') { setCapLine(error.message ?? ''); setState('cap'); return; }
+      setState(error?.code === 'live_test_unavailable' ? 'unavailable' : error?.code === 'too_many' ? 'limit' : 'failed'); return;
+    }
     const body = await start.json() as { runs: { run_id: string; role: 'clean' | 'planted' }[] };
-    setSides(body.runs.map((r) => ({ ...r, status: 'running', reply: null, cases: [], failed_checks: [], reason: null })));
+    setSides(body.runs.map((r) => ({ ...r, status: 'running', reply: null, cases: [], failed_checks: [], reason: null, note: null })));
     const results = await Promise.all(body.runs.map(async (r) => {
       const step = await fetch(`/api/workspaces/${workspaceId}/live-test/step`, { method: 'POST', headers, body: JSON.stringify({ run_id: r.run_id }) }).catch(() => null);
       const side = step?.ok ? await step.json().catch(() => null) as LiveSide | null : null;
@@ -58,9 +63,11 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
       {state === 'unavailable' ? <p role="status" data-note="live-unavailable">{t.unavailable}</p> : null}
       {state === 'limit' ? <p role="status">{t.limit}</p> : null}
       {state === 'failed' ? <p role="status">{t.failedRun}</p> : null}
+      {state === 'cap' ? <p role="status" data-note="live-cap">{capLine || t.limit}</p> : null}
       {sides.length ? <div className="nz-live-sides" data-state="live-sides">
         {sides.map((s) => <section key={s.run_id} className="nz-settings-card" data-side={s.role} data-status={s.status}>
           <h3>{s.role === 'clean' ? t.clean : t.planted} <span className={`nz-pill is-${s.status}`}>{label(s.status)}</span></h3>
+          {s.note ? <p className="nz-note" data-note="run-reason">{s.note[lang] || s.note.en}</p> : null}
           <p className="nz-note">{t.typed}: {text}</p>
           <h4>{t.said}</h4><p>{s.reply ?? ''}</p>
           <h4>{t.record}</h4>{s.cases.length ? <ul>{s.cases.map((c) => <li key={c.reference}>{c.reference}, {c.queue ?? ''}</li>)}</ul> : <p>{done(s.status) ? t.noRecord : ''}</p>}

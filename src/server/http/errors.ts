@@ -46,7 +46,25 @@ export const errorLines = {
   lesson_state: { en: 'That lesson cannot change this way now.', ar: 'لا يمكن تغيير هذا الدرس بهذه الطريقة الآن.' },
   live_test_unavailable: { en: 'The live test is not connected here yet. Nothing was queued.', ar: 'الاختبار المباشر غير متصل هنا بعد. لم يوضع شيء في الطابور.' },
   live_test_demo_only: { en: 'The live test runs in demo workspaces only.', ar: 'يعمل الاختبار المباشر في مساحات العرض فقط.' },
+  daily_run_cap: { en: 'You have started 10 test runs today. You can start more tomorrow.', ar: 'بدأت عشرة تشغيلات اختبار اليوم. يمكنك بدء المزيد غدا.' },
+  not_cancellable: { en: 'This has already finished, so it cannot be cancelled.', ar: 'انتهى هذا بالفعل، لذلك لا يمكن إلغاؤه.' },
+  // Why a test ended without a verdict. Shown wherever run status is shown.
+  daily_cap: { en: 'The daily limit of model calls is reached. Try again tomorrow.', ar: 'بلغت مكالمات النموذج حدها اليومي. أعد المحاولة غدا.' },
+  provider_exhausted: { en: 'All model providers are down right now. Try again later.', ar: 'جميع مزودي النماذج متوقفون الآن. أعد المحاولة لاحقا.' },
+  agent_unreachable: { en: 'The agent could not be reached, so the test could not finish.', ar: 'تعذر الوصول إلى الوكيل، لذلك لم يكتمل الاختبار.' },
+  timeout: { en: 'The test took longer than its time limit and was stopped.', ar: 'استغرق الاختبار وقتا أطول من المهلة المحددة فتوقف.' },
+  step_stalled: { en: 'The test stopped responding. It was tried again once and then ended without a verdict.', ar: 'توقف الاختبار عن الاستجابة. أعيدت محاولته مرة واحدة ثم انتهى دون نتيجة.' },
 } as const;
+/** Run outcome codes that have a plain line for the person watching the run. */
+const runReasonCodes: Record<string, ErrorCode> = {
+  daily_cap: 'daily_cap', provider_exhausted: 'provider_exhausted', timeout: 'timeout', step_stalled: 'step_stalled', lease_expired: 'step_stalled',
+  external_unreachable: 'agent_unreachable', external_timeout: 'agent_unreachable', external_format: 'agent_unreachable', external_rate_limit: 'agent_unreachable',
+};
+/** The plain line for an inconclusive or retried conversation reason, or null when it has none. */
+export function runReasonLine(reason: string | null | undefined): { code: ErrorCode; en: string; ar: string } | null {
+  const code = reason ? runReasonCodes[reason] : undefined;
+  return code ? { code, ...errorLines[code] } : null;
+}
 export type ErrorCode = keyof typeof errorLines;
 export type CallerLanguage = 'en' | 'ar';
 const arabic = /[\u0600-\u06FF]/;
