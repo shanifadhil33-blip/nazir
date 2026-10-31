@@ -24,7 +24,10 @@ export type LogEvent = {
   body: string;
   detail?: string;
   proposalId?: string;
+  /** A plan or run this card can cancel. */
+  cancel?: CancelTarget;
 };
+export type CancelTarget = { kind: 'plan' | 'run'; id: string };
 
 export type FailureCase = {
   id: string;
@@ -88,6 +91,11 @@ export function canApprove(roles: readonly string[], shared = false) {
 
 /** Matches plan.approve: an owner or a quality reviewer may run a recheck. */
 export function canRunRecheck(roles: readonly string[], shared = false) {
+  return !shared && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
+}
+
+/** Matches plan.approve: an owner or a quality reviewer may cancel a plan or a run. The server checks the role again. */
+export function canCancel(roles: readonly string[], shared = false) {
   return !shared && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
 }
 

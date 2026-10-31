@@ -6,6 +6,7 @@ import { withMember, withWorker } from '../db/context';
 import { requireRole } from '../auth/guard';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { enqueueRun } from '../runner/enqueue';
+import { runStarter } from '../runner/run-cap';
 import { onePerKey, budgetFor, callsPerScenario, type RetestScenario } from '../repair/retest';
 import { checkEffect, lessonReason, type LessonEffect } from './effects';
 import type { FrozenLesson } from './frozen';
@@ -94,5 +95,5 @@ export async function startNextPlan(driver: TransactionDriver, memberId: string,
   if (!plan || plan.stop_rules.set !== 'next') throw new Error('Approved next plan required');
   const fam = await withWorker(driver, plan.workspace_id, async (sql) => (await sql.query<{ id: string; family: string }>('SELECT id,family FROM nazir.scenarios WHERE id=ANY($1::uuid[])', [plan.stop_rules.scenario_ids])).rows);
   const repeatsFor = Object.fromEntries(fam.filter((s) => plan.stop_rules.family_repeats[s.family]).map((s) => [s.id, plan.stop_rules.family_repeats[s.family]!]));
-  return enqueueRun(driver, { workspaceId: plan.workspace_id, planId, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: plan.repeat_count, idempotencyKey: `next:${planId}`, order: plan.stop_rules.scenario_ids, repeatsFor, lessons: plan.lessons_used ?? [] });
+  return enqueueRun(driver, { workspaceId: plan.workspace_id, planId, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: plan.repeat_count, idempotencyKey: `next:${planId}`, order: plan.stop_rules.scenario_ids, repeatsFor, lessons: plan.lessons_used ?? [], startedBy: await runStarter(driver, memberId) });
 }

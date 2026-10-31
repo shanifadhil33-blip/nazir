@@ -121,3 +121,15 @@ Ocean offers Quick check beside Full suite for the existing run proposal roles. 
 The runner script accepts `SIZE=quick` with both languages and all selected keys available. Use an approved plan with sufficient budget, as for a full run. The budget estimate and remaining daily cap check use the selected 16 cases and their attempts. They remain enforced for both workspace kinds. `SIZE=full` is the default. No size changes provider selection or invokes a separate demo runner.
 
 Plan stop rules persist size and quick set version without a database migration. Runs freeze size, distinct test count and quick set version in their existing manifest. Saved reports and PDF headers read those frozen fields; older reports use their saved case count.
+
+## Runs that survive (B3)
+
+No migration. All of this uses the existing tables, states, leases and audit chain.
+
+**Stalled steps.** An in request step (`POST .../runs/{runId}/step` and the live test step) can die at its 120 second limit or when the database drops mid step. Its conversation stays running and its heartbeat stops. Before claiming, each step calls `recoverStale` (`src/server/runner/recover.ts`). A running conversation whose lease ran out is put back in the queue once, with `last_error=step_stalled`, and the next claim gives it a fresh tenant. If it stalls again, or has no attempts left, it ends inconclusive with `step_stalled`, and the run is aggregated as usual. Only running conversations are touched, so a finished case is never run again. The page that drives the run waits and asks again after a failed step instead of stopping.
+
+**Plain reasons.** `runReasonLine` in `src/server/http/errors.ts` maps `daily_cap`, `provider_exhausted`, `timeout`, `step_stalled` (and `lease_expired`) and the external agent failures to one English and Arabic line each. Step progress returns them as `notes`, and live test sides return `note`. Ocean shows them beside the run status.
+
+**Cancel.** `POST /api/workspaces/{workspaceId}/plans/{planId}/cancel` cancels a proposed or approved plan and any unfinished run of it. `POST /api/workspaces/{workspaceId}/runs/{runId}/cancel` cancels a queued or running run. Both need `plan.approve` (owner or quality reviewer). Cancelling again returns `changed: false`; a finished plan or run returns 409 `not_cancellable`. A plan cancel writes `plan.cancelled` with the member as actor; a run cancel writes `run_cancelled` with `cancelled_by`. A running step loses its fence and its late result is refused.
+
+**Daily runs per person.** `maxRunsPerUserPerDay` (10) in `src/server/runner/run-cap.ts`. Runs started by a signed in member record `started_by` in their `run_enqueued` audit payload. `enqueueRun` counts those across every active membership of the same person for the current UTC day, under a per person lock, and refuses past the cap with 429 `daily_run_cap`. A repeated idempotent start returns the same run and is not counted. Scripts and fixtures enqueue without a person and are not capped. The 300 call daily model cap is unchanged, and the scheduled demo reset never starts runs.

@@ -129,7 +129,12 @@
     "firstStepAction": "Run Quick check",
     "firstStepViewer": "A service owner or a service quality reviewer can run the first Quick check.",
     "sampleAgent": "the built in sample agent",
-    "firstReport": "Run a Quick check to get your first report."
+    "firstReport": "Run a Quick check to get your first report.",
+    "cancelPlan": "Cancel plan",
+    "cancelRun": "Cancel run",
+    "planCancelled": "The plan was cancelled. Nothing from it will run.",
+    "runCancelled": "The run was cancelled. Tests that already finished keep their results.",
+    "runRetrying": "A step did not answer. Trying again."
   },
   "sample": {
     "agent": "Harbor permits desk",

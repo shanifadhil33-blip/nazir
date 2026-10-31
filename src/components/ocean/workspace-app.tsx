@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fill, messagesFor, type Lang, type Messages } from './copy';
-import { canApprove, canRunRecheck, emptyModel, firstStepFor, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
+import { canApprove, canCancel, canRunRecheck, emptyModel, firstStepFor, modelFromReports, rolesForSeat, sampleModel, seatFromRoles, type CancelTarget, type LogEvent, type ScreenId, type ScreenModel, type Seat, type Status } from './model';
 import type { ReportBody } from '@/server/reports/build';
 import { WorkspaceScreen } from './screen';
 import type { Measured } from './screen';
@@ -54,6 +54,7 @@ export function WorkspaceApp({
   const [packs, setPacks] = useState<PackView[] | null>(null);
   const thread = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const stopped = useRef(new Set<string>());
   const langRef = useRef(lang);
 
   const copy = messagesFor(lang);
@@ -160,9 +161,10 @@ export function WorkspaceApp({
       const reply = lang === 'ar' ? payload?.reply?.ar : payload?.reply?.en;
       const text = typeof reply === 'string' ? reply : copy.ui.nothingChanged;
       const done = payload?.done === true;
+      const planId = done && payload?.tool === 'propose_plan' ? idOf(payload?.data) : null;
       if (done && payload?.tool === 'decide_repair') push({ id: crypto.randomUUID(), kind: 'applied', title: copy.ui.fixApplied, body: text });
       else if (done && payload?.tool === 'rerun_tests') push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: text });
-      else push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.reply, body: text });
+      else push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.reply, body: text, ...(planId ? { cancel: { kind: 'plan' as const, id: planId } } : {}) });
       if (done && (payload?.tool === 'start_run' || payload?.tool === 'rerun_tests')) { setRunStarted(true); void drive(runIdsIn(payload?.data)); }
     } catch {
       setExtra((items) => items.filter((item) => item.id !== 'applying'));
@@ -175,18 +177,50 @@ export function WorkspaceApp({
   }
 
   // Runs queued from chat are driven one conversation per request, only while this page is open.
+  // A step that dies (time limit, dropped database) is retried after a pause; the server retries a stalled test once and then ends it, so the run still finishes.
   async function drive(runIds: string[]) {
+    const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const clear = () => setExtra((items) => items.filter((item) => item.id !== 'drive-progress'));
+    const show = (runId: string, body: string) => setExtra((items) => [...items.filter((item) => item.id !== 'drive-progress'), { id: 'drive-progress', kind: 'note', title: copy.ui.note, body, cancel: { kind: 'run', id: runId } }]);
     for (const runId of runIds.slice(0, 4)) {
-      for (let n = 0; n < 60; n++) {
+      let failures = 0, idle = 0, last = -1;
+      for (let n = 0; n < 400 && idle < 40; n++) {
+        if (stopped.current.has(runId)) break;
         const response = await fetch(`/api/workspaces/${workspaceId}/runs/${runId}/step`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
-        if (!response?.ok) { setExtra((items) => items.filter((item) => item.id !== 'drive-progress')); push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: response?.status === 503 ? copy.ui.runWaiting : copy.ui.nothingChanged }); return; }
-        const p = await response.json().catch(() => null) as { done: boolean; passed: number; failed: number; inconclusive: number; waiting: number } | null;
+        if (stopped.current.has(runId)) break;
+        if (!response?.ok) {
+          if (response?.status !== 503 && (!response || response.status >= 500) && failures < 3) { failures++; show(runId, copy.ui.runRetrying); await pause(5000 * failures); continue; }
+          const payload = await response?.json().catch(() => null);
+          clear(); setStatus(null); push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: response?.status === 503 ? copy.ui.runWaiting : readError(payload, copy) }); return;
+        }
+        failures = 0;
+        const p = await response.json().catch(() => null) as { done: boolean; passed: number; failed: number; inconclusive: number; waiting: number; notes?: { en: string; ar: string }[] } | null;
         if (!p) return;
         const finished = p.passed + p.failed + p.inconclusive;
-        if (p.done || p.waiting === 0) { setStatus(null); setExtra((items) => items.filter((item) => item.id !== 'drive-progress')); push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: fill(copy.ui.runDone, { passed: String(p.passed), failed: String(p.failed), inconclusive: String(p.inconclusive) }) }); break; }
-        setStatus('running'); const body = fill(copy.ui.runProgress, { done: String(finished), total: String(finished + p.waiting) }); setExtra((items) => [...items.filter((item) => item.id !== 'drive-progress'), { id: 'drive-progress', kind: 'note', title: copy.ui.note, body }]);
+        const notes = (p.notes ?? []).map((note) => note[lang] || note.en).join(' ');
+        if (p.done || p.waiting === 0) { setStatus(null); clear(); push({ id: crypto.randomUUID(), kind: 'recheck', title: copy.ui.recheck, body: [fill(copy.ui.runDone, { passed: String(p.passed), failed: String(p.failed), inconclusive: String(p.inconclusive) }), notes].filter(Boolean).join(' ') }); break; }
+        setStatus('running'); show(runId, [fill(copy.ui.runProgress, { done: String(finished), total: String(finished + p.waiting) }), notes].filter(Boolean).join(' '));
+        // Nothing moved: a retry is waiting, or a stalled step's lease has not run out yet. Wait before asking again.
+        if (finished === last) { idle++; await pause(Math.min(15000, 3000 * idle)); } else { idle = 0; last = finished; }
       }
     }
+  }
+
+  async function cancelTarget(target: CancelTarget) {
+    if (preview || !canCancel(roles, shared)) return;
+    if (target.kind === 'run') stopped.current.add(target.id);
+    const response = await fetch(`/api/workspaces/${workspaceId}/${target.kind === 'plan' ? 'plans' : 'runs'}/${target.id}/cancel`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
+    const payload = await response?.json().catch(() => null) as { runs?: string[] } | null;
+    if (!response?.ok) {
+      if (target.kind === 'run') stopped.current.delete(target.id);
+      push({ id: crypto.randomUUID(), kind: 'error', title: copy.ui.errorTitle, body: readError(payload, copy) });
+      return;
+    }
+    for (const id of payload?.runs ?? []) stopped.current.add(id);
+    const ended = new Set([target.id, ...(payload?.runs ?? [])]);
+    setExtra((items) => items.filter((item) => !(item.id === 'drive-progress' && item.cancel && ended.has(item.cancel.id))).map((item) => item.cancel && ended.has(item.cancel.id) ? { ...item, cancel: undefined } : item));
+    if (target.kind === 'run' || payload?.runs?.length) setStatus(null);
+    push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: target.kind === 'plan' ? copy.ui.planCancelled : copy.ui.runCancelled });
   }
 
   function approve(id?: string) {
@@ -262,7 +296,7 @@ export function WorkspaceApp({
     onReplay={(size = 'full') => void send(size === 'quick' ? (lang === 'ar' ? 'فحص سريع' : 'run a quick check') : (lang === 'ar' ? 'اقترح خطة للمجموعة الكاملة' : 'propose a plan for the full suite'), size === 'quick' ? copy.ui.quickCheck : copy.ui.fullSuite)}
     pdfHref={!preview && reportId && roles.some((role) => role === 'service_owner' || role === 'quality_reviewer') ? `/api/workspaces/${workspaceId}/reports/${reportId}/pdf?lang=${lang}` : undefined}
     onShare={() => void share()} onSend={(message) => void send(message)} onStop={() => abortRef.current?.abort()}
-    onRecheck={recheck} measured={preview ? null : measured} onLiveTest={() => setLiveOpen(true)} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
+    onRecheck={recheck} onCancel={(target) => void cancelTarget(target)} measured={preview ? null : measured} onLiveTest={() => setLiveOpen(true)} avatar={shown.avatar} onSettings={() => setSettingsOpen(true)}
   />{settingsOpen ? <AgentSettingsPanel copy={copy} lang={lang} settings={shown} sample={preview} workspaceId={preview ? undefined : workspaceId} packs={packs ?? undefined} onClose={() => setSettingsOpen(false)} onConnectionChange={(value) => setSettings((current) => current ? { ...current, external_agent: value } : { ...shown, external_agent: value })} onSave={saveSettings} /> : null}{liveOpen ? <LiveTestPanel key={lang} copy={copy} lang={lang} workspaceId={workspaceId} sample={preview} reportHref={`/w/${workspaceId}/report`} onClose={() => setLiveOpen(false)} /> : null}</>;
 }
 
@@ -289,6 +323,11 @@ function readError(payload: unknown, copy: Messages) {
     if (typeof message === 'string' && message.trim()) return message;
   }
   return copy.ui.nothingChanged;
+}
+
+function idOf(data: unknown): string | null {
+  const id = data && typeof data === 'object' ? (data as { id?: unknown }).id : null;
+  return typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id) ? id : null;
 }
 
 function runIdsIn(data: unknown): string[] {

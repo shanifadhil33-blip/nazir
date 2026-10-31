@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { fill, type Lang, type Messages } from './copy';
 import { AgentAvatar } from './agent-settings';
-import { canApprove, canCompose, canRunQuickCheck, canRunRecheck, dubaiStamp, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
+import { canApprove, canCancel, canCompose, canRunQuickCheck, canRunRecheck, dubaiStamp, type CancelTarget, type FailureCase, type Metrics, type ScreenId, type ScreenModel, type Seat } from './model';
 import { ScoreFigure } from './score-figure';
 
 const bars = ['safety', 'accuracy', 'rules', 'recovery'] as const;
@@ -94,14 +94,14 @@ const sections = [['chat', 'chat'], ['score', 'score'], ['failures', 'fail'], ['
 
 export function WorkspaceScreen({
   lang, copy, demo, seat, roles, shared = false, userName, model, screen, pending = false, copied = false, copyError = false,
-  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null, onLiveTest, pdfHref,
+  onScreen, onLang, onApprove, onSkip, onReplay, onShare, onSend, onStop, onRecheck, avatar = 'preset:1', onSettings, measured = null, onLiveTest, pdfHref, onCancel,
 }: {
   lang: Lang; copy: Messages; demo: boolean; seat: Seat; roles: readonly string[]; shared?: boolean; userName: string; model: ScreenModel; screen: ScreenId;
   pending?: boolean; copied?: boolean; copyError?: boolean;
   onScreen: (screen: ScreenId) => void; onLang: (lang: Lang) => void; onApprove: (id?: string) => void; onSkip: (id?: string) => void;
   onReplay: (size?: 'quick' | 'full') => void; onShare: () => void; onSend: (message: string, display?: string) => void; onStop: () => void; onRecheck: () => void;
   pdfHref?: string;
-  avatar?: string; onSettings?: () => void; measured?: Measured | null; onLiveTest?: () => void;
+  avatar?: string; onSettings?: () => void; measured?: Measured | null; onLiveTest?: () => void; onCancel?: (target: CancelTarget) => void;
 }) {
   const [tab, setTab] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -110,6 +110,7 @@ export function WorkspaceScreen({
   const dragStart = useRef<number | null>(null);
   const decide = canApprove(roles, shared);
   const recheck = canRunRecheck(roles, shared);
+  const cancellable = canCancel(roles, shared) && Boolean(onCancel);
   const recheckReady = model.failures.some((item) => Boolean(item.proposalId));
   const compose = canCompose(seat, shared);
   const quick = canRunQuickCheck(roles, shared);
@@ -191,6 +192,7 @@ export function WorkspaceScreen({
                     <button type="button" className="nz-btn nz-btn-rust" data-action="open-failure" onClick={() => open('failures')}>{copy.ui.openFailure}</button>
                   </div> : null}
                   {event.kind === 'recheck' ? <button type="button" className="nz-btn nz-btn-ghost" onClick={() => open('report')}>{copy.ui.report}</button> : null}
+                  {event.cancel && cancellable ? <div className="nz-actions"><button type="button" className="nz-btn nz-btn-ghost" data-action={`cancel-${event.cancel.kind}`} onClick={() => onCancel!(event.cancel!)}>{event.cancel.kind === 'plan' ? copy.ui.cancelPlan : copy.ui.cancelRun}</button></div> : null}
                 </div>
               </li>;
             })}

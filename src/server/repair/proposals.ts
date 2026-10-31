@@ -5,6 +5,7 @@ import { requireRole, Forbidden } from '../auth/guard';
 import { NotFound } from '../http/errors';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { enqueueRun } from '../runner/enqueue';
+import { runStarter } from '../runner/run-cap';
 import { repairPatch, resolveRepairVersion, RepairRefused, type RepairPatch } from './executable';
 import { budgetFor, selectRetest, type RetestScenario } from './retest';
 import { hash } from '../../sandbox/demo-rule-pack';
@@ -116,10 +117,11 @@ export async function startRetest(driver: TransactionDriver, memberId: string, i
     return { wid, plans };
   });
   const out: Record<string, string> = {};
+  const startedBy = await runStarter(driver, memberId);
   for (const set of input.sets ?? ['retest', 'suite']) {
     const plan = plans.find((x) => x.stop_rules.set === set);
     if (!plan) throw new NotFound();
-    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids });
+    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids, startedBy });
     out[set] = run.id;
   }
   return out;

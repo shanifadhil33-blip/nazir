@@ -11,6 +11,7 @@ import { Coded, NotFound } from '../http/errors';
 import { planInputs, planOrder } from '../memory/planner';
 import type { FrozenLesson } from '../memory/frozen';
 import { enqueueRun } from '../runner/enqueue';
+import { runStarter } from '../runner/run-cap';
 import { callsPerScenario } from '../repair/retest';
 
 /** Tools this planner is allowed to call. A request cannot add to this list. */
@@ -213,7 +214,9 @@ export async function startBoundedRun(driver: TransactionDriver, memberId: strin
   });
   if (!plan || plan.stop_rules.set !== 'bounded' || !plan.stop_rules.scenario_ids?.length) throw new Coded(409, 'not_approved', 'An approved plan is required.');
   const repeatsFor = plan.stop_rules.repeats_for && Object.keys(plan.stop_rules.repeats_for).length ? plan.stop_rules.repeats_for : undefined;
+  const startedBy = await runStarter(driver, memberId);
   return enqueueRun(driver, {
+    startedBy,
     workspaceId: plan.workspace_id,
     planId,
     agentVersionId: plan.agent_version_id,
