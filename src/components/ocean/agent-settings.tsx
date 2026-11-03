@@ -15,26 +15,32 @@ type Provider = 'openai' | 'anthropic' | 'gemini' | 'openrouter' | 'groq' | 'cus
 const providers: Provider[] = ['openai', 'anthropic', 'gemini', 'openrouter', 'groq', 'custom'];
 const apps = ['slack', 'gmail', 'google_drive', 'github', 'notion', 'microsoft_teams', 'whatsapp_business', 'zendesk'] as const;
 const presets = ['preset:1', 'preset:2', 'preset:3', 'preset:4', 'preset:5', 'preset:6'];
-const palette = [['#0e7c86', '#5fd3c8'], ['#126e8f', '#8fe3f0'], ['#0b5f73', '#ff8a70'], ['#1a8f9c', '#c7f5ef'], ['#0d6d7a', '#ffb199'], ['#14809b', '#7fe0d6']];
+const palette = [
+  { fill: '#16181D', mark: '#FFFFFF' },
+  { fill: '#2E9E7A', mark: '#FFFFFF' },
+  { fill: '#E0614F', mark: '#FFFFFF' },
+  { fill: '#DFF3EC', mark: '#16181D' },
+  { fill: '#E3EEF9', mark: '#16181D' },
+  { fill: '#FCE9DF', mark: '#16181D' },
+];
 
 export function AgentAvatar({ value, size = 40 }: { value: string; size?: number }) {
   // A data address checked on the server (PNG, JPEG or WebP bytes); next/image adds nothing here.
   // eslint-disable-next-line @next/next/no-img-element
   if (value.startsWith('data:image/')) return <img className="nz-avatar" src={value} alt="" width={size} height={size} />;
   const index = Math.max(0, presets.indexOf(value));
-  const [a, b] = palette[index]!;
-  const id = `nzav${index}`;
+  const tone = palette[index] ?? palette[0]!;
+  const mark = tone.mark;
   const shapes = [
-    <path key="s" d="M6 26c6-8 12 4 18-4s10 2 10 2v10H6z" fill="#fff" opacity=".85" />,
-    <path key="s" d="M20 7l12 22H8z" fill="#fff" opacity=".85" />,
-    <g key="s" fill="none" stroke="#fff" strokeWidth="3" opacity=".9"><circle cx="20" cy="20" r="9" /><circle cx="29" cy="11" r="3" fill="#fff" /></g>,
-    <g key="s" fill="#fff" opacity=".85"><rect x="8" y="12" width="24" height="5" rx="2.5" /><rect x="12" y="21" width="16" height="5" rx="2.5" /></g>,
-    <path key="s" d="M20 6l12 8v12l-12 8-12-8V14z" fill="#fff" opacity=".85" />,
-    <g key="s" fill="#fff" opacity=".9"><circle cx="20" cy="20" r="4" /><circle cx="20" cy="20" r="10" fill="none" stroke="#fff" strokeWidth="2" /></g>,
+    <path key="s" d="M6 26c6-8 12 4 18-4s10 2 10 2v10H6z" fill={mark} opacity=".85" />,
+    <path key="s" d="M20 7l12 22H8z" fill={mark} opacity=".85" />,
+    <g key="s" fill="none" stroke={mark} strokeWidth="3" opacity=".9"><circle cx="20" cy="20" r="9" /><circle cx="29" cy="11" r="3" fill={mark} /></g>,
+    <g key="s" fill={mark} opacity=".85"><rect x="8" y="12" width="24" height="5" rx="2.5" /><rect x="12" y="21" width="16" height="5" rx="2.5" /></g>,
+    <path key="s" d="M20 6l12 8v12l-12 8-12-8V14z" fill={mark} opacity=".85" />,
+    <g key="s" fill={mark} opacity=".9"><circle cx="20" cy="20" r="4" /><circle cx="20" cy="20" r="10" fill="none" stroke={mark} strokeWidth="2" /></g>,
   ];
   return <svg className="nz-avatar" width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
-    <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor={a} /><stop offset="1" stopColor={b} /></linearGradient></defs>
-    <rect width="40" height="40" rx="12" fill={`url(#${id})`} />{shapes[index]}
+    <rect width="40" height="40" rx="12" fill={tone.fill} />{shapes[index]}
   </svg>;
 }
 
