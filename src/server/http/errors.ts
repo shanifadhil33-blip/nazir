@@ -31,6 +31,8 @@ export const errorLines = {
   version: { en: 'The agent version cannot be tested.', ar: 'لا يمكن اختبار نسخة الوكيل هذه.' },
   unknown_version: { en: 'Unknown agent version.', ar: 'نسخة الوكيل غير معروفة.' },
   impersonation: { en: 'You cannot act as another member.', ar: 'لا يمكنك أن تتصرف بصفة عضو آخر.' },
+  proposal_state: { en: 'This fix was already decided, or it is not waiting for a decision.', ar: 'تم البت في هذا الإصلاح بالفعل، أو أنه ليس بانتظار قرار.' },
+  proposal_not_approved: { en: 'Approve the fix before you rerun the tests.', ar: 'وافق على الإصلاح قبل إعادة الاختبارات.' },
   failed: { en: 'The action was not completed.', ar: 'لم يتم تنفيذ الإجراء.' },
   invalid_patch: { en: 'That repair is not allowed.', ar: 'هذا الإصلاح غير مسموح.' },
   repeat_budget: { en: 'The repeated tests exceed the plan call budget. Choose fewer attempts or fewer tests.', ar: 'تتجاوز الاختبارات المتكررة ميزانية مكالمات الخطة. اختر محاولات أقل أو اختبارات أقل.' },
