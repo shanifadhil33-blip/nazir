@@ -3,6 +3,7 @@ import { requireRole } from '../auth/guard';
 import { withMember, withWorker } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { Coded } from '../http/errors';
+import { closeStuckRuns } from './stale';
 
 export const demoResetHours = 6;
 const defaultCap = 262144;
@@ -24,14 +25,15 @@ async function recycle(sql: SqlConnection, workspaceId: string, cap: number, rea
   return Number((await sql.query<{ removed: number }>('SELECT nazir.demo_recycle($1,$2,$3,$4) AS removed', [workspaceId, cap, reason, at])).rows[0]!.removed);
 }
 
-/** On demand reset for one demo workspace. A real workspace is refused. */
+/** On demand reset for one demo workspace. A real workspace is refused. Runs stuck for over a day are cancelled too. */
 export async function resetDemoNow(driver: TransactionDriver, memberId: string, workspaceId: string, cap = demoCap(), at: Date | null = null) {
   try {
     const removed = await withMember(driver, memberId, async (sql) => {
       await requireRole(sql, 'demo.reset');
       return recycle(sql, workspaceId, cap, 'on_demand', at);
     });
-    return { workspaceId, removed, capBytes: cap };
+    const stuckRunsCancelled = await withWorker(driver, workspaceId, (sql) => closeStuckRuns(sql, at ?? new Date()));
+    return { workspaceId, removed, capBytes: cap, stuckRunsCancelled };
   } catch (error) { refused(error); }
 }
 
@@ -43,8 +45,12 @@ export async function resetDemosDue(driver: TransactionDriver, cap = demoCap(), 
   });
   const results = [];
   for (const workspaceId of ids) {
-    try { results.push({ workspaceId, removed: await withWorker(driver, workspaceId, (sql) => recycle(sql, workspaceId, cap, 'schedule', at)), capBytes: cap }); }
-    catch (error) { refused(error); }
+    try {
+      const removed = await withWorker(driver, workspaceId, (sql) => recycle(sql, workspaceId, cap, 'schedule', at));
+      // A run stuck for over a day is closed on every pass, so the 6 hour window above does not hold it back.
+      const stuckRunsCancelled = await withWorker(driver, workspaceId, (sql) => closeStuckRuns(sql, at ?? new Date()));
+      results.push({ workspaceId, removed, capBytes: cap, stuckRunsCancelled });
+    } catch (error) { refused(error); }
   }
   return results;
 }
