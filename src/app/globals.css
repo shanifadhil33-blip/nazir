@@ -50,6 +50,7 @@ p { text-wrap: pretty; }
   text-wrap: balance;
 }
 .nz-heading-light, .nz-heading-bold { display: block; }
+.nz-heading-inline .nz-heading-light, .nz-heading-inline .nz-heading-bold { display: inline; }
 .nz-heading-light { font-weight: 300; }
 .nz-heading-bold { font-weight: 700; }
 .nz-heading:lang(ar) { font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif; }
@@ -604,3 +605,299 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 .nz-live-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
 .nz-live-sides h4 { margin: 4px 0 0; font-size: 13px; color: var(--ink-muted); }
 .nz-live-sides p, .nz-live-sides ul { margin: 0; overflow-wrap: anywhere; }
+
+/* Shell: pills, cards, and nav. Logical properties so Arabic mirrors with dir. */
+.nz-shell {
+  min-block-size: 100vh;
+  padding-block: 20px 120px;
+  padding-inline: 16px;
+  color: var(--ink);
+}
+.nz-shell[dir="rtl"] {
+  font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif;
+  line-height: 1.7;
+}
+.nz-shell-phone, .nz-shell-desk { inline-size: min(100%, 480px); margin-inline: auto; }
+.nz-shell-desk { display: none; }
+.nz-shell-stack { display: grid; gap: 16px; }
+.nz-shell .nz-heading { font-size: 34px; }
+.nz-shell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block-end: 28px; }
+.nz-shell-who { display: flex; align-items: center; gap: 12px; min-inline-size: 0; }
+.nz-shell-greet { margin: 0; display: grid; line-height: 1.3; }
+.nz-shell-greet small { color: var(--ink-muted); font-size: 13px; font-weight: 400; }
+.nz-shell-greet strong { font-size: 16px; }
+.nz-avatar-initials {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 8%, var(--card));
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  flex: none;
+}
+.nz-bell, .nz-float-item, .nz-float-start, .nz-side-item, .nz-side-start, .nz-pill-btn {
+  font: inherit;
+  cursor: pointer;
+}
+.nz-bell {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  flex: none;
+}
+.nz-shell svg { inline-size: 20px; block-size: 20px; display: block; }
+[dir="rtl"] .nz-icon-dir { transform: scaleX(-1); }
+.nz-sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.nz-shell-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-block-size: 52px;
+  padding-inline: 16px;
+  background: var(--card);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow);
+  color: var(--ink-muted);
+}
+.nz-shell-search input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  border: 0;
+  background: transparent;
+  min-block-size: 44px;
+  color: var(--ink);
+}
+.nz-shell-search input:focus { outline: none; }
+.nz-shell-search:focus-within, .nz-bell:focus-visible, .nz-pill-btn:focus-visible, .nz-float-item:focus-visible, .nz-float-start:focus-visible, .nz-side-item:focus-visible, .nz-side-start:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.nz-white {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding-block: 18px;
+  padding-inline: 20px;
+}
+.nz-white-kicker { margin: 0; color: var(--ink-muted); font-size: 13px; }
+.nz-white-line { display: flex; align-items: center; gap: 8px; margin-block: 4px 0; margin-inline: 0; font-size: 18px; }
+.nz-live-dot { inline-size: 8px; block-size: 8px; border-radius: var(--radius-pill); background: var(--right); flex: none; }
+.nz-stat-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.nz-stat-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nz-pastel {
+  border-radius: var(--radius-card);
+  padding: 16px;
+  min-block-size: 132px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-inline-size: 0;
+}
+.nz-pastel-mint { background: var(--mint); }
+.nz-pastel-sky { background: var(--sky); }
+.nz-pastel-peach { background: var(--peach); }
+.nz-pastel-top { display: flex; align-items: center; gap: 8px; }
+.nz-pastel-title { margin: 0; font-size: 14px; font-weight: 700; }
+.nz-pastel-compact.nz-pastel-mint .nz-pastel-title, .nz-pastel-mint .nz-pastel-mark { color: var(--right); }
+.nz-pastel-compact.nz-pastel-peach .nz-pastel-title, .nz-pastel-peach .nz-pastel-mark { color: var(--wrong); }
+.nz-pastel-sky .nz-pastel-mark { color: #4f6f90; }
+.nz-pastel-value { margin: 0; font-size: 40px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.nz-pastel-caption { margin: 0; color: var(--ink-muted); font-size: 13px; }
+.nz-pastel-stat { align-content: space-between; min-block-size: 168px; }
+.nz-pastel-stat .nz-pastel-title { color: var(--ink-muted); font-weight: 500; }
+.nz-pastel-stat .nz-pastel-value { font-size: 48px; }
+.nz-pill-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.nz-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-block-size: 72px;
+  min-inline-size: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 22px;
+  text-align: start;
+  color: var(--ink);
+  background: transparent;
+  transition: transform 150ms var(--ease);
+}
+.nz-pill-btn-quiet.nz-pill-btn-neutral { background: var(--card); box-shadow: var(--shadow); }
+.nz-pill-btn-ink { background: var(--ink); color: var(--on-accent); }
+.nz-pill-btn-mint { background: color-mix(in srgb, var(--mint) 78%, white); }
+.nz-pill-btn-sky { background: color-mix(in srgb, var(--sky) 88%, white); }
+.nz-pill-btn-peach { background: color-mix(in srgb, var(--peach) 82%, white); }
+.nz-pill-btn-lilac { background: #f3eef8; }
+.nz-pill-ico {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 6%, white);
+  color: var(--ink-muted);
+  flex: none;
+}
+.nz-pill-btn-mint .nz-pill-ico { background: color-mix(in srgb, var(--right) 18%, white); color: var(--right); }
+.nz-pill-btn-sky .nz-pill-ico { background: #e4eef8; color: #4f6f90; }
+.nz-pill-btn-peach .nz-pill-ico { background: color-mix(in srgb, var(--wrong) 16%, white); color: var(--wrong); }
+.nz-pill-btn-lilac .nz-pill-ico { background: #e6def8; color: #6e5aa8; }
+.nz-pill-btn-ink .nz-pill-ico { background: color-mix(in srgb, white 18%, transparent); color: var(--on-accent); }
+.nz-pill-btn:hover { transform: translateY(-1px); }
+.nz-pill-btn:active { transform: scale(.98); }
+.nz-mark {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 28px;
+  padding-inline: 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+}
+.nz-mark-right { background: var(--mint); color: var(--right); }
+.nz-mark-wrong { background: var(--peach); color: var(--wrong); }
+.nz-mark-unsure { background: var(--page); color: var(--ink-muted); }
+.nz-state {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding-block: 28px;
+  padding-inline: 20px;
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+.nz-state h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.nz-state p { margin: 0; color: var(--ink-muted); }
+.nz-state-spin {
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: var(--radius-pill);
+  border: 2px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-block-start-color: var(--ink);
+  animation: nz-spin 700ms linear infinite;
+}
+.nz-float-nav {
+  position: fixed;
+  z-index: 20;
+  inset-inline: 12px;
+  inset-block-end: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+}
+.nz-float-bar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  inline-size: min(100%, 420px);
+  min-block-size: 64px;
+  padding-inline: 8px;
+  background: var(--card);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow);
+}
+.nz-float-item, .nz-float-start {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--ink) 55%, var(--page));
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  border-radius: var(--radius-pill);
+}
+.nz-float-item[aria-current="page"] { color: var(--ink); }
+.nz-float-start {
+  inline-size: 62px;
+  block-size: 62px;
+  margin-block: -16px;
+  background: var(--ink);
+  color: var(--on-accent);
+  box-shadow: var(--shadow);
+}
+.nz-side-nav { display: none; }
+.nz-side-item, .nz-side-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+}
+.nz-side-item[aria-current="page"] { background: var(--page); font-weight: 700; }
+.nz-side-start {
+  justify-content: center;
+  min-block-size: 52px;
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+@media (max-width: 389px) {
+  .nz-shell { padding-inline: 12px; }
+  .nz-shell .nz-heading { font-size: 30px; }
+  .nz-pastel-value { font-size: 34px; }
+  .nz-float-start { inline-size: 54px; block-size: 54px; }
+}
+
+@media (min-width: 1024px) {
+  .nz-shell { padding-block: 40px 48px; padding-inline: 32px; padding-inline-start: 268px; }
+  .nz-shell-phone { display: none; }
+  .nz-float-nav { display: none; }
+  .nz-shell-desk { display: block; inline-size: min(100%, 1040px); }
+  .nz-shell .nz-heading { font-size: 40px; margin-block-end: 12px; }
+  .nz-shell-desk-body {
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+  .nz-shell-desk .nz-pill-btn { min-block-size: 84px; border-radius: 28px; }
+  .nz-pastel-stat { block-size: 100%; }
+  .nz-side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: fixed;
+    z-index: 20;
+    inset-inline-start: 20px;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    inline-size: 220px;
+    max-block-size: calc(100vh - 32px);
+    overflow: auto;
+    padding: 16px;
+    background: var(--card);
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nz-pill-btn, .nz-state-spin { transition: none; animation: none; }
+  .nz-pill-btn:hover { transform: none; }
+}
