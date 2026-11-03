@@ -2,7 +2,7 @@ import 'server-only';
 import { z } from 'zod';
 import { withMember, withWorker } from '../db/context';
 import { requireRole, Forbidden } from '../auth/guard';
-import { NotFound } from '../http/errors';
+import { Coded, NotFound, errorLines } from '../http/errors';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { enqueueRun } from '../runner/enqueue';
 import { runStarter } from '../runner/run-cap';
@@ -70,11 +70,17 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
   const input = decideInput.parse(value);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'proposal.decide');
-    const p = (await sql.query<{ id: string; status: string; proposed_by: string | null; patch: RepairPatch | null; finding_id: string; title_ar: string | null }>('SELECT * FROM nazir.proposals WHERE id=$1 FOR UPDATE', [input.id])).rows[0];
+    const p = (await sql.query<{ id: string; status: string; proposed_by: string | null; patch: RepairPatch | null; finding_id: string; title_ar: string | null; resulting_agent_version_id: string | null }>('SELECT * FROM nazir.proposals WHERE id=$1 FOR UPDATE', [input.id])).rows[0];
     if (!p) throw new NotFound();
     if (!p.title_ar) throw new Forbidden();
     const me = (await sql.query<{ id: string }>('SELECT nazir.current_member_id() AS id')).rows[0]!.id;
-    if (p.proposed_by === me || p.status !== 'proposed') throw new Forbidden();
+    if (p.proposed_by === me) throw new Coded(403, 'four_eyes', errorLines.four_eyes.en);
+    if (p.status !== 'proposed') {
+      // The row lock above made a double tap wait. The same person repeating the same decision gets the saved answer and no second approval, audit row or version.
+      const prior = (await sql.query<{ id: string }>("SELECT id FROM nazir.approvals WHERE subject_type='proposal' AND subject_id=$1 AND decided_by=$2 AND decision=$3 ORDER BY created_at,id LIMIT 1", [p.id, me, input.decision])).rows[0];
+      if (prior && p.status === (input.decision === 'approve' ? 'approved' : 'rejected')) return { id: p.id, status: p.status, approval_id: prior.id, version_id: p.resulting_agent_version_id, retest: null, repeated: true as const };
+      throw new Coded(409, 'proposal_state', errorLines.proposal_state.en);
+    }
     const finding = (await sql.query<FindingRow>('SELECT * FROM nazir.findings WHERE id=$1', [p.finding_id])).rows[0];
     if (!finding) throw new NotFound();
     let executable: string | null = null, parent: string | null = null;
@@ -88,7 +94,7 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
     const status = input.decision === 'approve' ? 'approved' : 'rejected';
     await sql.query('UPDATE nazir.proposals SET status=$1 WHERE id=$2', [status, p.id]);
     await sql.query("SELECT nazir.append_audit('proposal.decide','proposal',$1,$2)", [p.id, JSON.stringify({ decision: input.decision, approval_id: decision.id, evidence_opened: input.evidence_opened })]);
-    if (input.decision === 'reject') return { id: p.id, status, approval_id: decision.id, version_id: null, retest: null };
+    if (input.decision === 'reject') return { id: p.id, status, approval_id: decision.id, version_id: null, retest: null, repeated: false as const };
     const scenarios = await scenariosFor(sql);
     const used = new Set((await sql.query<{ k: string }>("SELECT coalesce(m.canonical->>'meaning_key',m.id::text) AS k FROM nazir.library_fix_usage u JOIN nazir.scenario_meanings m ON m.id=u.meaning_id")).rows.map((r) => r.k));
     const own = scenarios.find((s) => s.id === finding.scenario_id);
@@ -99,7 +105,7 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
     await sql.query('SELECT nazir.repair_mark_used($1,$2)', [p.id, me]);
     const made = (await sql.query<{ r: { version_id: string; retest_plan_id: string; suite_plan_id: string } }>('SELECT nazir.repair_materialize($1,$2,$3::uuid[],$4::uuid[],$5,$6) AS r',
       [p.id, executable, selection.retest, selection.suite, budgetFor(selection.retest.length * 3, 400), budgetFor(selection.suite.length * 3, 800)])).rows[0]!.r;
-    return { id: p.id, status, approval_id: decision.id, version_id: made.version_id, parent_registry_id: parent, executable_hash: executable, retest: { ...selection, retest_plan_id: made.retest_plan_id, suite_plan_id: made.suite_plan_id } };
+    return { id: p.id, status, approval_id: decision.id, version_id: made.version_id, parent_registry_id: parent, executable_hash: executable, retest: { ...selection, retest_plan_id: made.retest_plan_id, suite_plan_id: made.suite_plan_id }, repeated: false as const };
   });
 }
 type PlanRow = { id: string; agent_version_id: string; repeat_count: number; stop_rules: { set: 'retest' | 'suite'; scenario_ids: string[]; retest_of_proposal: string } };
@@ -111,7 +117,7 @@ export async function startRetest(driver: TransactionDriver, memberId: string, i
     await requireRole(sql, 'plan.approve');
     const p = (await sql.query<{ status: string; resulting_agent_version_id: string | null }>('SELECT status,resulting_agent_version_id FROM nazir.proposals WHERE id=$1', [input.proposalId])).rows[0];
     if (!p) throw new NotFound();
-    if (p.status !== 'approved' || !p.resulting_agent_version_id) throw new Forbidden();
+    if (p.status !== 'approved' || !p.resulting_agent_version_id) throw new Coded(409, 'proposal_not_approved', errorLines.proposal_not_approved.en);
     const wid = (await sql.query<{ id: string }>('SELECT nazir.current_workspace_id() AS id')).rows[0]!.id;
     const plans = (await sql.query<PlanRow>("SELECT id,agent_version_id,repeat_count,stop_rules FROM nazir.plans WHERE status='approved' AND stop_rules->>'retest_of_proposal'=$1", [input.proposalId])).rows;
     return { wid, plans };
@@ -123,6 +129,12 @@ export async function startRetest(driver: TransactionDriver, memberId: string, i
     if (!plan) throw new NotFound();
     const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids, startedBy });
     out[set] = run.id;
+    // One audit row per run; a retry or double tap of the same rerun finds its row and adds none.
+    await withMember(driver, memberId, async (sql) => {
+      await sql.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`rerun-audit:${run.id}`]);
+      const done = (await sql.query("SELECT 1 FROM nazir.audit_events WHERE action='proposal.rerun' AND payload->>'run_id'=$1", [run.id])).rows.length > 0;
+      if (!done) await sql.query("SELECT nazir.append_audit('proposal.rerun','proposal',$1,$2)", [input.proposalId, JSON.stringify({ set, run_id: run.id, records_only: !!input.recordsOnly })]);
+    });
   }
   return out;
 }

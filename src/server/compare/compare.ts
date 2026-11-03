@@ -3,6 +3,7 @@ import { withMember } from '../db/context';
 import { requireRole } from '../auth/guard';
 import type { TransactionDriver, SqlConnection } from '../db/driver';
 import { hash } from '../../sandbox/demo-rule-pack';
+import { NotFound } from '../http/errors';
 
 export const comparerVersion = 'n17';
 export type RunStatus = 'planned' | 'queued' | 'running' | 'passed' | 'failed' | 'inconclusive' | 'cancelled';
@@ -145,7 +146,7 @@ export function languageParity(run: RunData) {
 }
 export async function loadRun(sql: SqlConnection, runId: string): Promise<RunData> {
   const run = (await sql.query<{ id: string; status: RunStatus; agent_version_id: string; frozen_manifest: Record<string, unknown>; created_at: string; finished_at: string | null }>('SELECT id,status,agent_version_id,frozen_manifest,created_at::text,finished_at::text FROM nazir.runs WHERE id=$1', [runId])).rows[0];
-  if (!run) throw new Error('Run not found');
+  if (!run) throw new NotFound();
   const conversations = (await sql.query<ConversationRow>(`SELECT c.id,c.idempotency_key,c.status,c.inconclusive_reason,c.language,c.scenario_hash,s.stable_key,s.family,s.split,s.meaning_id,c.failover,c.model_provider,c.model_id,c.model_calls,c.result_summary,
     (SELECT body FROM nazir.conversation_messages m WHERE m.conversation_id=c.id AND m.speaker='agent' ORDER BY seq DESC LIMIT 1) AS reply
     FROM nazir.conversations c JOIN nazir.scenarios s ON s.id=c.scenario_id WHERE c.run_id=$1 ORDER BY c.idempotency_key`, [runId])).rows;
