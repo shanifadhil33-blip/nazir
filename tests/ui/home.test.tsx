@@ -103,7 +103,7 @@ it('renders Arabic right to left with Arabic words', () => {
   const first = render('ar', ['service_owner'], none);
   expect(first).toContain('ابدأ أول فحص');
   expect(first).toContain('يستغرق أول فحص');
-  expect(render('ar', ['viewer'], checked, 'viewer')).toContain('يمكنك الاطلاع على هذا');
+  expect(render('ar', ['viewer'], checked, 'viewer')).toContain('يمكنك العرض فقط');
 });
 
 it('makes every tap go somewhere', () => {

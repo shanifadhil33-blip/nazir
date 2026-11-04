@@ -6,6 +6,7 @@ import type { Seat } from '@/components/ocean/model';
 import { ScreenFrame, type Phase } from './frame';
 import type { HomeLinks } from './home-model';
 import { ShellIcon, type ShellIconName } from './icons';
+import { StateCard } from './state-card';
 import { PillButton } from './pill-button';
 import { roleLabel, topicLabel, type SettingsAccess, type SettingsView } from './settings-model';
 
@@ -87,7 +88,7 @@ export function SettingsViewScreen(props: SettingsViewProps) {
           {props.reset === 'failed' ? <p className="nz-note-line" role="alert">{text.failed}</p> : null}
         </section>
       ) : null}
-      {!edit ? <p className="nz-view-line">{copy.shell.viewOnly}</p> : null}
+      {!edit ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
     </ScreenFrame>
   );
 }

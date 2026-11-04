@@ -376,13 +376,9 @@
     "nav": "Main",
     "alerts": "Alerts",
     "loadingTitle": "Loading",
-    "loadingBody": "One moment.",
     "errorTitle": "Something went wrong",
-    "errorBody": "Try again.",
     "emptyTitle": "Nothing here yet",
-    "emptyBody": "Start a check when you are ready.",
-    "limitTitle": "Limit reached",
-    "limitBody": "Try again later.",
+    "limitTitle": "That's all for today. Checks open again tomorrow.",
     "chipRight": "Right",
     "chipWrong": "Wrong",
     "chipUnsure": "Not sure",
@@ -405,7 +401,10 @@
     "retry": "Try again",
     "signInAgain": "Sign in",
     "noChecksYet": "None yet",
-    "noAlerts": "Nothing new"
+    "noAlerts": "Nothing new",
+    "offlineTitle": "We could not reach your assistant",
+    "statesLight": "State",
+    "statesBold": "cards"
   },
   "landing": {
     "home": "Nazir home",

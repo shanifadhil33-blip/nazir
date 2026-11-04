@@ -31,3 +31,9 @@ export function StateCard({ kind, title, body, action }: { kind: StateKind; titl
     </section>
   );
 }
+
+/** The loading and error card every screen shows while its data is not ready. Try again sits inside the card. */
+export function PhaseCard({ phase, copy, onRetry, fallback }: { phase: 'loading' | 'error'; copy: { shell: { loadingTitle: string; errorTitle: string; retry: string } }; onRetry?: () => void; /** Where Try again goes when there is nothing to run again. */ fallback?: string }) {
+  if (phase === 'loading') return <StateCard kind="loading" title={copy.shell.loadingTitle} />;
+  return <StateCard kind="error" title={copy.shell.errorTitle} action={onRetry ? { label: copy.shell.retry, onClick: onRetry } : fallback ? { label: copy.shell.retry, href: fallback } : null} />;
+}

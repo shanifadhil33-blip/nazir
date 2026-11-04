@@ -7,7 +7,7 @@ import { seatFromRoles } from '@/components/ocean/model';
 import type { ReportBody } from '@/server/reports/build';
 import { ChecksView, type ChecksNote } from './checks';
 import { checksAccess, checksFromReports, suggestMessage, type CheckRow } from './checks-model';
-import { driveRun, startQuickCheck, stopRun, storeKey, type RunProgress } from './checks-run';
+import { driveRun, startQuickCheckOutcome, stopRun, storeKey, type RunProgress } from './checks-run';
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
 import { idOf, readStore, storeKeyFor, titleOf, upsertFix } from './fixes-model';
@@ -99,10 +99,10 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     if (!access.start || busy) return;
     setNote(null);
     setBusy('starting');
-    const runId = await startQuickCheck(workspaceId, langRef.current);
-    if (!runId) { setBusy(null); setNote('startFailed'); return; }
+    const outcome = await startQuickCheckOutcome(workspaceId, langRef.current);
     setBusy(null);
-    void track(runId);
+    if ('fail' in outcome) { setNote(outcome.fail === 'limit' ? 'limit' : outcome.fail === 'unreachable' ? 'unreachable' : 'startFailed'); return; }
+    void track(outcome.runId);
   }
 
   async function stop() {
@@ -133,7 +133,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       const list = readStore(localStorage.getItem(storeKeyFor(workspaceId)));
       localStorage.setItem(storeKeyFor(workspaceId), JSON.stringify(upsertFix(list, { id: proposalId, findingId, status: 'waiting', by: { name, initials: person?.initials ?? 'OS', mine: true }, title: titleOf(payload?.data, { en: copy.fixesScreen.fix, ar: copy.fixesScreen.fix }), recheck: null, rerun: false, at: new Date().toISOString() })));
     }
-    setNote(response?.ok && payload?.done ? 'suggested' : 'suggestFailed');
+    setNote(response?.ok && payload?.done ? 'suggested' : response?.status === 429 ? 'limit' : 'suggestFailed');
   }
 
   return <>

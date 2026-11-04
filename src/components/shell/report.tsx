@@ -48,10 +48,8 @@ export function ReportView(props: ReportViewProps) {
   return (
     <ScreenFrame lang={lang} seat={seat} phase={phase} name="report" className="nz-report" assistant={props.assistant} person={props.person} links={links} canStart={props.canStart} history={props.history} onRetry={props.onRetry}>
       <Heading light={text.light} bold={text.bold} lang={lang} />
-      {!facts ? <>
-        <StateCard kind="empty" title={text.emptyTitle} body={text.emptyBody} />
-        {props.canStart ? <PillButton variant="ink" icon="checks" label={text.goChecks} href={links.checks} /> : <PillButton variant="ink" icon="home" label={text.goHome} href={links.home} />}
-      </> : <>
+            {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
+      {!facts ? <StateCard kind="empty" title={text.emptyTitle} action={props.canStart ? { label: copy.shell.startCheck, href: links.start } : { label: text.goHome, href: links.home }} /> : <>
         <section className="nz-rep-hero" data-tone="mint">
           <p className="nz-rep-headline">{headlineText(facts, copy)}</p>
           <p className="nz-rep-caption">{captionText(facts, props.assistant || copy.shell.helpDesk, now, copy)}</p>

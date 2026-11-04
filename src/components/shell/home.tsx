@@ -90,7 +90,7 @@ export function ShellHome({
               <PillGrid>{pills}</PillGrid>
               {cards}
             </div>}
-            {variant === 'viewer' ? <p className="nz-view-line">{copy.shell.viewOnly}</p> : null}
+            {variant === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
           </>}
         </div>
       </div>
@@ -106,15 +106,14 @@ function navLinks(go: HomeLinks, seat: Seat) {
 }
 
 function StatePanel({ copy, state, onRetry }: { copy: ReturnType<typeof messagesFor>; state: Exclude<ShellState, 'ready'>; onRetry?: () => void }) {
-  const panels = {
-    loading: [copy.shell.loadingTitle, copy.shell.loadingBody],
-    error: [copy.shell.errorTitle, copy.shell.errorBody],
-    empty: [copy.shell.emptyTitle, copy.shell.emptyBody],
-    limit: [copy.shell.limitTitle, copy.shell.limitBody],
+  const titles = {
+    loading: copy.shell.loadingTitle,
+    error: copy.shell.errorTitle,
+    empty: copy.shell.emptyTitle,
+    limit: copy.shell.limitTitle,
+    offline: copy.shell.offlineTitle,
+    view: copy.shell.viewOnly,
   } as const;
-  const [title, body] = panels[state];
-  return <>
-    <StateCard kind={state} title={title} body={body} />
-    {onRetry && state === 'error' ? <PillButton variant="ink" label={copy.shell.retry} onClick={onRetry} /> : null}
-  </>;
+  const action = onRetry && (state === 'error' || state === 'offline') ? { label: copy.shell.retry, onClick: onRetry } : null;
+  return <StateCard kind={state} title={titles[state]} action={action} />;
 }

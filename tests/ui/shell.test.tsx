@@ -101,13 +101,13 @@ it('renders pills, cards, chips, the avatar and the four state cards', () => {
   expect(renderToStaticMarkup(<Chip kind="wrong" label="Wrong" />)).toContain('data-chip="wrong"');
   expect(renderToStaticMarkup(<Chip kind="unsure" label="Not sure" />)).toContain('>Not sure<');
   expect(renderToStaticMarkup(<Avatar initials="KH" label="Khalid" />)).toContain('aria-label="Khalid"');
-  for (const kind of ['loading', 'error', 'empty', 'limit'] as const) {
+  for (const kind of ['loading', 'error', 'empty', 'limit', 'offline', 'view'] as const) {
     const card = renderToStaticMarkup(<StateCard kind={kind} title="Title" body="Body" />);
     expect(card).toContain(`data-state="${kind}"`);
     expect(card).toContain(kind === 'error' ? 'role="alert"' : 'role="status"');
   }
   const empty = renderToStaticMarkup(<ShellHome lang="ar" seat="viewer" state="empty" />);
-  expect(empty).toContain('لا شيء هنا بعد');
+  expect(empty).toContain('لا يوجد شيء هنا بعد');
   expect(empty).toContain('dir="rtl"');
   expect(empty).not.toContain('data-nav="start"');
 });

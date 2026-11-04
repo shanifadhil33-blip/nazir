@@ -9,7 +9,7 @@ import { localeAttrs } from './locale';
 import { personFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
-import { StateCard } from './state-card';
+import { PhaseCard, StateCard } from './state-card';
 
 export type Phase = 'loading' | 'ready' | 'error';
 
@@ -48,8 +48,7 @@ export function ScreenFrame({ lang, seat, phase, name, assistant, person, links,
         </header>
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
-            <StateCard kind={phase === 'error' ? 'error' : 'loading'} title={phase === 'error' ? copy.shell.errorTitle : copy.shell.loadingTitle} body={phase === 'error' ? copy.shell.errorBody : copy.shell.loadingBody} />
-            {phase === 'error' && onRetry ? <PillButton variant="ink" label={copy.shell.retry} onClick={onRetry} /> : null}
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />
           </> : children}
         </div>
       </div>
