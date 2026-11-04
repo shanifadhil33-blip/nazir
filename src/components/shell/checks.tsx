@@ -13,9 +13,9 @@ import { localeAttrs } from './locale';
 import { personFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
-import { StateCard } from './state-card';
+import { PhaseCard, StateCard } from './state-card';
 
-export type ChecksNote = 'stopped' | 'startFailed' | 'stopFailed' | 'suggested' | 'suggestFailed' | null;
+export type ChecksNote = 'limit' | 'unreachable' | 'stopped' | 'startFailed' | 'stopFailed' | 'suggested' | 'suggestFailed' | null;
 
 export type ChecksViewProps = {
   lang: Lang;
@@ -67,18 +67,17 @@ export function ChecksView(props: ChecksViewProps) {
         </header>
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
-            <StateCard kind={phase === 'error' ? 'error' : 'loading'} title={phase === 'error' ? copy.shell.errorTitle : copy.shell.loadingTitle} body={phase === 'error' ? copy.shell.errorBody : copy.shell.loadingBody} />
-            {phase === 'error' && props.onRetry ? <PillButton variant="ink" label={copy.shell.retry} onClick={props.onRetry} /> : null}
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
           </> : <>
             <div className="nz-checks-head"><Heading light={text.light} bold={text.bold} lang={lang} flow="inline" /></div>
-            {note ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
+            {note === 'limit' ? <StateCard kind="limit" title={copy.shell.limitTitle} /> : null}
+            {note === 'unreachable' ? <StateCard kind="offline" title={copy.shell.offlineTitle} action={access.start ? { label: copy.shell.retry, onClick: props.onStart } : null} /> : null}
+            {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
+            {note && note !== 'limit' && note !== 'unreachable' ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
             <div className="nz-checks-body">
               <div className="nz-checks-list">
                 {running ? <RunningCard lang={lang} running={running} canStop={access.stop} stopping={busy === 'stopping'} onStop={props.onStop} /> : null}
-                {checks.length === 0 && !running ? <>
-                  <StateCard kind="empty" title={copy.shell.emptyTitle} body={copy.shell.emptyBody} />
-                  {access.start ? <PillButton variant="ink" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
-                </> : null}
+                {checks.length === 0 && !running ? <StateCard kind="empty" title={copy.shell.emptyTitle} action={access.start ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
                 {checks.map((item) => {
                   const clean = item.toFix === 0;
                   return (

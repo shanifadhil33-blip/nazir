@@ -348,12 +348,9 @@
     "limit": "You have reached the limit for now."
   },
   "shell": {
-    "goodMorning": "Good morning",
     "assistantLine": "Your assistant",
-    "doingWell": "is doing well",
     "assistantIs": "Your assistant is",
     "mostlySafe": "mostly safe",
-    "checkAssistant": "Check assistant",
     "assistant": "Assistant",
     "helpDesk": "City Help Desk",
     "right": "Right",
@@ -365,7 +362,6 @@
     "today": "Today",
     "startCheck": "Start a check",
     "seeMistakes": "See mistakes",
-    "reviewFixes": "Review fixes",
     "history": "History",
     "fixes": "Fixes",
     "report": "Report",
@@ -376,16 +372,9 @@
     "nav": "Main",
     "alerts": "Alerts",
     "loadingTitle": "Loading",
-    "loadingBody": "One moment.",
     "errorTitle": "Something went wrong",
-    "errorBody": "Try again.",
     "emptyTitle": "Nothing here yet",
-    "emptyBody": "Start a check when you are ready.",
-    "limitTitle": "Limit reached",
-    "limitBody": "Try again later.",
-    "chipRight": "Right",
-    "chipWrong": "Wrong",
-    "chipUnsure": "Not sure",
+    "limitTitle": "That's all for today. Checks open again tomorrow.",
     "khalid": "Khalid",
     "khalidFull": "Khalid Hassan",
     "omar": "Omar",
@@ -403,9 +392,11 @@
     "yesterday": "Yesterday",
     "daysAgo": "{n} days ago",
     "retry": "Try again",
-    "signInAgain": "Sign in",
     "noChecksYet": "None yet",
-    "noAlerts": "Nothing new"
+    "noAlerts": "Nothing new",
+    "offlineTitle": "We could not reach your assistant",
+    "statesLight": "State",
+    "statesBold": "cards"
   },
   "landing": {
     "home": "Nazir home",
@@ -482,9 +473,7 @@
     "sending": "Sending",
     "noDetail": "No detail was saved",
     "emptyWaitingTitle": "No fixes waiting",
-    "emptyWaitingBody": "A suggested fix shows up here.",
     "emptyDoneTitle": "Nothing done yet",
-    "emptyDoneBody": "Decided fixes show up here.",
     "goChecks": "Go to checks",
     "failed": "Could not save your answer. Try again.",
     "rerunStarted": "Check again started",
@@ -511,7 +500,6 @@
     "arabic": "Arabic",
     "join": ", ",
     "emptyTitle": "Nothing to compare yet",
-    "emptyBody": "Run two checks to see the change.",
     "goChecks": "Go to checks"
   },
   "historyScreen": {
@@ -527,10 +515,8 @@
     "turnedDown": "{name} turned down a fix",
     "questions": "{n} safety questions",
     "emptyTitle": "Nothing happened yet",
-    "emptyBody": "Checks and fixes show up here.",
     "goChecks": "Go to checks",
     "noAccessTitle": "Only the team sees this",
-    "noAccessBody": "Ask an owner to share it with you.",
     "goHome": "Go home"
   },
   "settingsScreen": {
@@ -547,7 +533,7 @@
     "fixer": "Fixer",
     "reviewer": "Reviewer",
     "viewer": "Viewer",
-    "startAgain": "Start the demo again",
+    "startAgain": "Start again",
     "sure": "Start again? What you made here will be cleared.",
     "yes": "Yes, start again",
     "notNow": "Not now",
@@ -574,7 +560,6 @@
     "shareFailed": "Could not share. Try again.",
     "sharing": "Sharing",
     "emptyTitle": "No report yet",
-    "emptyBody": "Run a check to see your report.",
     "goChecks": "Go to checks",
     "goHome": "Go home"
   }

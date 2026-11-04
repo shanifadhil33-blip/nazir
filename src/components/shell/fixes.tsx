@@ -11,7 +11,7 @@ import { localeAttrs } from './locale';
 import { personFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
-import { StateCard } from './state-card';
+import { PhaseCard, StateCard } from './state-card';
 
 export type FixesNote = 'failed' | 'rerunStarted' | 'rerunFailed' | 'approvedNote' | 'turnedNote' | null;
 export type FixAction = 'approve' | 'reject' | 'recheck';
@@ -64,10 +64,10 @@ export function FixesView(props: FixesViewProps) {
         </header>
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
-            <StateCard kind={phase === 'error' ? 'error' : 'loading'} title={phase === 'error' ? copy.shell.errorTitle : copy.shell.loadingTitle} body={phase === 'error' ? copy.shell.errorBody : copy.shell.loadingBody} />
-            {phase === 'error' && props.onRetry ? <PillButton variant="ink" label={copy.shell.retry} onClick={props.onRetry} /> : null}
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
           </> : <>
             <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
+            {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
             <div className="nz-tabs" role="tablist" aria-label={text.light}>
               {(['waiting', 'done'] as const).map((id) => (
                 <button key={id} type="button" role="tab" className="nz-tab" aria-selected={tab === id} data-tab={id} onClick={() => props.onTab?.(id)}>{id === 'waiting' ? text.waiting : text.done}</button>
@@ -75,10 +75,7 @@ export function FixesView(props: FixesViewProps) {
             </div>
             {note ? <p className="nz-note-line" role="status" data-note={note}>{text[note]}</p> : null}
             <div className="nz-fix-list">
-              {shown.length === 0 ? <>
-                <StateCard kind="empty" title={tab === 'waiting' ? text.emptyWaitingTitle : text.emptyDoneTitle} body={tab === 'waiting' ? text.emptyWaitingBody : text.emptyDoneBody} />
-                <PillButton variant="ink" icon="checks" label={text.goChecks} href={links.checks} />
-              </> : shown.map((item) => <FixCardView key={item.id} lang={lang} item={item} access={access} open={open === item.id} busy={busy?.id === item.id ? busy.action : null} links={links} onToggle={props.onToggle} onAction={props.onAction} />)}
+              {shown.length === 0 ? <StateCard kind="empty" title={tab === 'waiting' ? text.emptyWaitingTitle : text.emptyDoneTitle} action={{ label: text.goChecks, href: links.checks }} /> : shown.map((item) => <FixCardView key={item.id} lang={lang} item={item} access={access} open={open === item.id} busy={busy?.id === item.id ? busy.action : null} links={links} onToggle={props.onToggle} onAction={props.onAction} />)}
               {fixes.length > 0 ? <PillButton className="nz-fix-change" icon="report" label={text.seeChange} href={links.after} /> : null}
             </div>
           </>}

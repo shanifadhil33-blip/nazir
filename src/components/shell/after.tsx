@@ -13,7 +13,7 @@ import { PastelCard } from './pastel-card';
 import { personFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
-import { StateCard } from './state-card';
+import { PhaseCard, StateCard } from './state-card';
 
 export type AfterViewProps = {
   lang: Lang;
@@ -51,10 +51,10 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
         </header>
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
-            <StateCard kind={phase === 'error' ? 'error' : 'loading'} title={phase === 'error' ? copy.shell.errorTitle : copy.shell.loadingTitle} body={phase === 'error' ? copy.shell.errorBody : copy.shell.loadingBody} />
-            {phase === 'error' && onRetry ? <PillButton variant="ink" label={copy.shell.retry} onClick={onRetry} /> : null}
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />
           </> : <>
             <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
+            {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
             {change ? <>
               <div className="nz-after-stats">
                 <PastelCard tone="peach" layout="stat" title={text.before} value={String(change.before)} caption={text.rightAnswers} />
@@ -69,10 +69,7 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
                 ))}
               </ul>
               {line ? <p className="nz-after-lang">{line}</p> : null}
-            </> : <>
-              <StateCard kind="empty" title={text.emptyTitle} body={text.emptyBody} />
-              <PillButton variant="ink" icon="checks" label={text.goChecks} href={links.checks} />
-            </>}
+            </> : <StateCard kind="empty" title={text.emptyTitle} action={{ label: text.goChecks, href: links.checks }} />}
           </>}
         </div>
       </div>

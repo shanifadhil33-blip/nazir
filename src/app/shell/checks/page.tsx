@@ -6,7 +6,7 @@ import { DocumentLocale } from '@/components/shell/document-locale';
 
 export const dynamic = 'force-dynamic';
 
-const states = ['list', 'check', 'running', 'empty', 'loading', 'error'] as const;
+const states = ['list', 'check', 'running', 'empty', 'loading', 'error', 'limit', 'offline'] as const;
 
 export default async function ChecksPreviewPage({ searchParams }: { searchParams: Promise<{ lang?: string; role?: string; state?: string }> }) {
   // Design preview with made up checks. It is for building and screenshots, so it is not served in production.

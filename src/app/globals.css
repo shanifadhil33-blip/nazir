@@ -99,8 +99,6 @@ a { color: var(--accent); }
   font-weight: 700;
   flex: none;
 }
-.nz-logo-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--wrong); box-shadow: 0 0 0 2px var(--card); }
-[dir="rtl"] .nz-logo-dot { right: auto; left: -3px; }
 .nz-title { margin: 0; font-size: 28px; line-height: 1; }
 .nz-sub { margin: 4px 0 0; color: var(--ink-muted); }
 .nz-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
@@ -789,21 +787,48 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
   background: var(--card);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow);
-  padding-block: 28px;
-  padding-inline: 20px;
-  display: grid;
-  justify-items: start;
-  gap: 8px;
+  padding-block: 18px;
+  padding-inline: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
-.nz-state h2 { margin: 0; font-size: 22px; font-weight: 700; }
-.nz-state p { margin: 0; color: var(--ink-muted); }
+.nz-state-text { flex: 1 1 auto; min-inline-size: 0; display: grid; gap: 6px; }
+.nz-state h2 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.35; }
+.nz-state-limit h2, .nz-state-view h2 { font-weight: 500; }
+.nz-state p { margin: 0; color: var(--ink-muted); font-size: 14px; }
+.nz-state-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--page);
+  color: var(--ink-muted);
+}
+.nz-state-ico .nz-icon, .nz-state-ico svg { inline-size: 20px; block-size: 20px; flex: none; }
+.nz-state-error .nz-state-ico { background: color-mix(in srgb, var(--wrong) 14%, white); color: var(--wrong); }
+.nz-state-empty .nz-state-ico { background: var(--sky); color: #3f7fb8; }
+.nz-state-limit .nz-state-ico { background: var(--mint); color: var(--right); }
+.nz-state-offline .nz-state-ico { background: #fdf1cf; color: #c98a1b; }
+.nz-shell .nz-state-act, .nz-shell-desk .nz-state .nz-state-act { flex: none; justify-content: center; min-block-size: 40px; padding: 0 18px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .nz-state-spin {
-  inline-size: 22px;
-  block-size: 22px;
+  inline-size: 18px;
+  block-size: 18px;
   border-radius: var(--radius-pill);
   border: 2px solid color-mix(in srgb, var(--ink) 18%, transparent);
   border-block-start-color: var(--ink);
   animation: nz-spin 700ms linear infinite;
+}
+.nz-state-bars { display: grid; gap: 6px; }
+.nz-state-bars i { display: block; block-size: 8px; border-radius: var(--radius-pill); background: var(--page); }
+.nz-state-bars { max-inline-size: 180px; }
+.nz-state-bars i:first-child { inline-size: 100%; }
+.nz-state-bars i:last-child { inline-size: 62%; }
+@media (max-width: 420px) {
+  .nz-state { padding-inline: 14px; gap: 12px; }
+  .nz-shell .nz-state-act, .nz-shell-desk .nz-state .nz-state-act { padding-inline: 14px; }
 }
 .nz-float-nav {
   position: fixed;
@@ -901,7 +926,6 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-first-card p { margin: 0; min-inline-size: 0; }
 .nz-first-mark { display: grid; place-items: center; inline-size: 44px; block-size: 44px; border-radius: var(--radius-pill); background: var(--card); color: var(--ink); flex: none; }
 .nz-shell .nz-hero-btn { justify-content: center; min-block-size: 56px; border-radius: var(--radius-pill); }
-.nz-view-line { margin: 0; color: var(--ink-muted); font-size: 14px; }
 .nz-shell-desk-body { display: grid; gap: 12px; }
 .nz-stat-row-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .nz-stat-row-3 .nz-pastel-stat { min-block-size: 124px; }

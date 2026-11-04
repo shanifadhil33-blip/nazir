@@ -20,7 +20,7 @@ function seatOf(value?: string): Seat {
 }
 
 function stateOf(value?: string): ShellState {
-  if (value === 'loading' || value === 'error' || value === 'empty' || value === 'limit') return value;
+  if (value === 'loading' || value === 'error' || value === 'empty' || value === 'limit' || value === 'offline' || value === 'view') return value;
   return 'ready';
 }
 

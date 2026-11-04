@@ -21,23 +21,43 @@ export const storeKey = (workspaceId: string) => `nz-check-run-${workspaceId}`;
 
 type Fetcher = typeof fetch;
 
+export type StartFail = 'limit' | 'unreachable' | 'failed';
+export type StartOutcome = { runId: string } | { fail: StartFail };
+
+const limitCodes = new Set(['daily_cap', 'too_many', 'provider_exhausted', 'repeat_daily_cap']);
+const unreachableCodes = new Set(['agent_unreachable']);
+
+/** Maps a refused request to the small state the person should see. No response at all means the assistant could not be reached. */
+export function failOf(status: number | null, code: string | null): StartFail {
+  if (status === 429 || (code && limitCodes.has(code))) return 'limit';
+  if (status === null || (code && unreachableCodes.has(code))) return 'unreachable';
+  return 'failed';
+}
+
 async function chat(fetcher: Fetcher, workspaceId: string, lang: Lang, message: string) {
   const response = await fetcher(`/api/workspaces/${workspaceId}/agent/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'accept-language': lang },
     body: JSON.stringify({ message }),
   }).catch(() => null);
-  const payload = await response?.json().catch(() => null) as { done?: boolean; tool?: string; data?: unknown } | null;
-  return { ok: Boolean(response?.ok), payload };
+  const payload = await response?.json().catch(() => null) as { done?: boolean; tool?: string; data?: unknown; error?: { code?: string } } | null;
+  return { ok: Boolean(response?.ok), payload, fail: failOf(response ? response.status : null, payload?.error?.code ?? null) };
 }
 
-/** Starts a quick check with the existing chat endpoint: one message proposes the plan, one approves it and starts the run. Returns the run id. */
-export async function startQuickCheck(workspaceId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<string | null> {
+/** Starts a quick check with the existing chat endpoint: one message proposes the plan, one approves it and starts the run. */
+export async function startQuickCheckOutcome(workspaceId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<StartOutcome> {
   const proposed = await chat(fetcher, workspaceId, lang, lang === 'ar' ? 'فحص سريع' : 'run a quick check');
   const planId = proposed.ok && proposed.payload?.done ? planIdOf(proposed.payload.data) : null;
-  if (!planId) return null;
+  if (!planId) return { fail: proposed.ok ? 'failed' : proposed.fail };
   const started = await chat(fetcher, workspaceId, lang, approvalMessage(planId, lang));
-  return started.ok && started.payload?.done ? runIdOf(started.payload.data) : null;
+  const runId = started.ok && started.payload?.done ? runIdOf(started.payload.data) : null;
+  return runId ? { runId } : { fail: started.ok ? 'failed' : started.fail };
+}
+
+/** Same as the outcome version, for callers that only need the run id. */
+export async function startQuickCheck(workspaceId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<string | null> {
+  const outcome = await startQuickCheckOutcome(workspaceId, lang, fetcher);
+  return 'runId' in outcome ? outcome.runId : null;
 }
 
 type StepBody = { done: boolean; passed: number; failed: number; inconclusive: number; waiting: number };

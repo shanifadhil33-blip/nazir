@@ -52,14 +52,10 @@ export function HistoryView(props: HistoryViewProps) {
     <ScreenFrame lang={lang} seat={seat} phase={phase} name="history" assistant={props.assistant} person={props.person} links={links} canStart={props.canStart} history={props.allowed} onRetry={props.onRetry}>
       {!props.allowed ? <>
         <Heading light={text.light} bold={text.bold} lang={lang} />
-        <StateCard kind="empty" title={text.noAccessTitle} body={text.noAccessBody} />
-        <PillButton variant="ink" icon="home" label={text.goHome} href={links.home} />
+        <StateCard kind="view" title={text.noAccessTitle} action={{ label: text.goHome, href: links.home }} />
       </> : <>
         <Heading light={text.light} bold={text.bold} lang={lang} />
-        {items.length === 0 ? <>
-          <StateCard kind="empty" title={text.emptyTitle} body={text.emptyBody} />
-          {props.canStart ? <PillButton variant="ink" icon="checks" label={text.goChecks} href={links.checks} /> : <PillButton variant="ink" icon="home" label={text.goHome} href={links.home} />}
-        </> : <>
+        {items.length === 0 ? <StateCard kind="empty" title={text.emptyTitle} action={props.canStart ? { label: copy.shell.startCheck, href: links.start } : { label: text.goHome, href: links.home }} /> : <>
           {sections.map((section) => (
             <section key={section.id} className="nz-hist-group" data-group={section.id} aria-label={section.title}>
               <h2 className="nz-hist-day">{section.title}</h2>
