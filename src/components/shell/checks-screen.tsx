@@ -10,6 +10,7 @@ import { checksAccess, checksFromReports, suggestMessage, type CheckRow } from '
 import { driveRun, startQuickCheck, stopRun, storeKey, type RunProgress } from './checks-run';
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
+import { idOf, readStore, storeKeyFor, titleOf, upsertFix } from './fixes-model';
 import { initialsOf } from './people';
 
 type Membership = { workspaceId: string; workspaceName: string; roles: string[] };
@@ -123,8 +124,15 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       headers: { 'content-type': 'application/json', 'accept-language': langRef.current },
       body: JSON.stringify({ message: suggestMessage(findingId, langRef.current) }),
     }).catch(() => null);
-    const payload = await response?.json().catch(() => null) as { done?: boolean } | null;
+    const payload = await response?.json().catch(() => null) as { done?: boolean; data?: unknown } | null;
     setBusy(null);
+    const proposalId = response?.ok && payload?.done ? idOf(payload.data) : null;
+    if (proposalId) {
+      // Kept on this device so the Fixes screen can show the card.
+      const name = person?.name ?? copy.shell.omar;
+      const list = readStore(localStorage.getItem(storeKeyFor(workspaceId)));
+      localStorage.setItem(storeKeyFor(workspaceId), JSON.stringify(upsertFix(list, { id: proposalId, findingId, status: 'waiting', by: { name, initials: person?.initials ?? 'OS', mine: true }, title: titleOf(payload?.data, { en: copy.fixesScreen.fix, ar: copy.fixesScreen.fix }), recheck: null, rerun: false })));
+    }
     setNote(response?.ok && payload?.done ? 'suggested' : 'suggestFailed');
   }
 

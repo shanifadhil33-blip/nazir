@@ -30,6 +30,6 @@ export function navIcon(id: NavId): ShellIconName {
   if (id === 'home') return 'home';
   if (id === 'checks') return 'checks';
   if (id === 'start') return 'play';
-  if (id === 'fixes') return 'pencil';
+  if (id === 'fixes') return 'wrench';
   return 'more';
 }
