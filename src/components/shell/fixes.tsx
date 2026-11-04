@@ -104,7 +104,7 @@ function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction
     const approved = item.status === 'approved';
     return (
       <article className={approved ? 'nz-fix nz-fix-approved' : 'nz-fix nz-fix-down'} data-fix={item.status} aria-busy={busy !== null}>
-        <p className="nz-fix-state"><span className="nz-fix-tick"><ShellIcon name="check" /></span><strong>{approved ? text.approved : text.turnedDown}</strong></p>
+        <p className="nz-fix-state"><span className="nz-fix-tick"><ShellIcon name="tick" /></span><strong>{approved ? text.approved : text.turnedDown}</strong></p>
         <p className="nz-fix-sub">{approved ? (item.rerun ? text.checkingAgain : text.readyAgain) : item.title}</p>
         {approved && !item.rerun && access.recheck ? <PillButton className="nz-fix-btn" label={busy === 'recheck' ? text.sending : text.checkAgain} disabled={busy !== null} onClick={() => onAction?.(item.id, 'recheck')} /> : null}
         {approved && item.rerun ? <PillButton className="nz-fix-btn" label={text.seeChange} href={links.after} /> : null}
@@ -128,7 +128,7 @@ function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction
         <p className="nz-fix-recheck">{recheckLine(item.recheck, copy)}</p>
         {access.decide && !mine ? (
           <div className="nz-fix-actions">
-            <PillButton variant="ink" icon="check" className="nz-fix-approve" label={busy === 'approve' ? text.sending : text.approve} disabled={busy !== null} onClick={() => onAction?.(item.id, 'approve')} />
+            <PillButton variant="ink" icon="tick" className="nz-fix-approve" label={busy === 'approve' ? text.sending : text.approve} disabled={busy !== null} onClick={() => onAction?.(item.id, 'approve')} />
             <PillButton className="nz-fix-turn" label={busy === 'reject' ? text.sending : text.turnDown} disabled={busy !== null} onClick={() => onAction?.(item.id, 'reject')} />
           </div>
         ) : <p className="nz-fix-wait">{text.someoneElse}</p>}

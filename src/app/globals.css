@@ -1134,3 +1134,6 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
   .nz-after-stats .nz-pastel-stat { min-block-size: 168px; }
 }
 @media (prefers-reduced-motion: reduce) { .nz-tab { transition: none; } }
+.nz-shell-desk .nz-fix .nz-pill-btn, .nz-shell-desk .nz-fix-change { min-block-size: 48px; border-radius: var(--radius-pill); }
+.nz-shell-desk .nz-fix-actions .nz-pill-btn { min-block-size: 52px; }
+.nz-fix-approve .nz-pill-ico { inline-size: 24px; block-size: 24px; }

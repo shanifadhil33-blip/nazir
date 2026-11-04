@@ -470,7 +470,7 @@
     "suggestedBy": "اقترحه {name}",
     "wrong": "ما الخطأ",
     "fix": "الإصلاح",
-    "recheck": "سنعيد فحص {n} أسئلة",
+    "recheck": "سنعيد فحص {n} سؤالاً",
     "approve": "وافق",
     "turnDown": "ارفض",
     "someoneElse": "شخص آخر يقرر هذا الإصلاح",
