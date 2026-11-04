@@ -348,12 +348,9 @@
     "limit": "بلغت الحد المسموح حاليا."
   },
   "shell": {
-    "goodMorning": "صباح الخير",
     "assistantLine": "مساعدك",
-    "doingWell": "يعمل بشكل جيد",
     "assistantIs": "مساعدك",
     "mostlySafe": "آمن في الغالب",
-    "checkAssistant": "افحص المساعد",
     "assistant": "المساعد",
     "helpDesk": "مكتب خدمة المدينة",
     "right": "صحيح",
@@ -365,7 +362,6 @@
     "today": "اليوم",
     "startCheck": "ابدأ فحصا",
     "seeMistakes": "شاهد الأخطاء",
-    "reviewFixes": "راجع الإصلاحات",
     "history": "السجل",
     "fixes": "الإصلاحات",
     "report": "التقرير",
@@ -379,9 +375,6 @@
     "errorTitle": "حدث خطأ ما",
     "emptyTitle": "لا يوجد شيء هنا بعد",
     "limitTitle": "هذا كل شيء لليوم. تفتح الفحوصات غدًا.",
-    "chipRight": "صحيح",
-    "chipWrong": "خطأ",
-    "chipUnsure": "غير متأكد",
     "khalid": "خالد",
     "khalidFull": "خالد حسن",
     "omar": "عمر",
@@ -399,7 +392,6 @@
     "yesterday": "أمس",
     "daysAgo": "قبل {n} أيام",
     "retry": "حاول مرة أخرى",
-    "signInAgain": "سجل الدخول",
     "noChecksYet": "لا شيء بعد",
     "noAlerts": "لا جديد",
     "offlineTitle": "تعذر الوصول إلى مساعدك",
@@ -481,9 +473,7 @@
     "sending": "جار الإرسال",
     "noDetail": "لم يحفظ أي تفصيل",
     "emptyWaitingTitle": "لا إصلاحات بالانتظار",
-    "emptyWaitingBody": "يظهر هنا أي إصلاح مقترح.",
     "emptyDoneTitle": "لا شيء بعد",
-    "emptyDoneBody": "تظهر هنا الإصلاحات التي تم البت فيها.",
     "goChecks": "اذهب إلى الفحوصات",
     "failed": "تعذر حفظ قرارك. حاول مرة أخرى.",
     "rerunStarted": "بدأ الفحص من جديد",
@@ -510,7 +500,6 @@
     "arabic": "العربية",
     "join": "، ",
     "emptyTitle": "لا شيء للمقارنة بعد",
-    "emptyBody": "أجر فحصين لترى التغيير.",
     "goChecks": "اذهب إلى الفحوصات"
   },
   "historyScreen": {
@@ -526,10 +515,8 @@
     "turnedDown": "رفض {name} إصلاحًا",
     "questions": "{n} سؤال أمان",
     "emptyTitle": "لم يحدث شيء بعد",
-    "emptyBody": "تظهر الفحوصات والإصلاحات هنا.",
     "goChecks": "اذهب إلى الفحوصات",
     "noAccessTitle": "الفريق فقط يرى هذا",
-    "noAccessBody": "اطلب من المالك أن يشاركه معك.",
     "goHome": "اذهب إلى الرئيسية"
   },
   "settingsScreen": {
@@ -573,7 +560,6 @@
     "shareFailed": "تعذرت المشاركة. حاول مرة أخرى.",
     "sharing": "جارٍ المشاركة",
     "emptyTitle": "لا تقرير بعد",
-    "emptyBody": "أجر فحصًا لترى تقريرك.",
     "goChecks": "اذهب إلى الفحوصات",
     "goHome": "اذهب إلى الرئيسية"
   }
