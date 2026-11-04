@@ -14,7 +14,12 @@ export type ShellIconName =
   | 'report'
   | 'settings'
   | 'help'
-  | 'wrench';
+  | 'wrench'
+  | 'tick'
+  | 'cross'
+  | 'ring'
+  | 'up'
+  | 'down';
 
 const stroke = {
   fill: 'none',
@@ -80,6 +85,11 @@ export function ShellIcon({ name, directional = false }: { name: ShellIconName; 
         <path {...stroke} d="M9.8 9.6a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 1.9-2.2 3.2" />
         <path {...stroke} d="M12 16.6h.01" />
       </> : null}
+      {name === 'tick' ? <path {...stroke} d="m6 12.4 4 4 8-8.6" /> : null}
+      {name === 'cross' ? <path {...stroke} d="m7 7 10 10M17 7 7 17" /> : null}
+      {name === 'ring' ? <circle {...stroke} cx="12" cy="12" r="4" /> : null}
+      {name === 'up' ? <path {...stroke} d="M12 18V6M7 11l5-5 5 5" /> : null}
+      {name === 'down' ? <path {...stroke} d="M12 6v12M7 13l5 5 5-5" /> : null}
       {name === 'wrench' ? <path {...stroke} d="M14.5 6.5a4 4 0 0 0 4.9 4.9l-9.4 9.4a2.1 2.1 0 0 1-3-3l9.4-9.4a4 4 0 0 0-1.9-1.9z" /> : null}
     </svg>
   );

@@ -1082,3 +1082,58 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
   .nz-check-page .nz-heading { font-size: 30px; }
 }
 @media (prefers-reduced-motion: reduce) { .nz-bar span, .nz-check-card, .nz-quiet-btn { transition: none; } }
+
+/* Fixes and Before and after. Logical properties so Arabic mirrors with dir. */
+.nz-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.nz-tab { min-block-size: 44px; padding-inline: 22px; border: 0; border-radius: var(--radius-pill); background: var(--card); color: var(--ink-muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); transition: transform 150ms var(--ease); }
+.nz-tab[aria-selected="true"] { background: var(--ink); color: var(--on-accent); }
+.nz-tab:active { transform: scale(.97); }
+.nz-tab:focus-visible, .nz-fix-head:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.nz-fix-list { display: grid; gap: 16px; align-content: start; min-inline-size: 0; }
+.nz-fix { display: grid; gap: 12px; padding: 20px; border-radius: var(--radius-card); min-inline-size: 0; }
+.nz-fix-waiting { background: var(--peach); }
+.nz-fix-approved { background: var(--mint); }
+.nz-fix-down { background: var(--sky); }
+.nz-fix[aria-busy="true"] { opacity: .85; }
+.nz-fix-head { display: grid; gap: 8px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: start; cursor: pointer; min-inline-size: 0; }
+.nz-fix-title { font-size: 20px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.nz-fix-by { display: flex; align-items: center; gap: 8px; color: var(--ink-muted); font-size: 14px; }
+.nz-fix-ini { display: grid; place-items: center; inline-size: 24px; block-size: 24px; flex: none; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--wrong) 18%, white); color: var(--ink); font-size: 10px; font-weight: 700; line-height: 1; }
+.nz-fix-card { display: grid; gap: 4px; padding: 16px; border-radius: 18px; background: var(--card); }
+.nz-fix-label { margin: 8px 0 0; color: var(--ink-muted); font-size: 13px; }
+.nz-fix-label:first-child { margin-block-start: 0; }
+.nz-fix-text { margin: 0; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.nz-fix-recheck, .nz-fix-wait, .nz-fix-sub { margin: 0; color: var(--ink-muted); font-size: 14px; }
+.nz-fix-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.nz-fix-actions .nz-pill-btn { flex: 1 1 auto; justify-content: center; min-block-size: 52px; }
+.nz-fix-turn { background: var(--card); }
+.nz-fix-state { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 20px; }
+.nz-fix-tick { display: grid; place-items: center; inline-size: 36px; block-size: 36px; flex: none; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--right) 16%, white); color: var(--right); }
+.nz-fix-tick svg { inline-size: 20px; block-size: 20px; }
+.nz-fix-down .nz-fix-tick { background: var(--card); color: var(--ink-muted); }
+.nz-fix-btn { justify-self: start; min-block-size: 48px; background: var(--card); }
+.nz-fix-approved .nz-fix-sub { color: var(--right); }
+.nz-fix-change, .nz-after-back { justify-content: center; }
+.nz-after-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.nz-after-stats .nz-pastel-stat { min-block-size: 140px; }
+.nz-after-stats .nz-pastel-peach { background: var(--peach); }
+.nz-after-stats .nz-pastel-mint .nz-pastel-mark { position: absolute; inset-block-start: 14px; inset-inline-end: 14px; display: grid; place-items: center; inline-size: 24px; block-size: 24px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--right) 22%, white); }
+.nz-after-stats .nz-pastel { position: relative; }
+.nz-after-stats .nz-pastel-mark svg { inline-size: 14px; block-size: 14px; }
+.nz-after-rows { list-style: none; display: grid; gap: 10px; margin: 0; padding: 0; }
+.nz-after-row { display: flex; align-items: center; gap: 12px; min-block-size: 56px; padding-inline: 16px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); font-weight: 600; }
+.nz-after-ico { display: grid; place-items: center; inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--ink) 8%, white); color: var(--ink-muted); }
+.nz-after-ico svg { inline-size: 14px; block-size: 14px; }
+.nz-after-ico-right { background: var(--mint); color: var(--right); }
+.nz-after-ico-wrong { background: var(--peach); color: var(--wrong); }
+.nz-after-lang { justify-self: start; margin: 0; padding: 6px 14px; border-radius: var(--radius-pill); background: var(--sky); color: #3f6a93; font-size: 13px; font-weight: 600; }
+@media (min-width: 1024px) {
+  .nz-fix-list { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+  .nz-fix-list > .nz-fix-change, .nz-fix-list > .nz-state, .nz-fix-list > .nz-pill-btn { grid-column: 1 / -1; justify-self: start; }
+  .nz-after-stats { grid-template-columns: 1fr 1.4fr; }
+  .nz-after-stats .nz-pastel-stat { min-block-size: 168px; }
+}
+@media (prefers-reduced-motion: reduce) { .nz-tab { transition: none; } }
+.nz-shell-desk .nz-fix .nz-pill-btn, .nz-shell-desk .nz-fix-change { min-block-size: 48px; border-radius: var(--radius-pill); }
+.nz-shell-desk .nz-fix-actions .nz-pill-btn { min-block-size: 52px; }
+.nz-fix-approve .nz-pill-ico { inline-size: 24px; block-size: 24px; }
