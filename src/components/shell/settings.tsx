@@ -38,7 +38,7 @@ function Card({ icon, tone, title, sub, href, children }: { icon: ShellIconName;
   </>;
   return href
     ? <Link href={href} className="nz-set-card nz-set-link" data-card={title}>{body}</Link>
-    : <section className="nz-set-card" data-card={title}>{body}{children}</section>;
+    : <section className="nz-set-card nz-set-flat" data-card={title}>{body}{children}</section>;
 }
 
 /** Your settings. A viewer sees the same cards without chevrons. Plain props in, markup out. */

@@ -1210,3 +1210,4 @@ a.nz-rep-btn { text-decoration: none; }
   .nz-shell[data-screen] .nz-shell-desk { inline-size: min(100%, 640px); }
 }
 .nz-shell-desk .nz-rep-btn, .nz-shell-desk .nz-hist-more, .nz-shell-desk .nz-set-actions .nz-pill-btn { min-block-size: 56px; border-radius: var(--radius-pill); }
+.nz-set-flat { display: flex; align-items: center; gap: 14px; }
