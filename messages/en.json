@@ -391,5 +391,25 @@
     "omar": "Omar",
     "yusuf": "Yusuf",
     "ahmed": "Ahmed"
+  },
+  "landing": {
+    "home": "Nazir home",
+    "switchLanguage": "العربية",
+    "lightLine": "Test your AI assistant",
+    "boldLine": "before people use it",
+    "tryDemo": "Try the demo",
+    "howItWorks": "How it works",
+    "free": "Free. No card.",
+    "heroAlt": "The Nazir home screen for Khalid, showing City Help Desk, 82 right answers and 3 to fix.",
+    "askQuestions": "Ask questions",
+    "seeMistakes": "See mistakes",
+    "fixSafely": "Fix safely",
+    "footer": "Legal"
+  },
+  "signin": {
+    "welcome": "Welcome",
+    "welcomeBold": "back",
+    "google": "Continue with Google",
+    "switchLanguage": "العربية"
   }
 }
