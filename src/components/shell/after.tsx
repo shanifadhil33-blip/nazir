@@ -73,7 +73,6 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
               <StateCard kind="empty" title={text.emptyTitle} body={text.emptyBody} />
               <PillButton variant="ink" icon="checks" label={text.goChecks} href={links.checks} />
             </>}
-            <PillButton className="nz-after-back" icon="wrench" label={text.back} href={links.fixes} />
           </>}
         </div>
       </div>

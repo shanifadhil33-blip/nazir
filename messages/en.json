@@ -512,7 +512,6 @@
     "join": ", ",
     "emptyTitle": "Nothing to compare yet",
     "emptyBody": "Run two checks to see the change.",
-    "goChecks": "Go to checks",
-    "back": "Fixes"
+    "goChecks": "Go to checks"
   }
 }

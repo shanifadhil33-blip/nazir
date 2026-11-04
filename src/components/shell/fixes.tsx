@@ -53,7 +53,7 @@ export function FixesView(props: FixesViewProps) {
   const shown = fixes.filter((item) => inTab(item, tab));
   const open = openId ?? shown.find((item) => item.status === 'waiting')?.id ?? null;
   return (
-    <main className="nz-shell nz-fixes" {...localeAttrs(lang)} data-seat={seat} data-state={phase} data-tab={tab}>
+    <main className="nz-shell nz-fixpage" {...localeAttrs(lang)} data-seat={seat} data-state={phase} data-tab={tab}>
       <div className="nz-shell-desk">
         <header className="nz-shell-head">
           <div className="nz-shell-who">

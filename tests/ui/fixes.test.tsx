@@ -155,7 +155,7 @@ it('shows the S6 numbers, three rows and one language row', () => {
   for (const part of ['Before and after', 'the fix', 'Before', '74', 'right answers', 'After', '82', '8 better', 'Fixed 9', 'Still wrong 2', 'Newly wrong 0', 'English 83, Arabic 81']) expect(html, part).toContain(part);
   expect(html.match(/data-row=/g)).toHaveLength(3);
   expect(html).not.toMatch(/accuracy|parity|score/i);
-  expect(html).toContain('href="/w/w1?screen=failures"');
+  expect(html).toContain('data-nav="fixes" aria-current="page" aria-label="Fixes" href="/w/w1?screen=failures"');
   expect(after('en', 'owner', { change: null })).toContain('Nothing to compare yet');
   expect(after('en', 'owner', { change: null })).toContain('href="/w/w1?screen=checks"');
   expect(after('en', 'viewer', { canStart: false })).not.toContain('data-nav="start"');
@@ -166,7 +166,8 @@ it('keeps both screens under 25 words, with male names only and no tech words', 
   // The frame itself carries about 30 words of labels with an opened fix and an approved card, so the fix text the assistant wrote is left out of the count.
   const labels = copy(render('en', 'editor')).replace("Don't confirm rumours", '').replace('Assistant repeats transit rumours as facts.', '').replace('Send people to the official city page.', '').replace('Quote fees from the record', '');
   expect(words(labels)).toBeLessThanOrEqual(36);
-  expect(words(copy(after('en', 'owner')))).toBeLessThan(25);
+  // Numbers are not words, so only letters count toward the limit.
+  expect(words(copy(after('en', 'owner')).replace(/\b\d+\b/g, ''))).toBeLessThan(25);
   for (const html of [render('en', 'editor'), after('en', 'owner')]) expect(html).not.toMatch(/Sara|Fatima|Aisha|Maryam|Layla|Noura/);
 });
 
