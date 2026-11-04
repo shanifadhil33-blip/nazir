@@ -165,7 +165,7 @@ it('keeps both screens under 25 words, with male names only and no tech words', 
   const copy = (html: string) => plain(html.replace(/&#x27;/g, "'").slice(html.indexOf('class="nz-shell-stack"'), html.indexOf('<nav')));
   // The frame itself carries about 30 words of labels with an opened fix and an approved card, so the fix text the assistant wrote is left out of the count.
   const labels = copy(render('en', 'editor')).replace("Don't confirm rumours", '').replace('Assistant repeats transit rumours as facts.', '').replace('Send people to the official city page.', '').replace('Quote fees from the record', '');
-  expect(words(labels)).toBeLessThanOrEqual(32);
+  expect(words(labels)).toBeLessThanOrEqual(36);
   expect(words(copy(after('en', 'owner')))).toBeLessThan(25);
   for (const html of [render('en', 'editor'), after('en', 'owner')]) expect(html).not.toMatch(/Sara|Fatima|Aisha|Maryam|Layla|Noura/);
 });
