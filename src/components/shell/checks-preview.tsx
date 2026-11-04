@@ -28,12 +28,12 @@ export function previewChecks(lang: Lang, now: Date): CheckRow[] {
   ];
 }
 
-export function ChecksPreview({ lang, seat, state }: { lang: Lang; seat: Seat; state: 'list' | 'check' | 'running' | 'empty' | 'loading' | 'error' }) {
+export function ChecksPreview({ lang, seat, state }: { lang: Lang; seat: Seat; state: 'list' | 'check' | 'running' | 'empty' | 'loading' | 'error' | 'limit' | 'offline' }) {
   const [now] = useState(() => new Date());
   const [openId, setOpenId] = useState<string | null>(state === 'check' ? 'quick' : null);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
   const [running, setRunning] = useState(state === 'running' ? { runId: 'preview', done: 9, total: 16 } : null);
-  const [note, setNote] = useState<'stopped' | 'suggested' | null>(null);
+  const [note, setNote] = useState<'stopped' | 'suggested' | 'limit' | 'unreachable' | null>(state === 'limit' ? 'limit' : state === 'offline' ? 'unreachable' : null);
   const copy = messagesFor(lang);
   const checks = state === 'empty' ? [] : previewChecks(lang, now);
   return <ChecksView
