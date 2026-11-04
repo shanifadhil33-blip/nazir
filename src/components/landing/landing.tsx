@@ -33,7 +33,7 @@ export function HeroPhone({ lang }: { lang: Lang }) {
 export function Landing({ lang }: { lang: Lang }) {
   const copy = messagesFor(lang);
   const attrs = localeAttrs(lang);
-  const signin = lang === 'ar' ? '/signin?lang=ar' : '/signin';
+  const signin = lang === 'ar' ? '/signin?lang=ar#demo' : '/signin#demo';
   return (
     <div className="nz-site" {...attrs}>
       <SiteBar lang={lang} path="/" signInLink />

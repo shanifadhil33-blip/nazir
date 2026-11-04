@@ -416,7 +416,17 @@
     "welcome": "Welcome",
     "welcomeBold": "back",
     "google": "Continue with Google",
-    "switchLanguage": "العربية"
+    "switchLanguage": "العربية",
+    "demoTitle": "Or look around as",
+    "demoNext": "You will land on the home screen as this person.",
+    "demoOwnerName": "Omar, service owner",
+    "demoOwnerLine": "Runs checks, approves fixes and sees everything.",
+    "demoEditorName": "Yusuf, quality reviewer",
+    "demoEditorLine": "Reviews answers and decides what counts as a mistake.",
+    "demoViewerName": "Khalid, viewer",
+    "demoViewerLine": "Looks at results and reports. Cannot change anything.",
+    "demoSupplierName": "Bilal, supplier",
+    "demoSupplierLine": "Maintains the assistant and suggests fixes for review."
   },
   "checksScreen": {
     "light": "Your",
