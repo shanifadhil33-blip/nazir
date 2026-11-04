@@ -82,18 +82,18 @@ it('shows Settings cards to everyone and chevrons only to people who can edit', 
     expect(settingsAccess([role]).reset, role).toBe(can([role], 'demo.reset'));
   }
   const owner = settings('en', 'owner');
-  for (const line of ['Your', 'settings', 'Assistant', 'City Help Desk', 'connected', 'Topic', 'Language', 'English', 'People', 'Khalid', 'Omar', 'Yusuf', 'Ahmed', 'Owner', 'Fixer', 'Reviewer', 'Viewer', 'Start the demo again']) expect(owner, line).toContain(line);
+  for (const line of ['Your', 'settings', 'Assistant', 'City Help Desk', 'connected', 'Topic', 'Language', 'English', 'People', 'Khalid', 'Omar', 'Yusuf', 'Ahmed', 'Owner', 'Fixer', 'Reviewer', 'Viewer', 'Start again']) expect(owner, line).toContain(line);
   expect(owner).toContain('>KH<');
   expect(owner).toContain(links.editor.replace('&', '&amp;'));
   expect(owner).not.toContain('You can view this');
   const viewer = settings('en', 'viewer');
   expect(viewer).toContain('You can view this');
-  expect(viewer).not.toContain('Start the demo again');
+  expect(viewer).not.toContain('Start again');
   expect(viewer).not.toContain('settings=open');
   expect(viewer).not.toContain('nz-set-link');
   expect(viewer).toContain('Assistant');
-  expect(settings('en', 'editor')).not.toContain('Start the demo again');
-  expect(settings('en', 'supplier')).not.toContain('Start the demo again');
+  expect(settings('en', 'editor')).not.toContain('Start again');
+  expect(settings('en', 'supplier')).not.toContain('Start again');
 });
 
 it('asks before starting the demo again, and says what happened', () => {
@@ -160,7 +160,7 @@ it('keeps every key in English and Arabic and the copy rules', () => {
       if (lang === en) expect(value as string, name).not.toBe((value as string).toUpperCase());
     }
   }
-  expect(en.settingsScreen.startAgain).toBe('Start the demo again');
+  expect(en.settingsScreen.startAgain).toBe('Start again');
 });
 
 it('keeps each screen under 25 words of its own copy', () => {
