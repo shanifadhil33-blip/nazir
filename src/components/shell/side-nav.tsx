@@ -3,15 +3,15 @@ import type { Messages } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
-import { navIcon, navItems, navLabel, type NavLinks } from './nav';
+import { navIcon, navItems, navLabel, type NavId, type NavLinks } from './nav';
 
-export function SideNav({ lang, seat, copy, canStart, links = {} }: { lang: 'en' | 'ar'; seat: Seat; copy: Messages; canStart?: boolean; links?: NavLinks }) {
+export function SideNav({ lang, seat, copy, canStart, links = {}, current: here = 'home' }: { lang: 'en' | 'ar'; seat: Seat; copy: Messages; canStart?: boolean; links?: NavLinks; current?: NavId }) {
   const items = navItems(seat, canStart);
   return (
     <nav className="nz-side-nav" aria-label={copy.shell.nav} {...localeAttrs(lang)} data-seat={seat}>
       {items.map((id) => {
         const className = id === 'start' ? 'nz-side-start' : 'nz-side-item';
-        const current = id === 'home' ? 'page' : undefined;
+        const current = id === here ? 'page' : undefined;
         const inner = <><ShellIcon name={navIcon(id)} directional={id === 'start'} /><span>{navLabel(copy, id)}</span></>;
         const href = links[id];
         return href

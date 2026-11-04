@@ -91,7 +91,7 @@ export function homeLinks(workspaceId: string): HomeLinks {
   return {
     home: base,
     start: `${base}?screen=chat`,
-    checks: `${base}?screen=score`,
+    checks: `${base}?screen=checks`,
     fixes: `${base}?screen=failures`,
     report: `${base}/report`,
     settings: `${base}?screen=chat&settings=open`,
