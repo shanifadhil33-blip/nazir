@@ -1137,3 +1137,77 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-shell-desk .nz-fix .nz-pill-btn, .nz-shell-desk .nz-fix-change { min-block-size: 48px; border-radius: var(--radius-pill); }
 .nz-shell-desk .nz-fix-actions .nz-pill-btn { min-block-size: 52px; }
 .nz-fix-approve .nz-pill-ico { inline-size: 24px; block-size: 24px; }
+
+/* History, Settings and Report. Logical properties so Arabic mirrors with dir. */
+.nz-hist-group { display: grid; gap: 10px; min-inline-size: 0; }
+.nz-hist-day { margin: 8px 0 0; padding-inline: 4px; color: var(--ink-muted); font-size: 14px; font-weight: 500; }
+.nz-hist-list { list-style: none; display: grid; gap: 12px; margin: 0; padding: 0; }
+.nz-hist-row { display: flex; align-items: center; gap: 14px; min-block-size: 68px; padding: 14px 16px; border-radius: 22px; background: var(--card); box-shadow: var(--shadow); min-inline-size: 0; }
+.nz-hist-ini { display: grid; place-items: center; inline-size: 44px; block-size: 44px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #3b5f86; font-size: 14px; font-weight: 700; line-height: 1; }
+.nz-hist-ini svg { inline-size: 22px; block-size: 22px; }
+.nz-hist-row[data-kind="approved"] .nz-hist-ini, .nz-hist-row[data-kind="checkDone"] .nz-hist-ini { background: var(--mint); color: var(--right); }
+.nz-hist-row[data-kind="suggested"] .nz-hist-ini { background: var(--peach); color: var(--wrong); }
+.nz-hist-text { display: grid; gap: 2px; flex: 1 1 auto; min-inline-size: 0; }
+.nz-hist-text strong { font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.nz-hist-text small { color: var(--ink-muted); font-size: 13px; overflow-wrap: anywhere; }
+.nz-hist-time { flex: none; align-self: flex-start; color: var(--ink-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nz-hist-more { justify-content: center; min-block-size: 52px; }
+
+.nz-set-card { display: grid; gap: 12px; padding: 16px 18px; border-radius: 24px; background: var(--card); box-shadow: var(--shadow); color: var(--ink); text-decoration: none; min-inline-size: 0; }
+a.nz-set-link, .nz-set-head { display: flex; align-items: center; gap: 14px; min-block-size: 56px; margin-block: -6px; padding: 0; border: 0; color: inherit; font: inherit; text-align: start; cursor: pointer; min-inline-size: 0; transition: transform 150ms var(--ease); }
+a.nz-set-link { padding: 16px 18px; margin-block: 0; background: var(--card); }
+.nz-set-head { background: none; inline-size: 100%; }
+a.nz-set-link:active, .nz-set-head:active { transform: scale(.98); }
+a.nz-set-link:focus-visible, .nz-set-head:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 16px; }
+.nz-set-ico { display: grid; place-items: center; inline-size: 44px; block-size: 44px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #4f6f90; }
+.nz-set-ico svg { inline-size: 22px; block-size: 22px; }
+.nz-set-ico-mint { background: var(--mint); color: var(--right); }
+.nz-set-ico-peach { background: var(--peach); color: #c9631f; }
+.nz-set-ico-lilac { background: #ece6f8; color: #6e5aa8; }
+.nz-set-ico-red { background: #fbe3e0; color: var(--wrong); }
+.nz-set-text { display: grid; gap: 2px; flex: 1 1 auto; min-inline-size: 0; }
+.nz-set-text strong { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.nz-set-text small { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--ink-muted); font-size: 13px; overflow-wrap: anywhere; }
+.nz-set-dot { inline-size: 7px; block-size: 7px; flex: none; border-radius: var(--radius-pill); background: var(--right); }
+.nz-set-go { display: grid; place-items: center; inline-size: 24px; block-size: 24px; flex: none; color: var(--ink-muted); transition: transform 150ms var(--ease); }
+.nz-set-go svg { inline-size: 20px; block-size: 20px; }
+[dir="rtl"] .nz-set-go svg { transform: scaleX(-1); }
+.nz-set-go[data-open="true"] { transform: rotate(90deg); }
+[dir="rtl"] .nz-set-go[data-open="true"] { transform: rotate(-90deg); }
+.nz-set-list { list-style: none; display: grid; gap: 4px; margin: 0; padding: 12px 0 0; border-block-start: 1px solid var(--line); }
+.nz-set-person { display: flex; align-items: center; gap: 14px; min-block-size: 48px; min-inline-size: 0; }
+.nz-set-ini { display: grid; place-items: center; inline-size: 36px; block-size: 36px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #3b5f86; font-size: 12px; font-weight: 700; line-height: 1; }
+.nz-set-person[data-role="fixer"] .nz-set-ini { background: var(--peach); color: #c9631f; }
+.nz-set-person[data-role="reviewer"] .nz-set-ini { background: var(--mint); color: var(--right); }
+.nz-set-person[data-role="viewer"] .nz-set-ini { background: #ece6f8; color: #6e5aa8; }
+.nz-set-name { flex: 1 1 auto; font-size: 15px; font-weight: 500; min-inline-size: 0; overflow-wrap: anywhere; }
+.nz-set-chip { flex: none; padding: 4px 12px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; line-height: 1.4; background: var(--sky); color: #3b5f86; }
+.nz-set-chip-fixer { background: var(--peach); color: #c9631f; }
+.nz-set-chip-reviewer { background: var(--mint); color: var(--right); }
+.nz-set-chip-viewer { background: #ece6f8; color: #6e5aa8; }
+.nz-set-red { color: var(--wrong); }
+.nz-set-sure { margin: 0; font-size: 15px; font-weight: 600; }
+.nz-set-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.nz-set-actions .nz-pill-btn { flex: 1 1 auto; justify-content: center; min-block-size: 52px; }
+.nz-set-reset .nz-note-line { box-shadow: none; background: var(--page); }
+
+.nz-rep-hero { display: grid; gap: 8px; padding: 24px; border-radius: var(--radius-card); background: var(--mint); }
+.nz-rep-headline { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.nz-rep-caption { margin: 0; color: var(--right); font-size: 14px; }
+.nz-rep-rows { list-style: none; display: grid; gap: 12px; margin: 0; padding: 0; }
+.nz-rep-row { display: flex; align-items: center; gap: 14px; min-block-size: 60px; padding: 10px 16px; border-radius: 22px; background: var(--card); box-shadow: var(--shadow); font-size: 15px; font-weight: 500; }
+.nz-rep-ico { display: grid; place-items: center; inline-size: 36px; block-size: 36px; flex: none; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--ink) 8%, white); color: var(--ink); }
+.nz-rep-ico svg { inline-size: 18px; block-size: 18px; }
+.nz-rep-ico-right { background: var(--mint); color: var(--right); }
+.nz-rep-ico-wrong { background: var(--peach); color: var(--wrong); }
+.nz-rep-label { flex: 1 1 auto; min-inline-size: 0; overflow-wrap: anywhere; }
+.nz-rep-value { flex: none; font-size: 16px; font-variant-numeric: tabular-nums; }
+.nz-rep-dot { inline-size: 8px; block-size: 8px; flex: none; border-radius: var(--radius-pill); background: var(--right); }
+.nz-rep-btn { justify-content: center; min-block-size: 56px; }
+a.nz-rep-btn { text-decoration: none; }
+
+@media (min-width: 900px) {
+  .nz-shell[data-screen] .nz-shell-desk { inline-size: min(100%, 640px); }
+}
+.nz-shell-desk .nz-rep-btn, .nz-shell-desk .nz-hist-more, .nz-shell-desk .nz-set-actions .nz-pill-btn { min-block-size: 56px; border-radius: var(--radius-pill); }
+.nz-set-flat { display: flex; align-items: center; gap: 14px; }

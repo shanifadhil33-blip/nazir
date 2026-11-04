@@ -84,14 +84,15 @@ export function FixesView(props: FixesViewProps) {
           </>}
         </div>
       </div>
-      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={props.canStart} current="fixes" links={navLinks(links)} />
-      <SideNav lang={lang} seat={seat} copy={copy} canStart={props.canStart} current="fixes" links={navLinks(links)} />
+      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={props.canStart} current="fixes" links={navLinks(links, seat)} />
+      <SideNav lang={lang} seat={seat} copy={copy} canStart={props.canStart} current="fixes" links={navLinks(links, seat)} />
     </main>
   );
 }
 
-export function navLinks(go: HomeLinks) {
-  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: go.more };
+export function navLinks(go: HomeLinks, seat: Seat) {
+  // A viewer cannot read History, so More opens Settings for them.
+  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
 }
 
 function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction }: {

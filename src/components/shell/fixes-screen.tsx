@@ -90,6 +90,11 @@ export function FixesScreen({ workspaceId, initialLang, mode }: { workspaceId: s
     return { ok: Boolean(response?.ok && payload?.done), data: payload?.data };
   }
 
+  function decidedNow(status: 'approved' | 'turnedDown') {
+    const me = person ?? personFor(seat, copy);
+    return { at: new Date().toISOString(), name: me.name, initials: me.initials, status };
+  }
+
   async function act(id: string, action: FixAction) {
     const allowed = action === 'recheck' ? access.recheck : access.decide;
     if (!allowed || inFlight.current.has(id)) return;
@@ -102,8 +107,8 @@ export function FixesScreen({ workspaceId, initialLang, mode }: { workspaceId: s
     setBusy(null);
     const current = readStore(localStorage.getItem(storeKeyFor(workspaceId)));
     if (!result.ok) { setNote(action === 'recheck' ? 'rerunFailed' : 'failed'); return; }
-    if (action === 'approve') { save(patchFix(current, id, { status: 'approved', recheck: recheckCount(result.data) })); setNote('approvedNote'); }
-    else if (action === 'reject') { save(patchFix(current, id, { status: 'turnedDown' })); setNote('turnedNote'); }
+    if (action === 'approve') { save(patchFix(current, id, { status: 'approved', recheck: recheckCount(result.data), decided: decidedNow('approved') })); setNote('approvedNote'); }
+    else if (action === 'reject') { save(patchFix(current, id, { status: 'turnedDown', decided: decidedNow('turnedDown') })); setNote('turnedNote'); }
     else { save(patchFix(current, id, { rerun: true })); setNote('rerunStarted'); }
   }
 

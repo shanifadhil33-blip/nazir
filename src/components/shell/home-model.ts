@@ -83,7 +83,7 @@ export function lastCheckText(at: Date | null, now: Date, copy: Messages): strin
   return fill(copy.shell.daysAgo, { n: String(days) });
 }
 
-export type HomeLinks = { start: string; fixes: string; report: string; settings: string; checks: string; more: string; home: string; after: string };
+export type HomeLinks = { start: string; fixes: string; report: string; settings: string; checks: string; more: string; home: string; after: string; history: string; editor: string };
 
 /** Where each tap goes for one workspace. */
 export function homeLinks(workspaceId: string): HomeLinks {
@@ -95,7 +95,9 @@ export function homeLinks(workspaceId: string): HomeLinks {
     fixes: `${base}?screen=failures`,
     after: `${base}?screen=after`,
     report: `${base}/report`,
-    settings: `${base}?screen=chat&settings=open`,
-    more: `${base}/report`,
+    settings: `${base}?screen=settings`,
+    editor: `${base}?screen=chat&settings=open`,
+    history: `${base}?screen=history`,
+    more: `${base}?screen=history`,
   };
 }
