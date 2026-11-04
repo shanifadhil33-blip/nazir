@@ -390,7 +390,22 @@
     "khalidFull": "Khalid Hassan",
     "omar": "Omar",
     "yusuf": "Yusuf",
-    "ahmed": "Ahmed"
+    "ahmed": "Ahmed",
+    "letsCheck": "Let's check",
+    "yourAssistantBold": "your assistant",
+    "firstCheckNote": "Your first check takes about two minutes",
+    "startFirst": "Start first check",
+    "viewOnly": "You can view this",
+    "safe": "safe",
+    "needsCare": "needs care",
+    "notSafeYet": "not safe yet",
+    "noChecksBold": "has no checks yet",
+    "yesterday": "Yesterday",
+    "daysAgo": "{n} days ago",
+    "retry": "Try again",
+    "signInAgain": "Sign in",
+    "noChecksYet": "None yet",
+    "noAlerts": "Nothing new"
   },
   "landing": {
     "home": "Nazir home",

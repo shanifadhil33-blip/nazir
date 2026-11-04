@@ -23,13 +23,14 @@ type Membership = {
 };
 
 export function WorkspaceApp({
-  workspaceId, preview = false, initialLang = 'en', initialRole = 'owner', initialScreen = 'chat', reportId, shared = false,
+  workspaceId, preview = false, initialLang = 'en', initialRole = 'owner', initialScreen = 'chat', initialSettingsOpen = false, reportId, shared = false,
 }: {
   workspaceId: string;
   preview?: boolean;
   initialLang?: Lang;
   initialRole?: Seat;
   initialScreen?: ScreenId;
+  initialSettingsOpen?: boolean;
   reportId?: string;
   shared?: boolean;
 }) {
@@ -51,7 +52,7 @@ export function WorkspaceApp({
   const [measured, setMeasured] = useState<Measured | null>(null);
   const [liveOpen, setLiveOpen] = useState(false);
   const [runStarted, setRunStarted] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(initialSettingsOpen);
   const [packs, setPacks] = useState<PackView[] | null>(null);
   const thread = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);

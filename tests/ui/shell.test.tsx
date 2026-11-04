@@ -53,7 +53,7 @@ it('keeps English nav in logical order and sets dir=ltr', () => {
   expect(floating).toEqual(navItems('owner'));
   expect(visualNavOrder(floating, 'ltr')).toEqual(['home', 'checks', 'start', 'fixes', 'more']);
   expect(html).toContain('Your assistant');
-  expect(html).toContain('is doing well');
+  expect(html).toContain('Your assistant is');
   expect(html).toContain('mostly safe');
   expect(html).toContain('City Help Desk');
   expect(html).toContain('>82<');
@@ -68,11 +68,13 @@ it('hides the centre start button for a viewer and keeps it for the other seats'
   expect(viewer).not.toContain('data-nav="start"');
   expect(viewer).toContain('Ahmed');
   expect(viewer).toContain('>AK<');
-  for (const seat of ['owner', 'editor', 'supplier'] as const) {
+  for (const seat of ['owner', 'editor'] as const) {
     const html = renderToStaticMarkup(<ShellHome lang="en" seat={seat} />);
     expect(navIds(html, 'nz-float-nav')).toContain('start');
     expect(navIds(html, 'nz-side-nav')).toContain('start');
   }
+  // The server lets only an owner or a reviewer start a check, so a fixer does not see the button.
+  expect(navIds(renderToStaticMarkup(<ShellHome lang="en" seat="supplier" />), 'nz-float-nav')).not.toContain('start');
   expect(renderToStaticMarkup(<ShellHome lang="en" seat="owner" />)).toContain('Khalid Hassan');
   expect(renderToStaticMarkup(<ShellHome lang="en" seat="supplier" />)).toContain('Omar');
   expect(renderToStaticMarkup(<ShellHome lang="en" seat="editor" />)).toContain('Yusuf');

@@ -152,6 +152,7 @@ export function WorkspaceScreen({
           {seat === 'viewer' ? <span className="nz-viewer">{copy.ui.viewer}</span> : null}
           <button type="button" className="nz-btn nz-btn-ghost nz-user" aria-expanded={menu} aria-haspopup="menu" aria-label={copy.ui.menu} onClick={() => setMenu((open) => !open)}>{userName}</button>
           {menu ? <div className="nz-menu-pop" role="menu">
+            <Link role="menuitem" href="/w">{copy.shell.home}</Link>
             <Link role="menuitem" href="/api/auth/signout">{copy.ui.signOut}</Link>
             <Link role="menuitem" href="/privacy">{copy.privacy}</Link>
             <Link role="menuitem" href="/terms">{copy.terms}</Link>

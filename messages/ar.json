@@ -390,7 +390,22 @@
     "khalidFull": "خالد حسن",
     "omar": "عمر",
     "yusuf": "يوسف",
-    "ahmed": "أحمد"
+    "ahmed": "أحمد",
+    "letsCheck": "لنفحص",
+    "yourAssistantBold": "مساعدك",
+    "firstCheckNote": "يستغرق أول فحص دقيقتين تقريبا",
+    "startFirst": "ابدأ أول فحص",
+    "viewOnly": "يمكنك الاطلاع على هذا",
+    "safe": "آمن",
+    "needsCare": "يحتاج إلى عناية",
+    "notSafeYet": "غير آمن بعد",
+    "noChecksBold": "ليس لديه فحوص بعد",
+    "yesterday": "أمس",
+    "daysAgo": "قبل {n} أيام",
+    "retry": "حاول مرة أخرى",
+    "signInAgain": "سجل الدخول",
+    "noChecksYet": "لا شيء بعد",
+    "noAlerts": "لا جديد"
   },
   "landing": {
     "home": "الصفحة الرئيسية لنظير",
