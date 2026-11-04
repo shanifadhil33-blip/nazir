@@ -103,6 +103,13 @@ it('asks before starting the demo again, and says what happened', () => {
   expect(settings('en', 'owner', 'failed')).toContain('Could not start again');
 });
 
+it('names a person by their strongest role', () => {
+  expect(roleWord(['viewer'])).toBe('viewer');
+  expect(roleWord(['quality_reviewer'])).toBe('reviewer');
+  expect(roleWord(['supplier_maintainer', 'quality_reviewer'])).toBe('fixer');
+  expect(roleWord(['viewer', 'service_owner'])).toBe('owner');
+});
+
 it('keeps Settings free of extra rows', () => {
   const text = plain(settings('en', 'owner')).toLowerCase();
   for (const extra of ['dialect', 'quiet hours', 'notifications']) expect(text).not.toContain(extra);
