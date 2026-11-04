@@ -416,7 +416,17 @@
     "welcome": "مرحبًا",
     "welcomeBold": "بعودتك",
     "google": "المتابعة عبر Google",
-    "switchLanguage": "English"
+    "switchLanguage": "English",
+    "demoTitle": "أو تجوّل بصفة",
+    "demoNext": "ستصل إلى الشاشة الرئيسية بصفة هذا الشخص.",
+    "demoOwnerName": "عمر، مالك الخدمة",
+    "demoOwnerLine": "يشغّل الفحوصات ويعتمد الإصلاحات ويرى كل شيء.",
+    "demoEditorName": "يوسف، مراجع الجودة",
+    "demoEditorLine": "يراجع الإجابات ويقرر ما يُعدّ خطأ.",
+    "demoViewerName": "خالد، مشاهد",
+    "demoViewerLine": "يطّلع على النتائج والتقارير ولا يغيّر شيئًا.",
+    "demoSupplierName": "بلال، المورّد",
+    "demoSupplierLine": "يصون المساعد ويقترح إصلاحات للمراجعة."
   },
   "checksScreen": {
     "light": "فحوصاتك",

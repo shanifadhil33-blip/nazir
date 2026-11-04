@@ -1235,3 +1235,12 @@ a.nz-rep-btn { text-decoration: none; }
 }
 .nz-shell-desk .nz-rep-btn, .nz-shell-desk .nz-hist-more, .nz-shell-desk .nz-set-actions .nz-pill-btn { min-block-size: 56px; border-radius: var(--radius-pill); }
 .nz-set-flat { display: flex; align-items: center; gap: 14px; }
+.nz-demo-picker { display: grid; gap: 12px; padding-block-start: 4px; }
+.nz-demo-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.nz-demo-list { display: grid; gap: 10px; }
+.nz-demo-list form { display: block; }
+.nz-demo-btn { inline-size: 100%; cursor: pointer; }
+.nz-demo-btn:disabled { cursor: progress; opacity: .7; }
+.nz-demo-text { display: grid; gap: 2px; font-size: 14px; }
+.nz-demo-text span { color: color-mix(in srgb, var(--ink) 70%, transparent); font-size: 13px; }
+.nz-demo-next { margin: 0; font-size: 13px; color: color-mix(in srgb, var(--ink) 70%, transparent); }

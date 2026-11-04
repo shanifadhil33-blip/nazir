@@ -5,6 +5,8 @@ import { LocaleScript } from '@/components/landing/locale-script';
 import { DocumentLocale } from '@/components/shell/document-locale';
 import { langOf } from '@/components/landing/lang';
 import { ensureHomeWorkspace } from '@/server/auth/workspaces';
+import { demoSignIn } from '@/server/auth/demo-action';
+import { demoLoginEnabled } from '@/server/auth/demo';
 import { runtimeDriver } from '@/server/db/runtime';
 
 export const dynamic = 'force-dynamic';
@@ -20,5 +22,5 @@ export default async function SignInPage({ searchParams }: { searchParams?: Prom
     'use server';
     await signIn('google', { redirectTo: '/w' });
   }
-  return <><LocaleScript lang={lang} /><DocumentLocale lang={lang} /><SignIn lang={lang} action={signInWithGoogle} /></>;
+  return <><LocaleScript lang={lang} /><DocumentLocale lang={lang} /><SignIn lang={lang} action={signInWithGoogle} demoAction={demoLoginEnabled() ? demoSignIn : undefined} /></>;
 }

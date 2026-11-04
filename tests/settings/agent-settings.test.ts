@@ -40,7 +40,7 @@ it('lets only the owner save, never returns the key, masks it to the last 4, hid
   expect(saved.llm?.key_last4).toBe('wxyz');
   expect(saved.integrations).toEqual(['slack', 'github']);
   expect(saved.can_edit).toBe(true);
-  const raw = (await db.owner.query<{ c: string }>('SELECT llm_key_cipher AS c FROM nazir.agent_settings')).rows[0]!.c;
+  const raw = (await db.owner.query<{ c: string }>('SELECT llm_key_cipher AS c FROM nazir.agent_settings WHERE llm_key_cipher IS NOT NULL')).rows[0]!.c;
   expect(raw).not.toContain(key);
   const seen = await readAgentSettings(db.driver, viewer);
   expect(JSON.stringify(seen)).not.toContain('wxyz');
