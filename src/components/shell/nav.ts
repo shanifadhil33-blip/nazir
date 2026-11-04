@@ -6,9 +6,12 @@ export const navOrder = ['home', 'checks', 'start', 'fixes', 'more'] as const;
 export type NavId = (typeof navOrder)[number];
 
 /** Logical reading order. The centre start action is omitted for a viewer. */
-export function navItems(seat: Seat): NavId[] {
-  return navOrder.filter((id) => id !== 'start' || seat !== 'viewer');
+export function navItems(seat: Seat, canStart: boolean = seat !== 'viewer'): NavId[] {
+  return navOrder.filter((id) => id !== 'start' || canStart);
 }
+
+/** Where each nav item goes. Missing entries stay plain buttons. */
+export type NavLinks = Partial<Record<NavId, string>>;
 
 /** Visual order after the document direction mirrors a row. Tab order stays logical. */
 export function visualNavOrder(items: readonly NavId[], dir: 'ltr' | 'rtl'): NavId[] {

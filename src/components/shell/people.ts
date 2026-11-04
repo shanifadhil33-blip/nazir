@@ -8,3 +8,10 @@ export function personFor(seat: Seat, copy: Messages): { initials: string; name:
   if (seat === 'viewer') return { initials: 'AK', name: copy.shell.ahmed, full: copy.shell.ahmed };
   return { initials: 'KH', name: copy.shell.khalid, full: copy.shell.khalidFull };
 }
+
+/** Up to two initials from a real name. Arabic names use the first letter of each of the first two words. */
+export function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  const letters = words.map((word) => Array.from(word)[0] ?? '').join('');
+  return /^[a-z]+$/i.test(letters) ? letters.toUpperCase() : letters;
+}

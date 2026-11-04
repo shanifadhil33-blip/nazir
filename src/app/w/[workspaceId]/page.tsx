@@ -1,3 +1,4 @@
+import { HomeScreen } from '@/components/shell/home-screen';
 import { WorkspaceApp } from '@/components/ocean/workspace-app';
 import type { Lang } from '@/components/ocean/copy';
 import type { ScreenId, Seat } from '@/components/ocean/model';
@@ -16,8 +17,10 @@ function screenOf(value?: string): ScreenId {
   return 'chat';
 }
 
-export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ workspaceId: string }>; searchParams: Promise<{ preview?: string; lang?: string; role?: string; screen?: string }> }) {
+export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ workspaceId: string }>; searchParams: Promise<{ preview?: string; lang?: string; role?: string; screen?: string; settings?: string }> }) {
   const { workspaceId } = await params;
   const query = await searchParams;
-  return <WorkspaceApp workspaceId={workspaceId} preview={query.preview === 'ocean'} initialLang={langOf(query.lang)} initialRole={seatOf(query.role)} initialScreen={screenOf(query.screen)} />;
+  // No screen asked for: the home. Every tap on it opens one of the screens below.
+  if (query.preview !== 'ocean' && query.screen === undefined) return <HomeScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} />;
+  return <WorkspaceApp workspaceId={workspaceId} preview={query.preview === 'ocean'} initialLang={langOf(query.lang)} initialRole={seatOf(query.role)} initialScreen={screenOf(query.screen)} initialSettingsOpen={query.settings === 'open'} />;
 }
