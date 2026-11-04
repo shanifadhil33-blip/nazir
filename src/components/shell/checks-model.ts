@@ -88,6 +88,6 @@ export function suggestMessage(findingId: string, lang: Lang) {
 /** The two messages the server expects to start a check. The reason line is the exact approval wording. */
 export function approvalMessage(planId: string, lang: Lang) {
   return lang === 'ar'
-    ? `أوافق على الخطة ${planId} وأبدأ التشغيل لأنني راجعت حجم الفحص والتكلفة. اطلعت على الدليل.`
+    ? `أوافق على الخطة ${planId} وأبدأ التشغيل لأن مراجعتي لحجم الفحص والتكلفة تمت. اطلعت على الدليل.`
     : `I approve plan ${planId} and start the run because I reviewed the check size and cost. I opened the evidence.`;
 }

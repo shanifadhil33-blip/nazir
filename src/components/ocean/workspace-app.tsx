@@ -234,7 +234,7 @@ export function WorkspaceApp({
     if (!canApprove(roles, shared)) return;
     if (!id) { push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.nothingChanged }); return; }
     const message = lang === 'ar'
-      ? `أوافق على الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية في عرض الخطأ. اطلعت على الدليل.`
+      ? `أوافق على الإصلاح ${id} لأن مراجعتي للإجابة المتوقعة والإجابة الفعلية تمت في عرض الخطأ. اطلعت على الدليل.`
       : `I approve repair ${id} because I reviewed the expected and actual answers in the failure view. I opened the evidence.`;
     void send(message, copy.ui.approve);
   }
@@ -243,7 +243,7 @@ export function WorkspaceApp({
     if (!canApprove(roles, shared)) return;
     if (!id) { push({ id: crypto.randomUUID(), kind: 'note', title: copy.ui.note, body: copy.ui.nothingChanged }); return; }
     const message = lang === 'ar'
-      ? `أرفض الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية ولا أوافق على التغيير الآن. اطلعت على الدليل.`
+      ? `أرفض الإصلاح ${id} لأن مراجعتي للإجابة المتوقعة والإجابة الفعلية تمت ولا أوافق على التغيير الآن. اطلعت على الدليل.`
       : `I reject repair ${id} because I reviewed the expected and actual answers and do not accept this change yet. I opened the evidence.`;
     void send(message, copy.ui.skip);
   }

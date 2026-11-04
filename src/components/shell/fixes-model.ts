@@ -85,11 +85,11 @@ export function recheckCount(data: unknown): number | null {
 export function decisionMessage(id: string, decision: 'approve' | 'reject', lang: Lang) {
   if (decision === 'approve') {
     return lang === 'ar'
-      ? `أوافق على الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية في عرض الخطأ. اطلعت على الدليل.`
+      ? `أوافق على الإصلاح ${id} لأن مراجعتي للإجابة المتوقعة والإجابة الفعلية تمت في عرض الخطأ. اطلعت على الدليل.`
       : `I approve repair ${id} because I reviewed the expected and actual answers in the failure view. I opened the evidence.`;
   }
   return lang === 'ar'
-    ? `أرفض الإصلاح ${id} لأنني راجعت الإجابة المتوقعة والإجابة الفعلية ولا أوافق على التغيير الآن. اطلعت على الدليل.`
+    ? `أرفض الإصلاح ${id} لأن مراجعتي للإجابة المتوقعة والإجابة الفعلية تمت ولا أوافق على التغيير الآن. اطلعت على الدليل.`
     : `I reject repair ${id} because I reviewed the expected and actual answers and do not accept this change yet. I opened the evidence.`;
 }
 
