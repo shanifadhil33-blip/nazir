@@ -78,7 +78,7 @@ export function ShellHome({
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
         </header>
         <div className="nz-shell-stack">
-          {state !== 'ready' ? <StatePanel copy={copy} state={state} onRetry={onRetry} /> : <>
+          {state !== 'ready' ? <StatePanel copy={copy} state={state} onRetry={onRetry} fallback={go.home} /> : <>
             <Heading light={heading.light} bold={heading.bold} lang={lang} />
             {variant === 'first' ? <>
               <section className="nz-first-card">
@@ -105,7 +105,7 @@ function navLinks(go: HomeLinks, seat: Seat) {
   return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
 }
 
-function StatePanel({ copy, state, onRetry }: { copy: ReturnType<typeof messagesFor>; state: Exclude<ShellState, 'ready'>; onRetry?: () => void }) {
+function StatePanel({ copy, state, onRetry, fallback }: { copy: ReturnType<typeof messagesFor>; state: Exclude<ShellState, 'ready'>; onRetry?: () => void; fallback: string }) {
   const titles = {
     loading: copy.shell.loadingTitle,
     error: copy.shell.errorTitle,
@@ -114,6 +114,7 @@ function StatePanel({ copy, state, onRetry }: { copy: ReturnType<typeof messages
     offline: copy.shell.offlineTitle,
     view: copy.shell.viewOnly,
   } as const;
-  const action = onRetry && (state === 'error' || state === 'offline') ? { label: copy.shell.retry, onClick: onRetry } : null;
+  const again = state === 'error' || state === 'offline';
+  const action = again ? { label: copy.shell.retry, ...(onRetry ? { onClick: onRetry } : { href: fallback }) } : null;
   return <StateCard kind={state} title={titles[state]} action={action} />;
 }
