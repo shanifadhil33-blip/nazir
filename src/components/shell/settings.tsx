@@ -34,7 +34,7 @@ function Card({ icon, tone, title, sub, href, children }: { icon: ShellIconName;
   const body = <>
     <span className={`nz-set-ico nz-set-ico-${tone}`} aria-hidden="true"><ShellIcon name={icon} /></span>
     <span className="nz-set-text"><strong>{title}</strong>{sub ? <small>{sub}</small> : null}</span>
-    {href ? <span className="nz-set-go nz-icon-dir" aria-hidden="true"><ShellIcon name="chevron" /></span> : null}
+    {href ? <span className="nz-set-go" aria-hidden="true"><ShellIcon name="chevron" /></span> : null}
   </>;
   return href
     ? <Link href={href} className="nz-set-card nz-set-link" data-card={title}>{body}</Link>
