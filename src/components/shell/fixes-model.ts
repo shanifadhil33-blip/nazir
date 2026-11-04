@@ -18,6 +18,9 @@ export type StoredFix = {
   recheck: number | null;
   /** True once the check again was started. */
   rerun: boolean;
+  /** When this device saw the suggestion, and who decided it and when. Used by History. */
+  at?: string;
+  decided?: { at: string; name: string; initials: string; status: 'approved' | 'turnedDown' };
 };
 
 export type FixCard = {

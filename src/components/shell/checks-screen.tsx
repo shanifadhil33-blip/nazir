@@ -131,7 +131,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       // Kept on this device so the Fixes screen can show the card.
       const name = person?.name ?? copy.shell.omar;
       const list = readStore(localStorage.getItem(storeKeyFor(workspaceId)));
-      localStorage.setItem(storeKeyFor(workspaceId), JSON.stringify(upsertFix(list, { id: proposalId, findingId, status: 'waiting', by: { name, initials: person?.initials ?? 'OS', mine: true }, title: titleOf(payload?.data, { en: copy.fixesScreen.fix, ar: copy.fixesScreen.fix }), recheck: null, rerun: false })));
+      localStorage.setItem(storeKeyFor(workspaceId), JSON.stringify(upsertFix(list, { id: proposalId, findingId, status: 'waiting', by: { name, initials: person?.initials ?? 'OS', mine: true }, title: titleOf(payload?.data, { en: copy.fixesScreen.fix, ar: copy.fixesScreen.fix }), recheck: null, rerun: false, at: new Date().toISOString() })));
     }
     setNote(response?.ok && payload?.done ? 'suggested' : 'suggestFailed');
   }

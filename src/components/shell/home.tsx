@@ -94,14 +94,15 @@ export function ShellHome({
           </>}
         </div>
       </div>
-      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={access.start} links={navLinks(go)} />
-      <SideNav lang={lang} seat={seat} copy={copy} canStart={access.start} links={navLinks(go)} />
+      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={access.start} links={navLinks(go, seat)} />
+      <SideNav lang={lang} seat={seat} copy={copy} canStart={access.start} links={navLinks(go, seat)} />
     </main>
   );
 }
 
-function navLinks(go: HomeLinks) {
-  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: go.more };
+function navLinks(go: HomeLinks, seat: Seat) {
+  // A viewer cannot read History, so More opens Settings for them.
+  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
 }
 
 function StatePanel({ copy, state, onRetry }: { copy: ReturnType<typeof messagesFor>; state: Exclude<ShellState, 'ready'>; onRetry?: () => void }) {

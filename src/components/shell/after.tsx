@@ -76,8 +76,8 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
           </>}
         </div>
       </div>
-      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="fixes" links={navLinks(links)} />
-      <SideNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="fixes" links={navLinks(links)} />
+      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="fixes" links={navLinks(links, seat)} />
+      <SideNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="fixes" links={navLinks(links, seat)} />
     </main>
   );
 }

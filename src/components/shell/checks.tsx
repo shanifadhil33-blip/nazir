@@ -99,14 +99,15 @@ export function ChecksView(props: ChecksViewProps) {
           </>}
         </div>
       </div>
-      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={access.start} current="checks" links={navLinks(links)} />
-      <SideNav lang={lang} seat={seat} copy={copy} canStart={access.start} current="checks" links={navLinks(links)} />
+      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={access.start} current="checks" links={navLinks(links, seat)} />
+      <SideNav lang={lang} seat={seat} copy={copy} canStart={access.start} current="checks" links={navLinks(links, seat)} />
     </main>
   );
 }
 
-function navLinks(go: HomeLinks) {
-  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: go.more };
+function navLinks(go: HomeLinks, seat: Seat) {
+  // A viewer cannot read History, so More opens Settings for them.
+  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
 }
 
 function RunningCard({ lang, running, canStop, stopping, onStop }: { lang: Lang; running: RunProgress; canStop: boolean; stopping: boolean; onStop?: () => void }) {
