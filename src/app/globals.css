@@ -814,7 +814,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 .nz-state-empty .nz-state-ico { background: var(--sky); color: #3f7fb8; }
 .nz-state-limit .nz-state-ico { background: var(--mint); color: var(--right); }
 .nz-state-offline .nz-state-ico { background: #fdf1cf; color: #c98a1b; }
-.nz-shell .nz-state-act { flex: none; justify-content: center; min-block-size: 40px; padding: 0 18px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.nz-shell .nz-state-act, .nz-shell-desk .nz-state .nz-state-act { flex: none; justify-content: center; min-block-size: 40px; padding: 0 18px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .nz-state-spin {
   inline-size: 18px;
   block-size: 18px;
@@ -825,11 +825,12 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 }
 .nz-state-bars { display: grid; gap: 6px; }
 .nz-state-bars i { display: block; block-size: 8px; border-radius: var(--radius-pill); background: var(--page); }
+.nz-state-bars { max-inline-size: 180px; }
 .nz-state-bars i:first-child { inline-size: 100%; }
 .nz-state-bars i:last-child { inline-size: 62%; }
 @media (max-width: 420px) {
   .nz-state { padding-inline: 14px; gap: 12px; }
-  .nz-shell .nz-state-act { padding-inline: 14px; }
+  .nz-shell .nz-state-act, .nz-shell-desk .nz-state .nz-state-act { padding-inline: 14px; }
 }
 .nz-float-nav {
   position: fixed;
