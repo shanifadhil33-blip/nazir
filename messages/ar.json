@@ -391,5 +391,25 @@
     "omar": "عمر",
     "yusuf": "يوسف",
     "ahmed": "أحمد"
+  },
+  "landing": {
+    "home": "الصفحة الرئيسية لنظير",
+    "switchLanguage": "English",
+    "lightLine": "اختبر مساعدك الذكي",
+    "boldLine": "قبل أن يستخدمه الناس",
+    "tryDemo": "جرّب العرض",
+    "howItWorks": "كيف يعمل",
+    "free": "مجاني. بدون بطاقة.",
+    "heroAlt": "الشاشة الرئيسية في نظير لخالد، تعرض مكتب خدمة المدينة و82 إجابة صحيحة و3 للإصلاح.",
+    "askQuestions": "اطرح أسئلة",
+    "seeMistakes": "اكتشف الأخطاء",
+    "fixSafely": "أصلح بأمان",
+    "footer": "قانوني"
+  },
+  "signin": {
+    "welcome": "مرحبًا",
+    "welcomeBold": "بعودتك",
+    "google": "المتابعة عبر Google",
+    "switchLanguage": "English"
   }
 }

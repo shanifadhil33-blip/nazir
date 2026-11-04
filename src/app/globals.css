@@ -350,10 +350,20 @@ a { color: var(--accent); }
 }
 .nz-legal nav { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .nz-legal nav form { display: contents; }
-.nz-signin { min-height: 44px; padding: 0 22px; border: 0; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 700; cursor: pointer; }
-.nz-signin:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 82%, white); }
-.nz-signin:focus-visible { outline: 3px solid var(--right); outline-offset: 2px; }
-.nz-signin:disabled { opacity: .75; cursor: progress; }
+.nz-signin {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  inline-size: 100%; min-block-size: 56px; padding: 0 22px; border: 0;
+  border-radius: var(--radius-pill); background: var(--card); color: var(--ink);
+  box-shadow: var(--shadow); font: inherit; font-weight: 700; cursor: pointer;
+  transition: transform 150ms var(--ease), background-color 150ms var(--ease);
+}
+.nz-signin:hover:not(:disabled) { transform: translateY(-1px); }
+.nz-signin:active:not(:disabled) { transform: scale(.98); }
+.nz-signin:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.nz-signin:disabled, .nz-signin[data-pending="true"] { background: color-mix(in srgb, var(--ink) 6%, var(--card)); cursor: progress; }
+.nz-signin-ico { display: grid; place-items: center; inline-size: 22px; block-size: 22px; flex: none; }
+.nz-google-mark { inline-size: 22px; block-size: 22px; display: block; }
+.nz-spin-dark { border-color: color-mix(in srgb, var(--ink) 25%, transparent); border-top-color: var(--ink); }
 .nz-loading { max-width: 42rem; margin: 24px auto; padding: 24px; background: var(--card); border-radius: var(--radius-card); border: 0; box-shadow: var(--shadow); color: var(--ink); }
 .nz-loading p { margin: 0 0 6px; }
 
@@ -619,7 +629,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 }
 .nz-shell-phone, .nz-shell-desk { inline-size: min(100%, 480px); margin-inline: auto; }
 .nz-shell-desk { display: none; }
-.nz-shell-stack { display: grid; gap: 16px; }
+.nz-shell-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .nz-shell .nz-heading { font-size: 34px; }
 .nz-shell-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block-end: 28px; }
 .nz-shell-who { display: flex; align-items: center; gap: 12px; min-inline-size: 0; }
@@ -668,6 +678,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
   border: 0;
 }
 .nz-shell-search {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -900,4 +911,64 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 @media (prefers-reduced-motion: reduce) {
   .nz-pill-btn, .nz-state-spin { transition: none; animation: none; }
   .nz-pill-btn:hover { transform: none; }
+}
+
+/* Landing and sign in. Logical properties so Arabic mirrors with dir. */
+.nz-site { min-block-size: 100vh; display: flex; flex-direction: column; background: var(--page); color: var(--ink); }
+.nz-site[dir="rtl"] { font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif; line-height: 1.7; }
+.nz-site-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 20px; padding-inline: 20px; }
+.nz-wordmark { color: var(--ink); font-size: 22px; font-weight: 700; text-decoration: none; letter-spacing: -.01em; }
+.nz-site-links { display: flex; align-items: center; gap: 8px; }
+.nz-site-link { display: inline-flex; align-items: center; min-block-size: 44px; padding-inline: 12px; border-radius: var(--radius-pill); color: var(--ink-muted); font-size: 15px; text-decoration: none; transition: background-color 150ms var(--ease), color 150ms var(--ease); }
+.nz-site-link:hover { background: var(--card); color: var(--ink); }
+.nz-site-link:active { background: color-mix(in srgb, var(--ink) 8%, var(--card)); }
+.nz-site-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.nz-site-foot { padding-block: 24px 32px; padding-inline: 20px; }
+.nz-site-foot nav { display: flex; justify-content: center; gap: 8px; }
+.nz-site-foot a { display: inline-flex; align-items: center; min-block-size: 44px; padding-inline: 12px; color: var(--ink-muted); font-size: 14px; text-decoration: none; }
+.nz-site-foot a:hover { color: var(--ink); }
+.nz-site-foot a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.nz-landing { flex: 1; display: grid; justify-items: center; gap: 28px; padding-block: 8px 0; padding-inline: 20px; text-align: center; }
+.nz-hero-copy { display: grid; justify-items: center; gap: 20px; max-inline-size: 640px; }
+.nz-landing .nz-heading { font-size: 30px; }
+.nz-hero-actions { display: grid; gap: 12px; inline-size: 100%; max-inline-size: 340px; }
+.nz-hero-btn { justify-content: center; min-block-size: 56px; border-radius: var(--radius-pill); font-weight: 700; text-decoration: none; text-align: center; }
+.nz-hero-btn.nz-pill-btn-ink { box-shadow: var(--shadow); }
+.nz-hero-note { margin: 0; color: var(--ink-muted); font-size: 14px; }
+.nz-hero-phone { inline-size: min(100%, 300px); padding: 8px; background: var(--card); border-radius: 40px; box-shadow: var(--shadow); }
+.nz-hero-phone img { display: block; inline-size: 100%; block-size: auto; border-radius: 32px; }
+.nz-landing-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; inline-size: 100%; max-inline-size: 340px; }
+.nz-landing-card { display: flex; align-items: center; gap: 14px; min-block-size: 64px; padding-block: 10px; padding-inline: 12px 20px; border-radius: 999px; font-weight: 700; text-align: start; }
+.nz-landing-card-mint { background: var(--mint); }
+.nz-landing-card-sky { background: var(--sky); }
+.nz-landing-card-peach { background: var(--peach); }
+.nz-landing-ico { display: grid; place-items: center; inline-size: 40px; block-size: 40px; border-radius: var(--radius-pill); background: var(--card); flex: none; }
+.nz-landing-ico svg { inline-size: 20px; block-size: 20px; display: block; }
+.nz-signin-page { flex: 1; display: grid; align-content: center; justify-items: center; padding-block: 16px; padding-inline: 20px; }
+.nz-signin-card { display: grid; align-self: center; gap: 28px; inline-size: min(100%, 420px); padding: 32px 28px; background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow); }
+.nz-signin-card .nz-heading { font-size: 34px; }
+.nz-signin-card form { display: block; }
+.nz-signin-card .nz-signin { background: var(--page); box-shadow: none; }
+.nz-signin-card .nz-signin:disabled, .nz-signin-card .nz-signin[data-pending="true"] { background: color-mix(in srgb, var(--ink) 8%, var(--page)); }
+.nz-signin-art { display: none; }
+@media (min-width: 640px) {
+  .nz-landing-cards { grid-auto-flow: column; max-inline-size: 760px; }
+  .nz-landing-card { flex-direction: column; justify-content: center; padding-block: 20px; padding-inline: 20px; border-radius: var(--radius-card); text-align: center; }
+  .nz-hero-actions { grid-auto-flow: column; max-inline-size: none; inline-size: auto; }
+  .nz-hero-btn { padding-inline: 28px; }
+}
+@media (min-width: 1024px) {
+  .nz-site-bar { padding-inline: 48px; }
+  .nz-landing { gap: 40px; padding-block: 40px 0; }
+  .nz-landing .nz-heading { font-size: 48px; }
+  .nz-hero-phone { inline-size: 320px; }
+  .nz-signin-page { grid-template-columns: 1fr 1fr; justify-items: center; gap: 32px; padding-inline: 48px; }
+  .nz-signin-art { display: grid; justify-items: center; }
+}
+@media (max-width: 389px) {
+  .nz-landing .nz-heading { font-size: 26px; }
+  .nz-signin-card { padding: 28px 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nz-signin, .nz-site-link { transition: none; }
 }

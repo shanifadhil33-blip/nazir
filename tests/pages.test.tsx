@@ -9,6 +9,7 @@ import WorkspaceLoading from '../src/app/w/loading';
 import WorkspaceIdLoading from '../src/app/w/[workspaceId]/loading';
 vi.mock('../src/server/db/runtime', () => ({ runtimeDriver: fake.runtimeDriver }));
 import HomePage from '../src/app/page';
+import SignInPage from '../src/app/signin/page';
 import WorkspacesPage from '../src/app/w/page';
 import PrivacyPage from '../src/app/privacy/page';
 import TermsPage from '../src/app/terms/page';
@@ -18,45 +19,46 @@ beforeEach(() => {
   fake.runtimeDriver.mockReset();
 });
 
-it('Shows both fictional service banners on the home page', async () => {
+it('shows the landing page without any demo or service banner', async () => {
   const html = renderToStaticMarkup(await HomePage());
-  expect(html).toContain('Fictional service and synthetic cases. No live government connection.');
-  expect(html).toContain('خدمة افتراضية وحالات اختبار مصطنعة. لا يوجد اتصال مباشر بنظام حكومي.');
-});
-it('Marks Arabic name and banner with their language and direction', async () => {
-  const html = renderToStaticMarkup(await HomePage());
-  expect(html).toContain('<p lang="ar" dir="rtl">ناظر</p>');
-  expect(html).toContain('<p lang="ar" dir="rtl">خدمة افتراضية وحالات اختبار مصطنعة. لا يوجد اتصال مباشر بنظام حكومي.</p>');
-});
-
-it('keeps the signed out landing card and sign in callback link', async () => {
-  const html = renderToStaticMarkup(await HomePage());
-  expect(html).toContain('<main class="nz-legal">');
-  expect(html).not.toContain('/api/auth/signin');
-  expect(html).toContain('class="nz-signin"');
+  expect(html).toContain('Test your AI assistant');
+  expect(html).toContain('before people use it');
+  expect(html).not.toContain('Fictional service');
+  expect(html).not.toContain('made up service');
   expect(html).toContain('href="/privacy"');
   expect(html).toContain('href="/terms"');
   expect(fake.runtimeDriver).not.toHaveBeenCalled();
 });
 
-it('submits the landing form to Google with the workspace index as the destination', async () => {
-  const tree = await HomePage() as { props: { children: Array<{ type?: string; props?: { children?: unknown } }> } };
-  const nav = tree.props.children.find((c) => c?.type === 'nav')!;
-  const form = (nav.props!.children as Array<{ type?: string; props: { action: () => Promise<void> } }>).find((c) => c?.type === 'form')!;
-  await form.props.action();
-  expect(fake.signIn).toHaveBeenCalledWith('google', { redirectTo: '/w' });
+it('renders the landing page in Arabic from the lang query', async () => {
+  const html = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ lang: 'ar' }) }));
+  expect(html).toContain('dir="rtl"');
+  expect(html).toContain('اختبر مساعدك الذكي');
+  expect(html).toContain('href="/signin?lang=ar"');
 });
 
-it('shows idle and pending sign in labels in English and Arabic', () => {
-  expect(renderToStaticMarkup(<SignInButton />)).toContain('>Sign in<');
+it('submits the sign in form to Google with the workspace index as the destination', async () => {
+  const tree = await SignInPage() as { props: { children: Array<{ props?: { action?: () => Promise<void> } }> } };
+  const page = tree.props.children.find((c) => c?.props?.action)!;
+  await page.props!.action!();
+  expect(fake.signIn).toHaveBeenCalledWith('google', { redirectTo: '/w' });
+  expect(fake.runtimeDriver).not.toHaveBeenCalled();
+});
+
+it('shows idle and pending Google button labels one language at a time', () => {
+  expect(renderToStaticMarkup(<SignInButton />)).toContain('Continue with Google');
+  expect(renderToStaticMarkup(<SignInButton lang="ar" />)).toContain('المتابعة عبر Google');
   fake.pending = true;
   const html = renderToStaticMarkup(<SignInButton />);
+  const ar = renderToStaticMarkup(<SignInButton lang="ar" />);
   fake.pending = false;
   expect(html).toContain('Signing you in');
-  expect(html).toContain('جار تسجيل الدخول');
+  expect(html).not.toContain('Continue with Google');
+  expect(ar).toContain('جار تسجيل الدخول');
   expect(html).toContain('disabled=""');
   expect(html).toContain('aria-busy="true"');
   expect(html).toContain('aria-live="polite"');
+  expect(html).toContain('nz-spin');
 });
 
 it.each([['w', WorkspaceLoading], ['workspace', WorkspaceIdLoading]])('renders the %s loading status in both languages', (_n, Loading) => {
