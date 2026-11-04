@@ -99,8 +99,6 @@ a { color: var(--accent); }
   font-weight: 700;
   flex: none;
 }
-.nz-logo-dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--wrong); box-shadow: 0 0 0 2px var(--card); }
-[dir="rtl"] .nz-logo-dot { right: auto; left: -3px; }
 .nz-title { margin: 0; font-size: 28px; line-height: 1; }
 .nz-sub { margin: 4px 0 0; color: var(--ink-muted); }
 .nz-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
@@ -928,7 +926,6 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-first-card p { margin: 0; min-inline-size: 0; }
 .nz-first-mark { display: grid; place-items: center; inline-size: 44px; block-size: 44px; border-radius: var(--radius-pill); background: var(--card); color: var(--ink); flex: none; }
 .nz-shell .nz-hero-btn { justify-content: center; min-block-size: 56px; border-radius: var(--radius-pill); }
-.nz-view-line { margin: 0; color: var(--ink-muted); font-size: 14px; }
 .nz-shell-desk-body { display: grid; gap: 12px; }
 .nz-stat-row-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .nz-stat-row-3 .nz-pastel-stat { min-block-size: 124px; }
