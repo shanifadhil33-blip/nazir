@@ -70,7 +70,7 @@ export function ChecksView(props: ChecksViewProps) {
             <StateCard kind={phase === 'error' ? 'error' : 'loading'} title={phase === 'error' ? copy.shell.errorTitle : copy.shell.loadingTitle} body={phase === 'error' ? copy.shell.errorBody : copy.shell.loadingBody} />
             {phase === 'error' && props.onRetry ? <PillButton variant="ink" label={copy.shell.retry} onClick={props.onRetry} /> : null}
           </> : <>
-            <div className="nz-checks-head"><Heading light={text.light} bold={text.bold} lang={lang} /></div>
+            <div className="nz-checks-head"><Heading light={text.light} bold={text.bold} lang={lang} flow="inline" /></div>
             {note ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
             <div className="nz-checks-body">
               <div className="nz-checks-list">
@@ -141,7 +141,7 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
     <section className="nz-check-page" aria-label={kindLabel(check.kind, copy)}>
       <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
       <Heading as="h2" light={kindLabel(check.kind, copy)} bold={resultLabel(check.toFix, copy)} lang={lang} flow="inline" />
-      <p className="nz-check-sub">{dayLabel(check.at, now, lang, copy)}, {fill(text.questionsCount, { n: String(check.questions.length) })}</p>
+      <p className="nz-check-sub">{dayLabel(check.at, now, lang, copy)}{lang === 'ar' ? '، ' : ', '}{fill(text.questionsCount, { n: String(check.questions.length) })}</p>
       <ul className="nz-questions">
         {check.questions.map((item) => {
           const isOpen = opened === item.id;
