@@ -10,7 +10,7 @@ import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
-import { personFor } from './people';
+import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
@@ -50,7 +50,7 @@ export function ChecksView(props: ChecksViewProps) {
   const { lang, seat, phase, checks, access, running, busy, note, openId, openQuestion, links, now } = props;
   const copy = messagesFor(lang);
   const text = copy.checksScreen;
-  const who = props.person ? { ...props.person, full: props.person.name } : personFor(seat, copy);
+  const who = whoFor(props.person, seat, copy, phase === 'loading');
   const attrs = localeAttrs(lang);
   const open = checks.find((item) => item.id === openId) ?? null;
   const showCheck = open ?? (checks[0] ?? null);
@@ -61,7 +61,7 @@ export function ChecksView(props: ChecksViewProps) {
         <header className="nz-shell-head">
           <div className="nz-shell-who">
             <Avatar initials={who.initials} label={who.full} />
-            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{props.assistant || copy.shell.helpDesk}</small></p>
+            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(props.assistant, copy, phase === 'loading')}</small></p>
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
         </header>

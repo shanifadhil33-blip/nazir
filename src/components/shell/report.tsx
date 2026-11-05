@@ -24,6 +24,8 @@ export type ReportViewProps = {
   links: HomeLinks;
   now: Date;
   note: ReportNote;
+  /** The PDF is for the owner and the reviewer only. Everyone else reads the numbers and sees no button that would be refused. */
+  canExport?: boolean;
   onDownload?: () => void;
   onShare?: () => void;
   onRetry?: () => void;
@@ -60,10 +62,12 @@ export function ReportView(props: ReportViewProps) {
           <Row icon="globe" tone="plain" label={languageRow(facts, copy)} dot />
         </ul>
         {props.note ? <p className="nz-note-line" role="status" data-note={props.note}>{text[props.note]}</p> : null}
+        {props.canExport === false ? null : <>
         <a className="nz-pill-btn nz-pill-btn-ink nz-pill-btn-neutral nz-rep-btn" data-variant="ink" href={pdfHref(props.workspaceId, facts.id, lang)} download onClick={props.onDownload}>
           <span className="nz-pill-ico"><ShellIcon name="download" /></span><span>{text.download}</span>
         </a>
         <PillButton className="nz-rep-btn" icon="share" label={props.note === 'sharing' ? text.sharing : text.share} disabled={props.note === 'sharing'} onClick={props.onShare} />
+        </>}
       </>}
     </ScreenFrame>
   );
