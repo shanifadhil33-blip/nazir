@@ -182,5 +182,6 @@ it('starts a check with the two existing chat messages and returns the run id', 
 
 it('points the Checks nav item at the checks screen', () => {
   expect(homeLinks('w1').checks).toBe('/w/w1?screen=checks');
+  expect(homeLinks('w1').start).toBe('/w/w1?screen=checks&start=1');
   expect(render('en', 'owner')).toContain('data-nav="checks" aria-current="page"');
 });

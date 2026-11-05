@@ -31,6 +31,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'suggesting' | null>(null);
   const [note, setNote] = useState<ChecksNote>(null);
   const [attempt, setAttempt] = useState(0);
+  const auto = useRef(false);
   const langRef = useRef(initialLang);
   const stopped = useRef(new Set<string>());
   const driving = useRef<string | null>(null);
@@ -83,6 +84,13 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       setRoles(membership.roles);
       setAssistant(settings?.name || membership.workspaceName);
       setPerson(name ? { name: name.split(/\s+/)[0]!, initials: initialsOf(name) } : undefined);
+      // The Start buttons arrive here with start=1: begin once, then drop it from the address so a reload does not start another.
+      const wanted = new URLSearchParams(window.location.search);
+      if (wanted.get('start') === '1') {
+        wanted.delete('start');
+        window.history.replaceState(null, '', `${window.location.pathname}${wanted.size ? `?${wanted}` : ''}`);
+        if (!sessionStorage.getItem(storeKey(workspaceId))) auto.current = true;
+      }
       setPhase('ready');
       // A check started on this page keeps going after the person leaves and comes back.
       const resume = sessionStorage.getItem(storeKey(workspaceId));
@@ -94,6 +102,14 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
   const access = checksAccess(roles);
   const copy = messagesFor(lang);
   const checks: CheckRow[] = useMemo(() => checksFromReports(reports, lang, copy), [reports, lang, copy]);
+
+  useEffect(() => {
+    if (!auto.current || phase !== 'ready') return;
+    auto.current = false;
+    if (access.start && !running && !busy) void start();
+    // start reads the state of the render it runs in, so only these inputs matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, access.start]);
 
   async function start() {
     if (!access.start || busy) return;
