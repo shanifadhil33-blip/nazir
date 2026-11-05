@@ -28,7 +28,10 @@ async function progress(driver: TransactionDriver, workspaceId: string, runId: s
     if (!row) throw new NotFound();
     const conversations = (await sql.query<ReportConversation & { last_error: string | null }>('SELECT id,status,scenario_id,attempt_number,language,inconclusive_reason,last_error FROM nazir.conversations WHERE run_id=$1 ORDER BY created_at,id', [runId])).rows;
     const results = caseResults(conversations);
-    return { run_id: runId, status: row.status, done: ['passed', 'failed', 'inconclusive', 'cancelled'].includes(row.status), passed: results.filter((c) => c.status === 'passed').length, failed: results.filter((c) => c.status === 'failed').length, inconclusive: results.filter((c) => c.status === 'inconclusive').length, waiting: conversations.filter((c) => ['queued', 'running'].includes(c.status)).length, results, notes: runNotes(conversations) };
+    // Progress is counted in tests, not tries: a test is finished only when none of its repeats is still waiting.
+    const unfinished = (c: (typeof results)[number]) => c.attempts.some((a) => ['queued', 'running', 'planned'].includes(a.status));
+    const finished = results.filter((c) => !unfinished(c));
+    return { run_id: runId, status: row.status, done: ['passed', 'failed', 'inconclusive', 'cancelled'].includes(row.status), passed: finished.filter((c) => c.status === 'passed').length, failed: finished.filter((c) => c.status === 'failed').length, inconclusive: finished.filter((c) => c.status === 'inconclusive').length, waiting: results.length - finished.length, results, notes: runNotes(conversations) };
   });
 }
 
