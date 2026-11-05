@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Lang } from '@/components/ocean/copy';
 import type { ReportBody } from '@/server/reports/build';
 import { initialsOf } from './people';
+import type { ServerFix } from './fixes-model';
 
 type Membership = { workspaceId: string; workspaceName: string; roles: string[] };
 export type SavedReport = { id: string; created_at: string; body: ReportBody };
@@ -19,11 +20,12 @@ export type MemberData = {
   fullName: string;
   settings: LoadedSettings;
   reports: SavedReport[];
+  fixes: ServerFix[];
   reload: () => void;
 };
 
 /** The same member APIs the other screens read, so the server decides what each role may see. Reports are skipped when a screen does not need them. */
-export function useMemberData(workspaceId: string, initialLang: Lang, withReports: boolean): MemberData {
+export function useMemberData(workspaceId: string, initialLang: Lang, withReports: boolean, withFixes = false): MemberData {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>(initialLang);
   const [phase, setPhase] = useState<MemberData['phase']>('loading');
@@ -33,6 +35,7 @@ export function useMemberData(workspaceId: string, initialLang: Lang, withReport
   const [fullName, setFullName] = useState('');
   const [settings, setSettings] = useState<LoadedSettings>(null);
   const [reports, setReports] = useState<SavedReport[]>([]);
+  const [fixes, setFixes] = useState<ServerFix[]>([]);
   const [attempt, setAttempt] = useState(0);
   const langRef = useRef(initialLang);
   const pinned = useRef(new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search).has('lang'));
@@ -47,9 +50,10 @@ export function useMemberData(workspaceId: string, initialLang: Lang, withReport
       const meBody = await me.json().catch(() => null);
       const membership = (meBody?.memberships as Membership[] | undefined)?.find((item) => item.workspaceId === workspaceId);
       if (!me.ok || !membership) { setPhase('error'); return; }
-      const [settingsResponse, reportsResponse] = await Promise.all([
+      const [settingsResponse, reportsResponse, fixesResponse] = await Promise.all([
         fetch(`/api/workspaces/${workspaceId}/settings`, { headers }).catch(() => null),
         withReports ? fetch(`/api/workspaces/${workspaceId}/reports`, { headers }).catch(() => null) : Promise.resolve(null),
+        withFixes ? fetch(`/api/workspaces/${workspaceId}/proposals`, { headers }).catch(() => null) : Promise.resolve(null),
       ]);
       if (cancelled) return;
       if (withReports && !reportsResponse?.ok) { setPhase('error'); return; }
@@ -60,6 +64,7 @@ export function useMemberData(workspaceId: string, initialLang: Lang, withReport
       if (!pinned.current && loaded?.language && loaded.language !== langRef.current) { langRef.current = loaded.language; setLang(loaded.language); }
       setSettings(loaded);
       setReports(list?.reports ?? []);
+      setFixes(fixesResponse?.ok ? ((await fixesResponse.json().catch(() => null)) as { proposals?: ServerFix[] } | null)?.proposals ?? [] : []);
       setRoles(membership.roles);
       setAssistant(loaded?.name || membership.workspaceName);
       setFullName(name);
@@ -67,8 +72,8 @@ export function useMemberData(workspaceId: string, initialLang: Lang, withReport
       setPhase('ready');
     })().catch(() => { if (!cancelled) setPhase('error'); });
     return () => { cancelled = true; };
-  }, [router, workspaceId, attempt, withReports]);
+  }, [router, workspaceId, attempt, withReports, withFixes]);
 
   const reload = useCallback(() => { setPhase('loading'); setAttempt((value) => value + 1); }, []);
-  return { phase, lang, roles, assistant, person, fullName, settings, reports, reload };
+  return { phase, lang, roles, assistant, person, fullName, settings, reports, fixes, reload };
 }

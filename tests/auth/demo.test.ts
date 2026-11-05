@@ -6,7 +6,8 @@ vi.mock('../../src/server/db/runtime', () => ({ runtimeDriver: () => fake.driver
 vi.mock('next/headers', () => ({ headers: async () => new Headers({ 'x-forwarded-proto': fake.proto }), cookies: async () => ({ set: fake.set }) }));
 vi.mock('next/navigation', () => ({ redirect: fake.redirect }));
 import { createAuthAdapter, sessionHash } from '../../src/server/auth/adapter';
-import { demoCookie, demoLoginEnabled, demoRoles, demoWorkspaceId, startDemoSession } from '../../src/server/auth/demo';
+import { messagesFor } from '../../src/components/ocean/copy';
+import { allowDemoLogin, demoCallerKey, demoCookie, demoLoginEnabled, demoLoginLimit, demoRoles, demoWorkspaceId, startDemoSession } from '../../src/server/auth/demo';
 import { demoSignIn } from '../../src/server/auth/demo-action';
 import { createWorkspace, ensureHomeWorkspace } from '../../src/server/auth/workspaces';
 import { requireMember } from '../../src/server/auth/session';
@@ -31,7 +32,7 @@ it('turns demo login on only with DEMO_LOGIN=1 and a sign in secret', () => {
 
 it('refuses the action when the flag is off and never touches the database', async () => {
   vi.stubEnv('DEMO_LOGIN', ''); vi.stubEnv('AUTH_SECRET', 'secret');
-  await expect(demoSignIn('owner')).rejects.toThrow('not available');
+  await expect(demoSignIn('owner', 'en')).rejects.toThrow('not available');
   expect(fake.set).not.toHaveBeenCalled();
   expect(fake.redirect).not.toHaveBeenCalled();
   expect((await db.owner.query('SELECT 1 FROM nazir.auth_sessions')).rows).toHaveLength(0);
@@ -39,7 +40,7 @@ it('refuses the action when the flag is off and never touches the database', asy
 
 it('refuses any role outside the four, in the app and in the database', async () => {
   vi.stubEnv('DEMO_LOGIN', '1'); vi.stubEnv('AUTH_SECRET', 'secret');
-  for (const role of ['admin', '', 'Owner', 'service_owner', '1; DROP TABLE x']) await expect(demoSignIn(role)).rejects.toThrow();
+  for (const role of ['admin', '', 'Owner', 'service_owner', '1; DROP TABLE x']) expect(await demoSignIn(role, 'en')).toEqual({ error: 'failed' });
   const expires = new Date(Date.now() + 3600_000);
   await expect(db.driver.transaction(async (sql) => { await sql.query('SET LOCAL ROLE nazir_auth'); await sql.query('SELECT * FROM nazir.auth_demo_session($1,$2,$3)', ['admin', sessionHash('x'), expires]); })).rejects.toThrow('Choose one of the demo people');
   for (const bad of [new Date(Date.now() - 1000), new Date(Date.now() + 48 * 3600_000)]) {
@@ -54,12 +55,12 @@ it('signs in each fixed person with a short Auth.js database session cookie', as
   const names = { owner: 'omar.mansoor', editor: 'yusuf.haddad', viewer: 'khalid.rahman', supplier: 'bilal.nasser' };
   for (const role of demoRoles) {
     fake.set.mockReset();
-    await demoSignIn(role);
+    await demoSignIn(role, 'en');
     const [name, token, options] = fake.set.mock.calls[0]!;
     expect(name).toBe('__Secure-authjs.session-token');
     expect(options).toMatchObject({ httpOnly: true, sameSite: 'lax', secure: true, path: '/' });
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(fake.redirect).toHaveBeenLastCalledWith(`/w/${demoWorkspaceId}`);
+    expect(fake.redirect).toHaveBeenLastCalledWith(`/w/${demoWorkspaceId}?lang=en`);
     const session = await createAuthAdapter(() => db.driver).getSessionAndUser!(token);
     expect(session!.user.email).toBe(`${names[role]}@demo.nazir.test`);
     const hours = ((options as { expires: Date }).expires.getTime() - Date.now()) / 3600_000;
@@ -67,7 +68,7 @@ it('signs in each fixed person with a short Auth.js database session cookie', as
     expect((await db.owner.query('SELECT token_hash FROM nazir.auth_sessions WHERE token_hash=$1', [sessionHash(token)])).rows).toHaveLength(1);
   }
   fake.proto = 'http'; fake.set.mockReset();
-  await demoSignIn('viewer');
+  await demoSignIn('viewer', 'en');
   expect(fake.set.mock.calls[0]![0]).toBe('authjs.session-token');
   expect(fake.set.mock.calls[0]![2]).toMatchObject({ secure: false });
   expect(demoCookie('t', new Date(), false).name).toBe('authjs.session-token');
@@ -133,8 +134,9 @@ it('startDemoSession rejects a bad role before any database call', async () => {
 });
 
 const noop = async () => {};
+const noopDemo = async (): Promise<null> => null;
 it('shows the four demo people in English only when the server passes the action', () => {
-  const on = renderToStaticMarkup(SignIn({ lang: 'en', action: noop, demoAction: noop }));
+  const on = renderToStaticMarkup(SignIn({ lang: 'en', action: noop, demoAction: noopDemo }));
   for (const text of ['Omar, service owner', 'Yusuf, quality reviewer', 'Khalid, viewer', 'Bilal, supplier', 'You will land on the home screen as this person.', 'Continue with Google', 'id="demo"', 'nz-pill-btn']) expect(on).toContain(text);
   expect(on.match(/<form/g)).toHaveLength(5);
   const off = renderToStaticMarkup(SignIn({ lang: 'en', action: noop }));
@@ -142,7 +144,43 @@ it('shows the four demo people in English only when the server passes the action
 });
 
 it('shows the four demo people in Arabic', () => {
-  const html = renderToStaticMarkup(SignIn({ lang: 'ar', action: noop, demoAction: noop }));
+  const html = renderToStaticMarkup(SignIn({ lang: 'ar', action: noop, demoAction: noopDemo }));
   for (const text of ['عمر، مالك الخدمة', 'يوسف، مراجع الجودة', 'خالد، مشاهد', 'بلال، المورّد', 'ستصل إلى الشاشة الرئيسية بصفة هذا الشخص.', 'dir="rtl"']) expect(html).toContain(text);
   expect(html).not.toContain('Omar');
+});
+
+it('keeps Arabic after a demo sign in started from the Arabic page, and never takes any other language value', async () => {
+  vi.stubEnv('DEMO_LOGIN', '1'); vi.stubEnv('AUTH_SECRET', 'secret');
+  await demoSignIn('editor', 'ar');
+  expect(fake.redirect).toHaveBeenLastCalledWith(`/w/${demoWorkspaceId}?lang=ar`);
+  await demoSignIn('editor', '"><script>');
+  expect(fake.redirect).toHaveBeenLastCalledWith(`/w/${demoWorkspaceId}?lang=en`);
+});
+
+it('puts the chosen language on the redirect of each Arabic demo form', () => {
+  const html = renderToStaticMarkup(SignIn({ lang: 'ar', action: noop, demoAction: noopDemo }));
+  expect(html).toContain('عمر، مالك الخدمة');
+});
+
+it('limits demo sign ins per caller, says so in plain words, and counts only allowed ones', async () => {
+  vi.stubEnv('DEMO_LOGIN', '1'); vi.stubEnv('AUTH_SECRET', 'secret');
+  await db.owner.query('DELETE FROM nazir.demo_login_attempts');
+  fake.set.mockReset();
+  const results = [];
+  for (let i = 0; i < demoLoginLimit.perCaller + 3; i++) results.push(await demoSignIn('viewer', 'en'));
+  expect(results.filter((r) => r === null || r === undefined)).toHaveLength(demoLoginLimit.perCaller);
+  expect(results.slice(-3)).toEqual([{ error: 'limit' }, { error: 'limit' }, { error: 'limit' }]);
+  expect(fake.set).toHaveBeenCalledTimes(demoLoginLimit.perCaller);
+  expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.demo_login_attempts')).rows[0]).toEqual({ n: demoLoginLimit.perCaller });
+  // Only a keyed hash is kept, never the address.
+  const key = demoCallerKey(new Headers({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }), 'secret');
+  expect(key).toMatch(/^[0-9a-f]{64}$/);
+  expect(key).toBe(demoCallerKey(new Headers({ 'x-forwarded-for': '203.0.113.9' }), 'secret'));
+  expect(key).not.toBe(demoCallerKey(new Headers({ 'x-forwarded-for': '203.0.113.10' }), 'secret'));
+  expect(await allowDemoLogin(db.driver, key)).toBe(true);
+  const rows = (await db.owner.query<{ caller_key: string }>('SELECT caller_key FROM nazir.demo_login_attempts')).rows;
+  expect(JSON.stringify(rows)).not.toContain('203.0.113');
+  const english = messagesFor('en').signin.demoLimit, arabic = messagesFor('ar').signin.demoLimit;
+  expect(english).toMatch(/wait a few minutes/); expect(arabic).toMatch(/الانتظار/);
+  await db.owner.query('DELETE FROM nazir.demo_login_attempts');
 });

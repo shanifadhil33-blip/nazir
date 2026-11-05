@@ -1244,3 +1244,4 @@ a.nz-rep-btn { text-decoration: none; }
 .nz-demo-text { display: grid; gap: 2px; font-size: 14px; }
 .nz-demo-text span { color: color-mix(in srgb, var(--ink) 70%, transparent); font-size: 13px; }
 .nz-demo-next { margin: 0; font-size: 13px; color: color-mix(in srgb, var(--ink) 70%, transparent); }
+.nz-demo-note { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink); }

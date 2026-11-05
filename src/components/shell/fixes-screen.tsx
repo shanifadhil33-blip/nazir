@@ -9,8 +9,8 @@ import { AfterView } from './after';
 import { DocumentLocale } from './document-locale';
 import { FixesView, type FixAction, type FixesNote } from './fixes';
 import {
-  cardsFrom, changeBetween, decisionMessage, fixesAccess, patchFix, readStore, recheckCount, recheckMessage, storeKeyFor,
-  type StoredFix, type Tab,
+  cardsFrom, changeBetween, decisionMessage, fixesAccess, mergeServerFixes, patchFix, readStore, recheckCount, recheckMessage, storeKeyFor,
+  type ServerFix, type StoredFix, type Tab,
 } from './fixes-model';
 import { homeLinks } from './home-model';
 import { initialsOf, personFor } from './people';
@@ -52,13 +52,16 @@ export function FixesScreen({ workspaceId, initialLang, mode }: { workspaceId: s
       const settings = settingsResponse?.ok ? await settingsResponse.json().catch(() => null) as { name?: string; language?: Lang } | null : null;
       const list = await fetch(`/api/workspaces/${workspaceId}/reports`, { headers }).catch(() => null);
       if (!list?.ok) { if (!cancelled) setPhase('error'); return; }
+      // The shared list of fixes. If it cannot be read, the fixes kept on this device still show.
+      const shared = await fetch(`/api/workspaces/${workspaceId}/proposals`, { headers }).catch(() => null);
+      const sharedBody = shared?.ok ? await shared.json().catch(() => null) as { proposals?: ServerFix[] } | null : null;
       const body = await list.json().catch(() => null) as { reports?: Report[] } | null;
       if (cancelled) return;
       const name = typeof meBody?.user?.name === 'string' ? meBody.user.name.trim() : '';
       if (!pinned.current && settings?.language && settings.language !== langRef.current) { langRef.current = settings.language; setLang(settings.language); }
       setReports(body?.reports ?? []);
       setRoles(membership.roles);
-      setStored(readStore(localStorage.getItem(storeKeyFor(workspaceId))));
+      setStored(mergeServerFixes(readStore(localStorage.getItem(storeKeyFor(workspaceId))), sharedBody?.proposals ?? []));
       setAssistant(settings?.name || membership.workspaceName);
       setPerson(name ? { name: name.split(/\s+/)[0]!, initials: initialsOf(name) } : undefined);
       setPhase('ready');
@@ -70,8 +73,7 @@ export function FixesScreen({ workspaceId, initialLang, mode }: { workspaceId: s
   const access = fixesAccess(roles);
   const seat = seatFromRoles(roles);
   const canStart = roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
-  const latest = reports[0]?.body ?? null;
-  const cards = useMemo(() => cardsFrom(stored, latest, lang, copy, person?.name ?? personFor(seat, copy).name), [stored, latest, lang, copy, person, seat]);
+  const cards = useMemo(() => cardsFrom(stored, reports.map((row) => row.body), lang, copy, person?.name ?? personFor(seat, copy).name), [stored, reports, lang, copy, person, seat]);
   const change = reports.length >= 2 ? changeBetween(reports[1]!.body, reports[0]!.body) : null;
   const links = homeLinks(workspaceId);
 

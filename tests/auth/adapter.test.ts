@@ -63,7 +63,7 @@ it('creates a real workspace, owner membership and an audit snapshot', async () 
 it('redacts storage errors and exposes only pinned definer functions to auth', async () => {
   await expect(authCall(db.driver, 'auth_create_user', [user.email, 'Saeed', null])).rejects.toThrow('Sign in storage is unavailable. Please try again.');
   const rows = (await db.owner.query<{ proname: string; prosecdef: boolean; proconfig: string[] }>("SELECT proname,prosecdef,proconfig FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid WHERE n.nspname='nazir' AND has_function_privilege('nazir_auth',p.oid,'EXECUTE')")).rows;
-  expect(rows).toHaveLength(14);
+  expect(rows).toHaveLength(15);
   for (const row of rows) { expect(row.proname).toMatch(/^auth_/); expect(row.prosecdef).toBe(true); expect(row.proconfig).toEqual(['search_path=pg_catalog, nazir']); }
   expect((await db.owner.query("SELECT rolcanlogin FROM pg_roles WHERE rolname='nazir_auth'")).rows).toEqual([{ rolcanlogin: false }]);
 });

@@ -2,6 +2,7 @@ import { Heading } from '@/components/heading';
 import { SignInButton } from '@/components/sign-in-button';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { localeAttrs } from '@/components/shell/locale';
+import type { DemoState } from '@/server/auth/demo-action';
 import { DemoButton } from './demo-button';
 import { HeroPhone } from './landing';
 import { SiteBar, SiteFooter } from './site-bar';
@@ -15,7 +16,7 @@ const demoPeople = [
 ] as const;
 
 /** Google only, plus the demo picker when the server passes demoAction (DEMO_LOGIN is on). */
-export function SignIn({ lang, action, demoAction }: { lang: Lang; action: () => Promise<void>; demoAction?: (role: string) => Promise<void> }) {
+export function SignIn({ lang, action, demoAction }: { lang: Lang; action: () => Promise<void>; demoAction?: (role: string, lang: string, previous: DemoState) => Promise<DemoState> }) {
   const copy = messagesFor(lang);
   const attrs = localeAttrs(lang);
   return (
@@ -28,9 +29,7 @@ export function SignIn({ lang, action, demoAction }: { lang: Lang; action: () =>
           {demoAction ? <section id="demo" className="nz-demo-picker" aria-labelledby="nz-demo-title">
             <h2 id="nz-demo-title" className="nz-demo-title">{copy.signin.demoTitle}</h2>
             <div className="nz-demo-list">
-              {demoPeople.map((person) => <form key={person.role} action={demoAction.bind(null, person.role)}>
-                <DemoButton name={copy.signin[person.name]} line={copy.signin[person.line]} lang={lang} />
-              </form>)}
+              {demoPeople.map((person) => <DemoButton key={person.role} name={copy.signin[person.name]} line={copy.signin[person.line]} lang={lang} action={demoAction.bind(null, person.role, lang)} />)}
             </div>
             <p className="nz-demo-next">{copy.signin.demoNext}</p>
           </section> : null}
