@@ -90,7 +90,7 @@ export function homeLinks(workspaceId: string): HomeLinks {
   const base = `/w/${workspaceId}`;
   return {
     home: base,
-    start: `${base}?screen=chat`,
+    start: `${base}?screen=checks&start=1`,
     checks: `${base}?screen=checks`,
     fixes: `${base}?screen=failures`,
     after: `${base}?screen=after`,
