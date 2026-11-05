@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
 import type { ReportBody } from '@/server/reports/build';
@@ -11,32 +10,25 @@ import { driveRun, startQuickCheckOutcome, stopRun, storeKey, type RunProgress }
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
 import { idOf, readStore, storeKeyFor, titleOf, upsertFix } from './fixes-model';
-import { initialsOf } from './people';
+import { useMemberData } from './member-data';
 
-type Membership = { workspaceId: string; workspaceName: string; roles: string[] };
 type Report = { id: string; created_at: string; body: ReportBody };
 
 /** The signed in checks screen. It reads the same member APIs as the home, and starts and stops runs with the existing endpoints. */
 export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { workspaceId: string; initialLang: Lang; initialCheck?: string }) {
-  const router = useRouter();
-  const [lang, setLang] = useState<Lang>(initialLang);
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [reports, setReports] = useState<Report[]>([]);
-  const [roles, setRoles] = useState<string[]>([]);
-  const [assistant, setAssistant] = useState('');
-  const [person, setPerson] = useState<{ initials: string; name: string } | undefined>();
+  const data = useMemberData(workspaceId, initialLang, true);
+  const { lang, phase, reports, roles, assistant, person, setReports } = data;
   const [openId, setOpenId] = useState<string | null>(initialCheck ?? null);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
   const [running, setRunning] = useState<RunProgress | null>(null);
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'suggesting' | null>(null);
   const [note, setNote] = useState<ChecksNote>(null);
-  const [attempt, setAttempt] = useState(0);
   const auto = useRef(false);
-  const langRef = useRef(initialLang);
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
   const stopped = useRef(new Set<string>());
   const driving = useRef<string | null>(null);
   const alive = useRef(true);
-  const pinned = useRef(new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search).has('lang'));
 
   const loadReports = useCallback(async () => {
     const response = await fetch(`/api/workspaces/${workspaceId}/reports`, { headers: { 'accept-language': langRef.current } }).catch(() => null);
@@ -45,7 +37,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     if (!alive.current) return true;
     setReports(body?.reports ?? []);
     return true;
-  }, [workspaceId]);
+  }, [workspaceId, setReports]);
 
   const track = useCallback(async (runId: string) => {
     if (driving.current === runId) return;
@@ -66,38 +58,19 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
 
   useEffect(() => {
     alive.current = true;
-    let cancelled = false;
-    (async () => {
-      const headers = { 'accept-language': langRef.current };
-      const me = await fetch('/api/me', { headers });
-      if (cancelled) return;
-      if (me.status === 401) { router.replace('/signin'); return; }
-      const meBody = await me.json().catch(() => null);
-      const membership = (meBody?.memberships as Membership[] | undefined)?.find((item) => item.workspaceId === workspaceId);
-      if (!me.ok || !membership) { setPhase('error'); return; }
-      const settingsResponse = await fetch(`/api/workspaces/${workspaceId}/settings`, { headers }).catch(() => null);
-      const settings = settingsResponse?.ok ? await settingsResponse.json().catch(() => null) as { name?: string; language?: Lang } | null : null;
-      if (!await loadReports()) { if (!cancelled) setPhase('error'); return; }
-      if (cancelled) return;
-      const name = typeof meBody?.user?.name === 'string' ? meBody.user.name.trim() : '';
-      if (!pinned.current && settings?.language && settings.language !== langRef.current) { langRef.current = settings.language; setLang(settings.language); }
-      setRoles(membership.roles);
-      setAssistant(settings?.name || membership.workspaceName);
-      setPerson(name ? { name: name.split(/\s+/)[0]!, initials: initialsOf(name) } : undefined);
-      // The Start buttons arrive here with start=1: begin once, then drop it from the address so a reload does not start another.
-      const wanted = new URLSearchParams(window.location.search);
-      if (wanted.get('start') === '1') {
-        wanted.delete('start');
-        window.history.replaceState(null, '', `${window.location.pathname}${wanted.size ? `?${wanted}` : ''}`);
-        if (!sessionStorage.getItem(storeKey(workspaceId))) auto.current = true;
-      }
-      setPhase('ready');
-      // A check started on this page keeps going after the person leaves and comes back.
-      const resume = sessionStorage.getItem(storeKey(workspaceId));
-      if (resume && checksAccess(membership.roles).start) void track(resume);
-    })().catch(() => { if (!cancelled) setPhase('error'); });
-    return () => { cancelled = true; alive.current = false; };
-  }, [router, workspaceId, loadReports, track, attempt]);
+    if (phase !== 'ready') return () => { alive.current = false; };
+    // The Start buttons arrive here with start=1: begin once, then drop it from the address so a reload does not start another.
+    const wanted = new URLSearchParams(window.location.search);
+    if (wanted.get('start') === '1') {
+      wanted.delete('start');
+      window.history.replaceState(null, '', `${window.location.pathname}${wanted.size ? `?${wanted}` : ''}`);
+      if (!sessionStorage.getItem(storeKey(workspaceId))) auto.current = true;
+    }
+    // A check started on this page keeps going after the person leaves and comes back.
+    const resume = sessionStorage.getItem(storeKey(workspaceId));
+    if (resume && checksAccess(roles).start) void track(resume);
+    return () => { alive.current = false; };
+  }, [workspaceId, phase, roles, track]);
 
   const access = checksAccess(roles);
   const copy = messagesFor(lang);
@@ -175,7 +148,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       onStart={() => void start()}
       onStop={() => void stop()}
       onSuggest={(id) => void suggest(id)}
-      onRetry={() => { setPhase('loading'); setAttempt((value) => value + 1); }}
+      onRetry={data.reload}
     />
   </>;
 }
