@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { can, type Action, type Role } from '../auth/roles';
 import { requireRole, Forbidden } from '../auth/guard';
 import { withMember } from '../db/context';
+import { ensureStarterLibrary } from '../library/starter';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, NotFound, errorLines, messageFor, type ErrorCode } from '../http/errors';
 import { caseResults, type ReportConversation } from '../reports/build';
@@ -125,7 +126,9 @@ async function propose(driver: TransactionDriver, memberId: string, args: unknow
   if (!await packRuns(driver, memberId)) return refused('propose_plan', actionErrors.pack_not_running);
   const record = args && typeof args === 'object' ? { ...(args as Record<string, unknown>) } : {};
   if (typeof record.agent_version_id !== 'string') {
-    const found = await versions(driver, memberId);
+    let found = await versions(driver, memberId);
+    // A new workspace has no approved tests or rules yet. The first Start installs the shipped ones for the service owner.
+    if (!found && await ensureStarterLibrary(driver, memberId).catch(() => 0)) found = await versions(driver, memberId);
     if (!found) return { done: false, reply: successReply.missing, data: null };
     record.agent_version_id = found.agent_version_id;
     record.rule_pack_version_id = found.rule_pack_version_id;
