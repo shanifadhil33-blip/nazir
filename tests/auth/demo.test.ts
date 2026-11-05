@@ -184,3 +184,23 @@ it('limits demo sign ins per caller, says so in plain words, and counts only all
   expect(english).toMatch(/wait a few minutes/); expect(arabic).toMatch(/الانتظار/);
   await db.owner.query('DELETE FROM nazir.demo_login_attempts');
 });
+
+it('does not stretch a demo session when Auth.js refreshes it, but still refreshes a real one', async () => {
+  vi.stubEnv('DEMO_LOGIN', '1'); vi.stubEnv('AUTH_SECRET', 'secret');
+  await db.owner.query('DELETE FROM nazir.demo_login_attempts');
+  fake.set.mockReset();
+  await demoSignIn('viewer', 'en');
+  const token = fake.set.mock.calls[0]![1] as string;
+  const adapter = createAuthAdapter(() => db.driver);
+  const before = (await db.owner.query<{ expires: Date }>('SELECT expires FROM nazir.auth_sessions WHERE token_hash=$1', [sessionHash(token)])).rows[0]!.expires.getTime();
+  await adapter.updateSession!({ sessionToken: token, expires: new Date(Date.now() + 30 * 86400_000) });
+  const after = (await db.owner.query<{ expires: Date }>('SELECT expires FROM nazir.auth_sessions WHERE token_hash=$1', [sessionHash(token)])).rows[0]!.expires.getTime();
+  expect(after).toBe(before);
+  const real = await db.bootstrap('refresh-real');
+  const uid = (await db.owner.query<{ user_id: string }>('SELECT user_id FROM nazir.members WHERE id=$1', [real.member_id])).rows[0]!.user_id;
+  const created = await adapter.createSession!({ sessionToken: 'real-token-refresh', userId: uid, expires: new Date(Date.now() + 3600_000) });
+  const later = new Date(Date.now() + 30 * 86400_000);
+  const updated = await adapter.updateSession!({ sessionToken: created.sessionToken, expires: later });
+  expect(updated!.expires.getTime()).toBe(later.getTime());
+  await db.owner.query('DELETE FROM nazir.demo_login_attempts');
+});

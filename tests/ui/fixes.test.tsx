@@ -52,7 +52,7 @@ it('never lets the person who suggested a fix approve it', () => {
 
 it('shows the opened fix with its three lines and Omar as avatar OS', () => {
   const html = render('en', 'editor');
-  for (const line of ['What goes wrong', 'The fix', 'We will check 12 questions again', 'Suggested by Omar']) expect(html, line).toContain(line);
+  for (const line of ['What goes wrong', 'The fix', 'Questions to check again: 12', 'Suggested by Omar']) expect(html, line).toContain(line);
   expect(html).toContain('Don&#x27;t confirm rumours');
   expect(html).toContain('>OS<');
   expect(html).not.toContain('>YA<');
