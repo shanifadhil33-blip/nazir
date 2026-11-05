@@ -116,3 +116,20 @@ it('cancels the rest of a bounded run when the failure streak is reached', async
   expect(cancelled).toBe(1);
   expect((await db.owner.query<{ status: string }>("SELECT status FROM nazir.conversations WHERE run_id=$1 AND idempotency_key='later'", [run.id])).rows[0]!.status).toBe('cancelled');
 });
+
+it('counts a streak in different tests, and never stops a Quick check early', async () => {
+  const mk = async (rules: string) => {
+    const plan = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,status)
+      VALUES($1,'Stop','${agentVersion}','${rulePack}','{test}','{en}',1,80,'${rules}','nazir','approved') RETURNING id`, [workspaceId])).rows[0]!;
+    const scenarioId = (await db.owner.query<{ id: string }>("SELECT id FROM nazir.scenarios WHERE workspace_id=$1 AND family='test' LIMIT 1", [workspaceId])).rows[0]!.id;
+    const run = (await db.owner.query<{ id: string }>("INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,status,frozen_manifest,runner_version,calls_budget,calls_used) VALUES($1,$2,$3,$4,'running','{}','1',80,1) RETURNING id", [workspaceId, plan.id, agentVersion, rulePack])).rows[0]!;
+    for (const key of ['a', 'b', 'c']) await db.owner.query("INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,status,idempotency_key,finished_at) VALUES($1,$2,$3,'en','failed',$4,clock_timestamp())", [workspaceId, run.id, scenarioId, key]);
+    await db.owner.query("INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,status,idempotency_key) VALUES($1,$2,$3,'ar','queued','later')", [workspaceId, run.id, scenarioId]);
+    return run.id;
+  };
+  // Three failed attempts of one test are one failing test, so a limit of 3 does not stop.
+  const same = await mk('{"set":"bounded","stop":{"failure_streak":3}}');
+  expect(await db.worker(workspaceId, (sql) => applyBoundedStop(sql, same))).toBe(0);
+  const quick = await mk('{"set":"bounded","size":"quick","stop":{"failure_streak":1}}');
+  expect(await db.worker(workspaceId, (sql) => applyBoundedStop(sql, quick))).toBe(0);
+});
