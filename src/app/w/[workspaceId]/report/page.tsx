@@ -1,3 +1,4 @@
+import { MemberShell } from '@/server/shell/member-shell';
 import { WorkspaceApp } from '@/components/ocean/workspace-app';
 import { ReportScreen } from '@/components/shell/report-screen';
 import type { Lang } from '@/components/ocean/copy';
@@ -10,7 +11,7 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const query = await searchParams;
   const lang: Lang = query.lang === 'ar' ? 'ar' : 'en';
   // The preview flag keeps the older report view for the design pages that still use it.
-  if (query.preview !== 'ocean') return <ReportScreen workspaceId={workspaceId} initialLang={lang} />;
+  if (query.preview !== 'ocean') return <MemberShell workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><ReportScreen workspaceId={workspaceId} initialLang={lang} /></MemberShell>;
   const role: Seat = query.role === 'viewer' || query.role === 'editor' || query.role === 'supplier' || query.role === 'owner' ? query.role : 'owner';
   return <WorkspaceApp workspaceId={workspaceId} preview initialLang={lang} initialRole={role} initialScreen="report" shared />;
 }

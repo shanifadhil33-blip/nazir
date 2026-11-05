@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
 import { DocumentLocale } from './document-locale';
-import { mergeServerFixes, readStore, storeKeyFor } from './fixes-model';
+import { mergeServerFixes, readStore, storeKeyFor, type StoredFix } from './fixes-model';
 import { HistoryView } from './history';
 import { buildHistory, historyAccess } from './history-model';
 import { homeLinks } from './home-model';
@@ -14,13 +14,21 @@ import { useMemberData } from './member-data';
 export function HistoryScreen({ workspaceId, initialLang }: { workspaceId: string; initialLang: Lang }) {
   const data = useMemberData(workspaceId, initialLang, true, true);
   const [older, setOlder] = useState(false);
+  const [localFixes, setLocalFixes] = useState<StoredFix[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) setLocalFixes(readStore(localStorage.getItem(storeKeyFor(workspaceId))));
+    });
+    return () => { cancelled = true; };
+  }, [workspaceId, data.fixes]);
   const copy = messagesFor(data.lang);
   const allowed = historyAccess(data.roles);
   const items = useMemo(() => {
     if (data.phase !== 'ready' || !allowed) return [];
-    const fixes = mergeServerFixes(readStore(localStorage.getItem(storeKeyFor(workspaceId))), data.fixes);
+    const fixes = mergeServerFixes(localFixes, data.fixes);
     return buildHistory(data.reports, fixes, data.lang, copy);
-  }, [data.phase, data.reports, data.fixes, data.lang, copy, allowed, workspaceId]);
+  }, [data.phase, data.reports, data.fixes, data.lang, copy, allowed, localFixes]);
   const canStart = data.roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
   return <>
     <DocumentLocale lang={data.lang} />

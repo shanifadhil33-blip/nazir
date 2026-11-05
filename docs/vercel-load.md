@@ -30,7 +30,7 @@ This starts a real Quick check, so it uses that deployment's model calls. Set `N
 ## Settings changes that would cut usage further (for Adhil to decide, none applied)
 
 1. **Fluid compute / Active CPU billing.** Check that Fluid compute is on for the project. With it, time spent waiting on model and database I/O is not billed as CPU, and that wait is most of a step.
-2. **Function region next to the database.** Set the function region (project settings, or `regions` in `vercel.json`) to the Neon region. Every step makes many short queries, so each round trip saves wall time.
+2. **Function region next to the database.** `vercel.json` now pins `regions` to `["iad1"]`, beside Neon in us-east-1. The Nov 5 cold-load measurement already observed iad1 in live response headers; this makes the placement explicit and prevents drift.
 3. **Lower default maxDuration for all functions** (project settings, Functions). A lower default caps any route that hangs, for example the PDF routes, which are still on the platform default.
 4. **Move run stepping off Vercel.** The box runner (`scripts/runner-run.mjs`) already drives the same queue. Running it on a small always on box for real workspaces would leave Vercel serving only the UI. This is a product decision as well as a settings one.
 5. **Daily run cap.** Lowering `maxRunsPerUserPerDay` (`src/server/runner/run-cap.ts`) caps the worst case per person. It is a code constant, but it is a usage policy choice.

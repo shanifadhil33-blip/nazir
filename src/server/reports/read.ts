@@ -61,9 +61,12 @@ export async function listReports(driver: TransactionDriver, memberId: string) {
     const roles = await rolesOf(sql);
     if (!can(roles, 'report.read') && !can(roles, 'report.viewer')) throw new Forbidden();
     const fn = can(roles, 'report.read') ? 'read_report' : 'read_report_viewer';
-    const ids = (await sql.query<{ id: string; created_at: string; run_id: string }>('SELECT id, created_at, run_id FROM nazir.list_reports()')).rows;
-    const reports = [];
-    for (const row of ids) reports.push({ ...row, body: await stored(sql, row.id, fn) });
+    // Keep the security-definer projection for each role, evaluated in one SQL
+    // statement rather than one network round trip per report.
+    const reports = (await sql.query<{ id: string; created_at: string; run_id: string; body: ReportBody }>(
+      `SELECT r.id, r.created_at, r.run_id, nazir.${fn}(r.id) AS body FROM nazir.list_reports() r ORDER BY r.created_at DESC, r.id DESC`,
+    )).rows;
+    if (reports.some((row) => !row.body)) throw new NotFound();
     // Every role that may list reports may also read runs; the count drives the first step card.
     const runs = can(roles, 'run.read') ? Number((await sql.query<{ n: string }>('SELECT count(*) AS n FROM nazir.runs')).rows[0]!.n) : reports.length;
     return { reports, runs };

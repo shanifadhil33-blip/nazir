@@ -1,3 +1,4 @@
+import { MemberShell } from '@/server/shell/member-shell';
 import { HomeScreen } from '@/components/shell/home-screen';
 import { FixesScreen } from '@/components/shell/fixes-screen';
 import { HistoryScreen } from '@/components/shell/history-screen';
@@ -25,11 +26,11 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   const { workspaceId } = await params;
   const query = await searchParams;
   // No screen asked for: the home. Every tap on it opens one of the screens below.
-  if (query.preview !== 'ocean' && query.screen === undefined) return <HomeScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} />;
-  if (query.preview !== 'ocean' && query.screen === 'checks') return <ChecksScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} initialCheck={query.check} />;
-  if (query.preview !== 'ocean' && query.screen === 'failures') return <FixesScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} mode="fixes" />;
-  if (query.preview !== 'ocean' && query.screen === 'history') return <HistoryScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} />;
-  if (query.preview !== 'ocean' && query.screen === 'settings') return <SettingsScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} />;
-  if (query.preview !== 'ocean' && query.screen === 'after') return <FixesScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} mode="after" />;
+  if (query.preview !== 'ocean' && query.screen === undefined) return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={true} withFixes={false}><HomeScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} /></MemberShell>;
+  if (query.preview !== 'ocean' && query.screen === 'checks') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={true} withFixes={false}><ChecksScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} initialCheck={query.check} /></MemberShell>;
+  if (query.preview !== 'ocean' && query.screen === 'failures') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={true} withFixes={true}><FixesScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} mode="fixes" /></MemberShell>;
+  if (query.preview !== 'ocean' && query.screen === 'history') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={true} withFixes={true}><HistoryScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} /></MemberShell>;
+  if (query.preview !== 'ocean' && query.screen === 'settings') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={false} withFixes={false}><SettingsScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} /></MemberShell>;
+  if (query.preview !== 'ocean' && query.screen === 'after') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={true} withFixes={true}><FixesScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} mode="after" /></MemberShell>;
   return <WorkspaceApp workspaceId={workspaceId} preview={query.preview === 'ocean'} initialLang={langOf(query.lang)} initialRole={seatOf(query.role)} initialScreen={screenOf(query.screen)} initialSettingsOpen={query.settings === 'open'} />;
 }
