@@ -8,7 +8,7 @@ import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
-import { personFor } from './people';
+import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
@@ -49,7 +49,7 @@ export function FixesView(props: FixesViewProps) {
   const { lang, seat, phase, fixes, access, tab, openId, busy, note, links } = props;
   const copy = messagesFor(lang);
   const text = copy.fixesScreen;
-  const who = props.person ? { ...props.person, full: props.person.name } : personFor(seat, copy);
+  const who = whoFor(props.person, seat, copy, phase === 'loading');
   const shown = fixes.filter((item) => inTab(item, tab));
   const open = openId ?? shown.find((item) => item.status === 'waiting')?.id ?? null;
   return (
@@ -58,7 +58,7 @@ export function FixesView(props: FixesViewProps) {
         <header className="nz-shell-head">
           <div className="nz-shell-who">
             <Avatar initials={who.initials} label={who.full} />
-            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{props.assistant || copy.shell.helpDesk}</small></p>
+            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(props.assistant, copy, phase === 'loading')}</small></p>
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
         </header>
@@ -103,7 +103,8 @@ function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction
     return (
       <article className={approved ? 'nz-fix nz-fix-approved' : 'nz-fix nz-fix-down'} data-fix={item.status} aria-busy={busy !== null}>
         <p className="nz-fix-state"><span className="nz-fix-tick"><ShellIcon name="tick" /></span><strong>{approved ? text.approved : text.turnedDown}</strong></p>
-        <p className="nz-fix-sub">{approved ? (item.rerun ? text.checkingAgain : text.readyAgain) : item.title}</p>
+        <p className="nz-fix-sub">{item.title}</p>
+        {approved ? <p className="nz-fix-sub nz-fix-next">{item.rerun ? text.checkingAgain : text.readyAgain}</p> : null}
         {approved && !item.rerun && access.recheck ? <PillButton className="nz-fix-btn" label={busy === 'recheck' ? text.sending : text.checkAgain} disabled={busy !== null} onClick={() => onAction?.(item.id, 'recheck')} /> : null}
         {approved && item.rerun ? <PillButton className="nz-fix-btn" label={text.seeChange} href={links.after} /> : null}
       </article>

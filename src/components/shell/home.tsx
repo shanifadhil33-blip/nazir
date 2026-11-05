@@ -8,7 +8,7 @@ import { ShellIcon } from './icons';
 import { headingFor, homeLinks, lastCheckText, seatAccess, type HomeLinks, type HomeView } from './home-model';
 import { localeAttrs } from './locale';
 import { PastelCard } from './pastel-card';
-import { personFor } from './people';
+import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { PillGrid } from './pill-grid';
 import { SideNav } from './side-nav';
@@ -47,11 +47,11 @@ export function ShellHome({
   person?: { initials: string; name: string };
 }) {
   const copy = messagesFor(lang);
-  const person = who ? { ...who, full: who.name } : personFor(seat, copy);
+  const person = whoFor(who, seat, copy, state === 'loading');
   const attrs = localeAttrs(lang);
   const go = links ?? homeLinks('preview');
   const { access, facts, variant } = view;
-  const assistant = view.assistant || copy.shell.helpDesk;
+  const assistant = helpLine(view.assistant, copy, state === 'loading');
   const heading = headingFor(view, copy);
   const showCards = facts.checks > 0 && variant !== 'first';
   const pills = [

@@ -15,3 +15,14 @@ export function initialsOf(name: string): string {
   const letters = words.map((word) => Array.from(word)[0] ?? '').join('');
   return /^[a-z]+$/i.test(letters) ? letters.toUpperCase() : letters;
 }
+
+/** Who the header names. While a page is still loading and the person is not known yet, it names no one rather than someone else. */
+export function whoFor(person: { initials: string; name: string } | undefined | null, seat: Seat, copy: Messages, loading: boolean): { initials: string; name: string; full: string } {
+  if (person) return { ...person, full: person.name };
+  return loading ? { initials: '', name: '', full: '' } : personFor(seat, copy);
+}
+
+/** The line under the name. Empty while loading, so no made up workspace name flashes first. */
+export function helpLine(assistant: string | undefined, copy: Messages, loading: boolean): string {
+  return assistant || (loading ? '' : copy.shell.helpDesk);
+}

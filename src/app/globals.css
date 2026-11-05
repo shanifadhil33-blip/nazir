@@ -1137,6 +1137,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-fix-down .nz-fix-tick { background: var(--card); color: var(--ink-muted); }
 .nz-fix-btn { justify-self: start; min-block-size: 48px; background: var(--card); }
 .nz-fix-approved .nz-fix-sub { color: var(--right); }
+.nz-fix-approved .nz-fix-sub:not(.nz-fix-next) { color: var(--ink); font-weight: 600; }
 .nz-fix-change, .nz-after-back { justify-content: center; }
 .nz-after-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .nz-after-stats .nz-pastel-stat { min-block-size: 140px; }

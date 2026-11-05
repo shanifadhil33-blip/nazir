@@ -10,7 +10,7 @@ import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
 import { PastelCard } from './pastel-card';
-import { personFor } from './people';
+import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
@@ -32,7 +32,7 @@ export type AfterViewProps = {
 export function AfterView({ lang, seat, phase, change, canStart, assistant, person, links, onRetry }: AfterViewProps) {
   const copy = messagesFor(lang);
   const text = copy.afterScreen;
-  const who = person ? { ...person, full: person.name } : personFor(seat, copy);
+  const who = whoFor(person, seat, copy, phase === 'loading');
   const rows = change ? [
     { id: 'fixed', label: text.fixed, n: change.fixed, tone: 'right', icon: 'tick' },
     { id: 'still', label: text.stillWrong, n: change.stillWrong, tone: 'wrong', icon: 'cross' },
@@ -45,7 +45,7 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
         <header className="nz-shell-head">
           <div className="nz-shell-who">
             <Avatar initials={who.initials} label={who.full} />
-            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{assistant || copy.shell.helpDesk}</small></p>
+            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(assistant, copy, phase === 'loading')}</small></p>
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
         </header>

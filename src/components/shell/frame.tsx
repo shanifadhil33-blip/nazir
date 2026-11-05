@@ -6,7 +6,7 @@ import { Bell } from './bell';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { localeAttrs } from './locale';
-import { personFor } from './people';
+import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
@@ -34,7 +34,7 @@ export function ScreenFrame({ lang, seat, phase, name, assistant, person, links,
   children: ReactNode;
 }) {
   const copy = messagesFor(lang);
-  const who = person ? { ...person, full: person.name } : personFor(seat, copy);
+  const who = whoFor(person, seat, copy, phase === 'loading');
   const nav = { home: links.home, checks: links.checks, start: links.start, fixes: links.fixes, more: moreLink(links, history) };
   return (
     <main className={`nz-shell ${className ?? ''}`.trim()} {...localeAttrs(lang)} data-seat={seat} data-state={phase} data-screen={name}>
@@ -42,7 +42,7 @@ export function ScreenFrame({ lang, seat, phase, name, assistant, person, links,
         <header className="nz-shell-head">
           <div className="nz-shell-who">
             <Avatar initials={who.initials} label={who.full} />
-            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{assistant || copy.shell.helpDesk}</small></p>
+            <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(assistant, copy, phase === 'loading')}</small></p>
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
         </header>

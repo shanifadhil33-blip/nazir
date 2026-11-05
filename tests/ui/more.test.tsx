@@ -201,3 +201,13 @@ it('renders every preview state without a dead end', () => {
     if (state === 'error') expect(html).toContain('Try again');
   }
 });
+
+it('shows Download and Share to the owner and the reviewer only', () => {
+  const view = (canExport?: boolean) => renderToStaticMarkup(
+    <ReportView lang="en" seat="viewer" phase="ready" facts={previewFacts(now)} workspaceId="w1" assistant="City Help Desk" canStart={false} history={false} links={links} now={now} note={null} canExport={canExport} />);
+  expect(view(true)).toContain('/pdf');
+  expect(view(undefined)).toContain('/pdf');
+  const hidden = view(false);
+  expect(hidden).not.toContain('/pdf');
+  expect(hidden).not.toContain('nz-rep-btn');
+});
