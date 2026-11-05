@@ -3,11 +3,12 @@ import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { sessionHash } from '../../src/server/auth/adapter';
 import { demoWorkspaceId } from '../../src/server/auth/demo';
 import { listReports, readFullReport } from '../../src/server/reports/read';
+import { installDemoLibrary } from '../../src/server/demo/library';
 import { assembleReport, caseResults, type ReportBody } from '../../src/server/reports/build';
 
 let db: TestDatabase;
 const member = { owner: 'd0000000-0000-4000-8000-000000000011', editor: 'd0000000-0000-4000-8000-000000000012', viewer: 'd0000000-0000-4000-8000-000000000013', supplier: 'd0000000-0000-4000-8000-000000000014' };
-beforeAll(async () => { db = await testDatabase(); expect(await count('runs')).toBe(0); expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok).toBe(true); }, 60000);
+beforeAll(async () => { db = await testDatabase(); expect(await count('runs')).toBe(0); expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok, 'no seed before the library is there').toBe(false); await installDemoLibrary(db.driver, db.driver); expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok).toBe(true); }, 60000);
 afterAll(async () => { await db?.close(); });
 const count = async (table: string) => Number((await db.owner.query<{ n: string }>(`SELECT count(*) AS n FROM nazir.${table} WHERE workspace_id=$1`, [demoWorkspaceId])).rows[0]!.n);
 
@@ -15,7 +16,7 @@ it('fills the demo workspace with two finished checks, findings and two fixes wh
   expect(await count('runs')).toBe(2);
   expect(await count('reports')).toBe(2);
   expect(await count('conversations')).toBe(16);
-  expect(await count('findings')).toBe(4);
+  expect(await count('findings')).toBe(5);
   expect(await count('proposals')).toBe(2);
   const statuses = (await db.owner.query<{ status: string }>('SELECT status FROM nazir.proposals WHERE workspace_id=$1 ORDER BY created_at', [demoWorkspaceId])).rows.map((r) => r.status);
   expect(statuses).toEqual(['approved', 'proposed']);
@@ -27,8 +28,8 @@ it('every role sees the saved checks, newest first, with the second check better
     expect(reports, role).toHaveLength(2);
     const [latest, first] = reports.map((r) => r.body as ReportBody);
     expect(first!.counts).toMatchObject({ conversations: 8, passed: 5, failed: 3, findings: 3 });
-    expect(latest!.counts).toMatchObject({ conversations: 8, passed: 7, failed: 1, findings: 1 });
-    expect(caseResults(latest!.conversations).filter((c) => c.status === 'failed')).toHaveLength(1);
+    expect(latest!.counts).toMatchObject({ conversations: 8, passed: 6, failed: 2, findings: 2 });
+    expect(caseResults(latest!.conversations).filter((c) => c.status === 'failed')).toHaveLength(2);
   }
 });
 
@@ -44,8 +45,11 @@ it('the stored copy matches what the report route would build from the same rows
   }
 });
 
-it('keeps the seeded questions out of real checks and leaves every other workspace alone', async () => {
-  expect(Number((await db.owner.query<{ n: string }>("SELECT count(*) AS n FROM nazir.scenarios WHERE stable_key LIKE 'demo_history_%' AND status='approved'")).rows[0]!.n)).toBe(0);
+it('points at the real approved tests and planted versions, and leaves every other workspace alone', async () => {
+  const rows = (await db.owner.query<{ n: string }>("SELECT count(DISTINCT c.scenario_id) AS n FROM nazir.conversations c JOIN nazir.scenarios s ON s.id=c.scenario_id WHERE s.status='approved' AND s.library_hash IS NOT NULL")).rows;
+  expect(Number(rows[0]!.n)).toBe(8);
+  const latest = (await db.owner.query<{ r: string }>("SELECT config->>'registry_id' AS r FROM nazir.agent_versions WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 1", [demoWorkspaceId])).rows[0]!.r;
+  expect(latest).toBe('planted_wrong_queue');
   const others = await db.owner.query<{ n: string }>('SELECT count(*) AS n FROM nazir.runs WHERE workspace_id<>$1', [demoWorkspaceId]);
   expect(Number(others.rows[0]!.n)).toBe(0);
 });
@@ -82,4 +86,17 @@ it('refuses the fix list to someone outside the workspace', async () => {
   const stranger = await db.bootstrap('stranger');
   const own = await listProposals(db.driver, stranger.member_id);
   expect(own.proposals).toEqual([]);
+});
+
+it('lets the reviewer approve the waiting fix like any real fix, and refuses the person who suggested it', async () => {
+  const { decideRepair } = await import('../../src/server/repair/proposals');
+  const waiting = (await db.owner.query<{ id: string }>("SELECT id FROM nazir.proposals WHERE workspace_id=$1 AND status='proposed'", [demoWorkspaceId])).rows[0]!.id;
+  const input = { id: waiting, decision: 'approve', reason: 'I checked the expected and actual answers.', evidence_opened: true };
+  await expect(decideRepair(db.driver, member.supplier, input)).rejects.toThrow();
+  await expect(decideRepair(db.driver, member.viewer, input)).rejects.toThrow();
+  const done = await decideRepair(db.driver, member.editor, input);
+  expect(done).toMatchObject({ status: 'approved', repeated: false });
+  expect(done.retest!.retest.length).toBeGreaterThan(0);
+  const { listProposals } = await import('../../src/server/repair/list');
+  expect((await listProposals(db.driver, member.viewer)).proposals.find((p) => p.id === waiting)!.status).toBe('approved');
 });
