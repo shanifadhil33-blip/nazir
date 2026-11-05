@@ -53,7 +53,7 @@ function RecordDetail({ copy, lines }: { copy: Messages; lines: { text: string; 
   if (!lines.length) return null;
   return <details className="nz-raw">
     <summary>{copy.ui.recordDetail}</summary>
-    {lines.map((line, index) => <p key={`${line.lang ?? 'raw'}-${index}`} lang={line.lang} dir={line.lang === 'ar' ? 'rtl' : line.lang === 'en' ? 'ltr' : undefined}>{line.text}</p>)}
+    {lines.map((line, index) => <p key={`${line.lang ?? 'raw'}-${index}`} lang={line.lang} dir={line.lang === 'ar' ? 'rtl' : line.lang === 'en' ? 'ltr' : 'auto'}>{line.text}</p>)}
   </details>;
 }
 
@@ -187,7 +187,7 @@ export function WorkspaceScreen({
                 {number !== null ? <span className={event.kind === 'critical' ? 'nz-num-bubble is-critical' : 'nz-num-bubble'}>{number}</span> : null}
                 <div>
                   {event.title ? <strong>{event.title}</strong> : null}
-                  <p>{event.body}</p>
+                  <p dir={event.kind === 'user' ? 'auto' : undefined}>{event.body}</p>
                   {event.detail ? <RecordDetail copy={copy} lines={[{ text: event.detail }]} /> : null}
                   {event.kind === 'fix' ? <div className="nz-actions">
                     <button type="button" className="nz-btn nz-btn-rust" data-action="open-failure" onClick={() => open('failures')}>{copy.ui.openFailure}</button>

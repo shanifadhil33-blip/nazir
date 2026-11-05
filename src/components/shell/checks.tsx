@@ -148,12 +148,12 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
           return (
             <li key={item.id} className="nz-question" data-mark={item.mark} data-open={isOpen}>
               <button type="button" className="nz-question-head" aria-expanded={isOpen} onClick={() => onOpenQuestion?.(item.id)}>
-                <span className="nz-question-text">{item.question}</span>
+                <span className="nz-question-text" dir="auto">{item.question}</span>
                 <Chip kind={item.mark} label={markLabel(item.mark, lang)} />
               </button>
               {isOpen ? <div className="nz-question-body">
-                <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.said}</p><p>{item.said}</p></div>
-                {item.record ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.record}</p><p>{item.record}</p></div> : null}
+                <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.said}</p><p dir="auto">{item.said}</p></div>
+                {item.record ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.record}</p><p dir="auto">{item.record}</p></div> : null}
                 {access.suggest && item.mark === 'wrong' && item.findingId ? <PillButton variant="ink" icon="wrench" className="nz-suggest" label={busy === 'suggesting' ? text.suggesting : text.suggest} disabled={busy === 'suggesting'} onClick={() => onSuggest?.(item.findingId!)} /> : null}
               </div> : null}
             </li>
