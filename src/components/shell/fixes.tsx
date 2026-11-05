@@ -103,7 +103,8 @@ function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction
     return (
       <article className={approved ? 'nz-fix nz-fix-approved' : 'nz-fix nz-fix-down'} data-fix={item.status} aria-busy={busy !== null}>
         <p className="nz-fix-state"><span className="nz-fix-tick"><ShellIcon name="tick" /></span><strong>{approved ? text.approved : text.turnedDown}</strong></p>
-        <p className="nz-fix-sub">{approved ? (item.rerun ? text.checkingAgain : text.readyAgain) : item.title}</p>
+        <p className="nz-fix-sub">{item.title}</p>
+        {approved ? <p className="nz-fix-sub nz-fix-next">{item.rerun ? text.checkingAgain : text.readyAgain}</p> : null}
         {approved && !item.rerun && access.recheck ? <PillButton className="nz-fix-btn" label={busy === 'recheck' ? text.sending : text.checkAgain} disabled={busy !== null} onClick={() => onAction?.(item.id, 'recheck')} /> : null}
         {approved && item.rerun ? <PillButton className="nz-fix-btn" label={text.seeChange} href={links.after} /> : null}
       </article>

@@ -191,3 +191,9 @@ it('keeps every new string free of dashes, caps, emoji and tech words in both la
     }
   }
 });
+
+it('shows what was approved, not only that something was', () => {
+  const html = renderToStaticMarkup(<FixesView lang="en" seat="editor" phase="ready" fixes={[{ id: 'p1', status: 'approved', title: 'Restore the approved complaint routing', by: { name: 'Bilal', initials: 'BN', mine: false }, wrong: 'x', fix: 'y', recheck: 1, rerun: false }]} access={{ decide: true, recheck: true }} canStart assistant="Nazir demo" links={homeLinks('w1')} tab="waiting" openId={null} busy={null} note={null} />);
+  expect(html).toContain('Restore the approved complaint routing');
+  expect(html).toContain('Ready to check again');
+});
