@@ -4,6 +4,9 @@ const config: NextConfig = {
   turbopack: {},
   outputFileTracingIncludes: {
     '/api/workspaces/*/reports/*/pdf': ['./src/server/reports/fonts/NotoSansArabic.ttf'],
+    // The shipped Government tests are read from disk when a new workspace starts its first check.
+    '/api/workspaces/*/agent/chat': ['./src/server/library/scenarios/**/*', './src/server/packs/government/**/*'],
+    '/api/mcp': ['./src/server/library/scenarios/**/*', './src/server/packs/government/**/*'],
   },
   poweredByHeader: false,
   async headers() {
