@@ -27,7 +27,7 @@ This starts a real Quick check, so it uses that deployment's model calls. Set `N
 
 **Risk to watch.** A conversation used to get 100 s. It now gets at most about 48 s. If free providers are slow, more conversations end with `timeout` and are retried (each retry waits 30 s times the attempt number), up to their attempt limit. The measurement script shows whether this happens.
 
-## Settings changes that would cut usage further (for Adhil to decide, none applied)
+## Deployment settings (region pinned; remaining changes for Adhil to decide)
 
 1. **Fluid compute / Active CPU billing.** Check that Fluid compute is on for the project. With it, time spent waiting on model and database I/O is not billed as CPU, and that wait is most of a step.
 2. **Function region next to the database.** `vercel.json` now pins `regions` to `["iad1"]`, beside Neon in us-east-1. The Nov 5 cold-load measurement already observed iad1 in live response headers; this makes the placement explicit and prevents drift.
