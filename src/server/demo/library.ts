@@ -3,7 +3,7 @@ import { demoRulePack } from '../../sandbox/demo-rule-pack';
 import { agentVersions } from '../../sandbox/versions';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { approveScenario, importLibrary } from '../library/import';
-import { approveRulePackVersion, draftRulePackVersion } from '../services';
+import { approveRulePackVersion, draftRulePackVersion } from '../services/index';
 import { loadPackCases } from '../packs/load';
 import { demoWorkspaceId } from '../auth/demo';
 
