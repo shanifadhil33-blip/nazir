@@ -58,6 +58,32 @@ export function readStore(raw: string | null): StoredFix[] {
   }
 }
 
+/** One suggested fix as the proposals route returns it. */
+export type ServerFix = {
+  id: string; finding_id: string; status: string; title: string; title_ar: string; created_at: string;
+  proposed_by_name: string | null; decided_at: string | null; decided_by_name: string | null;
+};
+const firstName = (name: string | null) => (name ?? '').trim().split(/\s+/)[0] ?? '';
+const initialsFor = (name: string | null) => (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((word) => Array.from(word)[0] ?? '').join('').toUpperCase();
+
+/**
+ * The server list is the truth, so every person and every device sees the same fixes.
+ * What only this device knows (the questions chosen to check again, and whether that was started) is kept from the local copy.
+ * A fix saved here a moment ago that the list does not have yet stays.
+ */
+export function mergeServerFixes(local: StoredFix[], server: readonly ServerFix[]): StoredFix[] {
+  const known = new Map(local.map((item) => [item.id, item]));
+  const merged = server.map((row): StoredFix => {
+    const kept = known.get(row.id);
+    const status: FixStatus = row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'turnedDown' : 'waiting';
+    const by = { name: firstName(row.proposed_by_name), initials: initialsFor(row.proposed_by_name), mine: false };
+    const decided = status !== 'waiting' && row.decided_at ? { at: row.decided_at, name: firstName(row.decided_by_name), initials: initialsFor(row.decided_by_name), status: status as 'approved' | 'turnedDown' } : undefined;
+    return { id: row.id, findingId: row.finding_id, status, by, title: { en: row.title, ar: row.title_ar }, recheck: kept?.recheck ?? null, rerun: kept?.rerun ?? false, at: row.created_at, ...(decided ? { decided } : {}) };
+  });
+  const serverIds = new Set(server.map((row) => row.id));
+  return [...merged, ...local.filter((item) => !serverIds.has(item.id))].sort((a, b) => new Date(b.at ?? 0).getTime() - new Date(a.at ?? 0).getTime());
+}
+
 export function upsertFix(list: StoredFix[], next: StoredFix): StoredFix[] {
   return [next, ...list.filter((item) => item.id !== next.id)];
 }
@@ -101,8 +127,11 @@ export function recheckMessage(id: string, lang: Lang) {
 }
 
 /** Turns what was kept plus the latest report into cards. Plain words only. */
-export function cardsFrom(stored: StoredFix[], body: ReportBody | null, lang: Lang, copy: Messages, me: string): FixCard[] {
+export function cardsFrom(stored: StoredFix[], bodies: ReportBody | null | readonly ReportBody[], lang: Lang, copy: Messages, me: string): FixCard[] {
+  const list: readonly ReportBody[] = Array.isArray(bodies) ? bodies : bodies ? [bodies as ReportBody] : [];
   return stored.map((item) => {
+    // A fix can belong to an earlier check, so every saved check is searched, newest first.
+    const body = list.find((candidate) => candidate.findings.some((row) => row.id === item.findingId)) ?? null;
     const finding = body?.findings.find((row) => row.id === item.findingId);
     const record = finding ? presentRecord(finding.really_happened, finding.really_happened_ar) : null;
     const wrong = record ? (lang === 'ar' ? record.ar : record.en) : copy.fixesScreen.noDetail;

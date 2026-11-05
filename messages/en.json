@@ -419,6 +419,8 @@
     "switchLanguage": "العربية",
     "demoTitle": "Or look around as",
     "demoNext": "You will land on the home screen as this person.",
+    "demoLimit": "Too many sign ins from your connection just now. Please wait a few minutes and try again.",
+    "demoFailed": "We could not sign you in. Please try again.",
     "demoOwnerName": "Omar, service owner",
     "demoOwnerLine": "Runs checks, approves fixes and sees everything.",
     "demoEditorName": "Yusuf, quality reviewer",

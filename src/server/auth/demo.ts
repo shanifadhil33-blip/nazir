@@ -1,5 +1,5 @@
 import 'server-only';
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import type { TransactionDriver } from '../db/driver';
 import { authCall, sessionHash } from './adapter';
 
@@ -35,4 +35,19 @@ export async function startDemoSession(driver: TransactionDriver, role: unknown,
   const expires = new Date(now.getTime() + demoSessionHours * 60 * 60 * 1000);
   await authCall(driver, 'auth_demo_session', [role, sessionHash(token), expires]);
   return demoCookie(token, expires, secure);
+}
+
+/** One caller may start 30 demo sessions in 10 minutes, and everyone together 600 an hour. Enough to try all four people many times. */
+export const demoLoginLimit = { perCaller: 30, windowSeconds: 600, overall: 600 } as const;
+
+/** A keyed hash of the caller's address from the proxy header. The address itself is never stored. */
+export function demoCallerKey(headerList: Pick<Headers, 'get'>, secret: string): string {
+  const forwarded = (headerList.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || headerList.get('x-real-ip')?.trim() || 'unknown';
+  return createHmac('sha256', secret).update(`demo-login:${forwarded.slice(0, 100)}`).digest('hex');
+}
+
+/** False when this caller (or everyone together) has used up the sign ins for now. */
+export async function allowDemoLogin(driver: TransactionDriver, callerKey: string): Promise<boolean> {
+  const rows = await authCall<{ auth_demo_login_allowed: boolean }>(driver, 'auth_demo_login_allowed', [callerKey, demoLoginLimit.perCaller, demoLoginLimit.windowSeconds, demoLoginLimit.overall]);
+  return rows[0]?.auth_demo_login_allowed === true;
 }
