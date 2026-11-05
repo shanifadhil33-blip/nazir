@@ -473,7 +473,7 @@
     "suggestedBy": "Suggested by {name}",
     "wrong": "What goes wrong",
     "fix": "The fix",
-    "recheck": "We will check {n} questions again",
+    "recheck": "Questions to check again: {n}",
     "approve": "Approve",
     "turnDown": "Turn down",
     "someoneElse": "Someone else decides this one",

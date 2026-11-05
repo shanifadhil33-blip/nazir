@@ -60,7 +60,7 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
   let scheduler = schedulers.get(now);
   if (!scheduler) { scheduler = { queues: new Map(), cooldowns: new Map() }; schedulers.set(now, scheduler); }
   const { queues, cooldowns } = scheduler;
-  const taskCaps = { test_run: capValue(env.AI_DAILY_CAP_TEST_RUN,300), live_demo: capValue(env.AI_DAILY_CAP_LIVE_DEMO,400), probe: capValue(env.AI_DAILY_CAP_PROBE,40) };
+  const taskCaps = { test_run: capValue(env.AI_DAILY_CAP_TEST_RUN,800), live_demo: capValue(env.AI_DAILY_CAP_LIVE_DEMO,400), probe: capValue(env.AI_DAILY_CAP_PROBE,40) };
   return {
     async chat(request: ChatRequest): Promise<ChatResponse & { meta: CallMeta }> {
       const plan = chainOrder(providers, request.purpose, request.agentFamilies ?? request.agentFamily, request.externalAgent);

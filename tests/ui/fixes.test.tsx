@@ -52,7 +52,7 @@ it('never lets the person who suggested a fix approve it', () => {
 
 it('shows the opened fix with its three lines and Omar as avatar OS', () => {
   const html = render('en', 'editor');
-  for (const line of ['What goes wrong', 'The fix', 'We will check 12 questions again', 'Suggested by Omar']) expect(html, line).toContain(line);
+  for (const line of ['What goes wrong', 'The fix', 'Questions to check again: 12', 'Suggested by Omar']) expect(html, line).toContain(line);
   expect(html).toContain('Don&#x27;t confirm rumours');
   expect(html).toContain('>OS<');
   expect(html).not.toContain('>YA<');
@@ -101,7 +101,7 @@ it('renders Arabic right to left with Arabic words and no English leftovers', ()
   const html = render('ar', 'editor');
   expect(html).toContain('dir="rtl"');
   expect(html).toContain('lang="ar"');
-  for (const word of ['إصلاحات', 'للمراجعة', 'بالانتظار', 'وافق', 'ارفض', 'ما الخطأ', 'الإصلاح', 'سنعيد فحص 12 سؤالاً', 'اقترحه']) expect(html, word).toContain(word);
+  for (const word of ['إصلاحات', 'للمراجعة', 'بالانتظار', 'وافق', 'ارفض', 'ما الخطأ', 'الإصلاح', 'أسئلة ستُفحص مجددا: 12', 'اقترحه']) expect(html, word).toContain(word);
   expect(html).not.toContain('Approve');
   expect(after('ar', 'owner')).toContain('dir="rtl"');
   expect(after('ar', 'owner')).toContain('قبل الإصلاح');
