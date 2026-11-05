@@ -158,7 +158,7 @@ export async function visibleCandidates(driver: TransactionDriver, memberId: str
   });
 }
 
-/** Proposes a bounded plan as the signed in member. The planner cannot use the worker role to skip a permission. */
+/** Proposes a bounded plan for the signed in member, who must hold plan.propose. Nazir is the proposer of record; approval stays with a person. */
 export async function proposeBoundedPlan(driver: TransactionDriver, memberId: string, value: unknown) {
   const input = proposeInput.parse(value);
   return withMember(driver, memberId, async (sql) => {
@@ -194,10 +194,19 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     const languages = input.languages ?? [...new Set(scenarios.filter((scenario) => plan.scenarioIds.includes(scenario.id)).map((scenario) => scenario.language))];
     const stopRules = { size: input.size, ...(input.size === 'quick' ? { quick_version: packById(packId)!.quick.version } : {}), set: 'bounded', budget: plan.budget, stop: { on_budget: plan.stop.onBudget, failure_streak: plan.stop.failureStreak }, order: plan.order, scenario_ids: plan.scenarioIds, failures, tools: plan.tools, permissions: plan.permissions, calls_per_attempt: callsPerScenario, planned_calls: plan.plannedCalls, planned_cost: plan.plannedCost, call_ceiling: plan.callCeiling, repeats_for: repeatsFor };
     const lessonsUsed = ordered.lessonsUsed;
+    // A Quick check is what the Start button runs. Nazir proposes it and the person who tapped approves it, so one person can start
+    // a check in their own workspace. Other plans keep a member as proposer, and nobody approves what they proposed themselves.
+    // The member who asked is kept in the audit record.
+    const asker = (await sql.query<{ id: string; wid: string }>('SELECT nazir.current_member_id() AS id, nazir.current_workspace_id() AS wid')).rows[0]!;
+    const byNazir = input.size === 'quick';
+    if (byNazir) {
+      await sql.query('SET LOCAL ROLE nazir_worker');
+      await sql.query("SELECT set_config('app.workspace_id',$1,true)", [asker.wid]);
+    }
     const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used,repeat_count)
-      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,$8,$5,$6::jsonb,'member',$7::jsonb,$8) RETURNING id`,
-    [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules), lessonsUsed.length ? JSON.stringify(lessonsUsed) : null, input.repeat_count])).rows[0]!;
-    await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order, lessons: lessonsUsed.map((lesson) => lesson.lesson_id) })]);
+      VALUES(nazir.current_workspace_id(),'Bounded plan from failure history',$1,$2,$3,$4,$8,$5,$6::jsonb,$9,$7::jsonb,$8) RETURNING id`,
+    [input.agent_version_id, input.rule_pack_version_id, plan.order, languages.length ? languages : ['en'], plan.plannedCalls, JSON.stringify(stopRules), lessonsUsed.length ? JSON.stringify(lessonsUsed) : null, input.repeat_count, byNazir ? 'nazir' : 'member'])).rows[0]!;
+    await sql.query("SELECT nazir.append_audit('plan.proposed','plan',$1,$2)", [row.id, JSON.stringify({ requested_by: asker.id, set: 'bounded', planned_calls: plan.plannedCalls, order: plan.order, lessons: lessonsUsed.map((lesson) => lesson.lesson_id) })]);
     return { id: row.id, ...plan, size: input.size, repeatCount: input.repeat_count, lessonsUsed };
   });
 }

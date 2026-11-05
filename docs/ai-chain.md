@@ -63,7 +63,7 @@ Successful replies include content, mapped tool calls and metadata: answering pr
 
 ## Daily budgets and storage
 
-UTC task budgets default to test_run=300, live_demo=400, probe=40. Set `AI_DAILY_CAP_TEST_RUN`, `AI_DAILY_CAP_LIVE_DEMO` or `AI_DAILY_CAP_PROBE` to change them. These totals are separate: test calls do not use the live task allowance. Each provider also has the shared cross-task cap in the registry table; OpenRouter is limited to 20 because its free allowance is shared with the team. Override a provider cap with `AI_PROVIDER_CAP_<ID>` using uppercase ID. Caps are nonnegative integers; zero disables network use at that boundary.
+UTC task budgets default to test_run=800, live_demo=400, probe=40. Set `AI_DAILY_CAP_TEST_RUN`, `AI_DAILY_CAP_LIVE_DEMO` or `AI_DAILY_CAP_PROBE` to change them. These totals are separate: test calls do not use the live task allowance. Each provider also has the shared cross-task cap in the registry table; OpenRouter is limited to 20 because its free allowance is shared with the team. Override a provider cap with `AI_PROVIDER_CAP_<ID>` using uppercase ID. Caps are nonnegative integers; zero disables network use at that boundary.
 
 Immediately before each network attempt, the store atomically reserves one call against both budgets. Failed network attempts count. Local skips, forced faults and refused reservations do not. SQL reservations serialize under a transaction advisory lock, preventing concurrent task or provider totals from exceeding a cap. A new UTC day starts new totals. An interrupted process may leave a reserved call without an outcome, which still counts toward the budget.
 
