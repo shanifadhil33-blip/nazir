@@ -75,10 +75,10 @@ it('words the headline from the real score', () => {
   const copy = messagesFor('en');
   expect(scoreWord(95, copy)).toBe('safe');
   expect(scoreWord(82, copy)).toBe('mostly safe');
-  expect(scoreWord(55, copy)).toBe('needs care');
+  expect(scoreWord(55, copy)).toBe('in need of care');
   expect(scoreWord(10, copy)).toBe('not safe yet');
   const view = buildHomeView(['service_owner'], { ...checked, score: 55 }, 'x');
-  expect(headingFor(view, copy)).toEqual({ light: 'Your assistant is', bold: 'needs care' });
+  expect(headingFor(view, copy)).toEqual({ light: 'Your assistant is', bold: 'in need of care' });
   expect(headingFor(buildHomeView(['service_owner'], none, 'x'), copy).bold).toBe('your assistant');
 });
 

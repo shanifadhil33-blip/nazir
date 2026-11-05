@@ -43,12 +43,12 @@ export function ExternalAgentCard({ copy, lang, workspaceId, initial, edit, samp
         <p className="nz-hint">{t.connectionKeyHint}</p>
         {saved?.key_saved ? <p>{fill(t.keySaved, { last4: `•••• ${saved.key_last4 ?? ''}` })}</p> : null}
         <button type="button" className="nz-btn" data-action="save-connection" disabled={!name.trim() || !endpoint.trim() || !!secret && !header} onClick={() => void act('PUT')}>{t.save}</button>
-        <label>{t.testMessage}<textarea value={message} maxLength={1000} rows={2} onChange={(e) => setMessage(e.target.value)} /></label>
+        <label>{t.testMessage}<textarea dir="auto" value={message} maxLength={1000} rows={2} onChange={(e) => setMessage(e.target.value)} /></label>
         <button type="button" className="nz-btn" data-action="test-connection" disabled={!saved || dirty || !message.trim()} onClick={() => void act('POST')}>{t.sendTest}</button>
         {saved ? <button type="button" className="nz-btn nz-btn-ghost" data-action="remove-connection" onClick={() => void act('DELETE')}>{t.remove}</button> : null}
       </fieldset>
       <p role="status">{busy ? t.connectionBusy : status || (saved ? saved.ready ? t.connectionReady : t.connectionPending : t.connectionEmpty)}</p>
-      {reply ? <p data-agent-reply>{reply}</p> : null}
+      {reply ? <p data-agent-reply dir="auto">{reply}</p> : null}
     </>}
   </section>;
 }

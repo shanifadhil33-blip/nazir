@@ -65,7 +65,7 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
       </div>
       <p className="nz-note">{t.intro}</p>
       <label className="nz-live-field"><span>{t.complaint}</span>
-        <textarea name="complaint" rows={3} maxLength={400} value={text} onChange={(e) => setText(e.target.value)} disabled={state === 'running'} />
+        <textarea name="complaint" dir="auto" rows={3} maxLength={400} value={text} onChange={(e) => setText(e.target.value)} disabled={state === 'running'} />
       </label>
       <div className="nz-live-switch">
         <button type="button" role="switch" aria-checked={planted} data-action="planted-switch" className="nz-switch" onClick={() => setPlanted((p) => !p)} disabled={state === 'running'}><span aria-hidden="true" /></button>
@@ -82,8 +82,8 @@ export function LiveTestPanel({ copy, lang, workspaceId, sample, reportHref, onC
         {sides.map((s) => <section key={s.run_id} className="nz-settings-card" data-side={s.role} data-status={s.status}>
           <h3>{s.role === 'clean' ? t.clean : t.planted} <span className={`nz-pill is-${s.status}`}>{label(s.status)}</span></h3>
           {s.note ? <p className="nz-note" data-note="run-reason">{s.note[lang] || s.note.en}</p> : null}
-          <p className="nz-note">{t.typed}: {text}</p>
-          <h4>{t.said}</h4><p>{s.reply ?? ''}</p>
+          <p className="nz-note">{t.typed}: <span dir="auto">{text}</span></p>
+          <h4>{t.said}</h4><p dir="auto">{s.reply ?? ''}</p>
           <h4>{t.record}</h4>{s.cases.length ? <ul>{s.cases.map((c) => <li key={c.reference}>{c.reference}, {c.queue ?? ''}</li>)}</ul> : <p>{done(s.status) ? t.noRecord : ''}</p>}
           <h4>{t.checks}</h4><p>{s.failed_checks.length ? s.failed_checks.map((c) => c[lang] || c.en).join('. ') : done(s.status) ? t.none : ''}</p>
         </section>)}
