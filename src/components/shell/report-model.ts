@@ -1,3 +1,4 @@
+import { checkDate } from '@/server/reports/date';
 import { fill, type Messages } from '@/components/ocean/copy';
 import { can, type Role } from '@/server/auth/roles';
 import { caseResults, completionOf, isCompleteReport, type ReportBody } from '@/server/reports/build';
@@ -28,7 +29,7 @@ export function factsFromReports(reports: readonly Saved[], now: Date): ReportFa
   const latest = reports[0];
   if (!latest) return null;
   const week = 7 * 86_400_000;
-  const base = [...reports].slice(1).filter((item) => isCompleteReport(item.body) && now.getTime() - new Date(item.created_at).getTime() <= week).pop();
+  const base = [...reports].slice(1).filter((item) => isCompleteReport(item.body) && now.getTime() - checkDate(item.created_at, item.body).getTime() <= week).pop();
   const rows = caseResults(latest.body.conversations);
   const has = (language: string) => rows.some((row) => row.language === language);
   return {
@@ -40,7 +41,7 @@ export function factsFromReports(reports: readonly Saved[], now: Date): ReportFa
     toFix: latest.body.counts.failed,
     fixedThisWeek: base && isCompleteReport(latest.body) && !base.body.sample && !latest.body.sample ? changeBetween(base.body, latest.body).fixed : 0,
     languages: { en: has('en'), ar: has('ar') },
-    at: new Date(latest.created_at),
+    at: checkDate(latest.created_at, latest.body),
   };
 }
 

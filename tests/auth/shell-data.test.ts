@@ -52,3 +52,30 @@ it.each(['service_owner', 'quality_reviewer', 'viewer', 'supplier_maintainer'] a
   const small = await loadMemberSnapshot(workspace, 'en', true, false);
   expect(small.reports).toEqual([]); expect(small.fixes).toEqual([]);
 });
+
+it('seeds queued checks with null started_at under member RLS for reload and fresh sign-in', async () => {
+  const other = await seed(db, 'QueuedShell');
+  await db.owner.query("UPDATE nazir.runs SET status='queued',started_at=NULL WHERE id=$1", [other.ids.runs]);
+  const sessionFor = (workspaceId: string, memberId: string) => ({ user: { id: 'user', name: 'Omar Haddad' }, memberships: [{ workspaceId, memberId, roles: ['service_owner'], workspaceName: 'Shell' }] });
+  for (let visit = 0; visit < 2; visit++) {
+    fake.auth.mockResolvedValue(sessionFor(other.workspace_id, other.member_id));
+    const loaded = await loadMemberSnapshot(other.workspace_id, 'en', true, true, false, true);
+    expect(loaded.activeRuns).toEqual([{ runId: other.ids.runs, done: 0, total: 1 }]);
+  }
+  fake.auth.mockResolvedValue(sessionFor(workspace, members.service_owner));
+  expect((await loadMemberSnapshot(workspace, 'en', true, true, false, true)).activeRuns).toEqual([]);
+  await expect(loadMemberSnapshot(other.workspace_id, 'en', true, true, false, true)).rejects.toBeInstanceOf(Forbidden);
+});
+
+it('keeps a failed server active-runs read unknown and recovers on the next load', async () => {
+  fake.auth.mockResolvedValue({ user: { id: 'user' }, memberships: [{ workspaceId: workspace, memberId: members.service_owner, roles: ['service_owner'], workspaceName: 'Shell' }] });
+  const broken: typeof db.driver = { transaction: (work) => db.driver.transaction((sql) => work({ query: (query, params) => {
+    if (query.includes("status IN ('queued','running')")) throw new Error('Read unavailable');
+    return sql.query(query, params);
+  } })) };
+  fake.runtimeDriver.mockReturnValue(broken);
+  try {
+    expect((await loadMemberSnapshot(workspace, 'en', true, true, false, true)).activeRuns).toBeNull();
+  } finally { fake.runtimeDriver.mockReturnValue(db.driver); }
+  expect((await loadMemberSnapshot(workspace, 'en', true, true, false, true)).activeRuns).toEqual([]);
+});

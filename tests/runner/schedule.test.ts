@@ -4,7 +4,7 @@ vi.mock('next/server', () => ({ after: (fn: () => Promise<void>) => { hooks.afte
 const runtime = vi.hoisted(() => ({ tick: vi.fn(), lock: vi.fn() }));
 vi.mock('../../src/server/db/runtime', () => ({ runtimeDriver: () => ({}), inspectionRuntimeDriver: () => ({}), runnerLock: runtime.lock }));
 vi.mock('../../src/server/runner/tick', () => ({ tick: runtime.tick }));
-import { runnerUrl, scheduleRunner } from '../../src/server/runner/schedule';
+import { busyDelayMs, runnerUrl, scheduleRunner } from '../../src/server/runner/schedule';
 import { POST, maxDuration } from '../../src/app/api/runner/tick/route';
 
 beforeEach(() => {
@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', undefined);
   vi.stubEnv('VERCEL_URL', undefined);
 });
-afterEach(() => { hooks.after = []; vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { hooks.after = []; vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); vi.useRealTimers(); });
 it('requires the configured secret before accepting a POST, without echoing authentication', async () => {
   expect(maxDuration).toBe(300);
   vi.stubEnv('CRON_SECRET', 'test_tick_secret');
@@ -45,14 +45,36 @@ it('registers the initial kick before Start returns, so it needs no browser', as
   await hooks.after.shift()!();
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
-it('stops chaining when no work remains or another tick owns the lock', async () => {
+it('stops chaining only when idle', async () => {
   vi.stubEnv('CRON_SECRET', 'test_tick_secret');
-  for (const result of [{ pending: false, busy: false }, { pending: false, busy: true }]) {
-    runtime.tick.mockResolvedValue(result);
-    await POST(new Request('https://example.test/api/runner/tick', { method: 'POST', headers: { authorization: 'Bearer test_tick_secret' } }));
-    await hooks.after.shift()!();
-    expect(hooks.after).toHaveLength(0);
-  }
+  runtime.tick.mockResolvedValue({ pending: false, busy: false });
+  await POST(new Request('https://example.test/api/runner/tick', { method: 'POST', headers: { authorization: 'Bearer test_tick_secret' } }));
+  await hooks.after.shift()!();
+  expect(hooks.after).toHaveLength(0);
+});
+it('chains a busy tick after a short delay even without pending work', async () => {
+  vi.useFakeTimers();
+  vi.stubEnv('CRON_SECRET', 'test_tick_secret'); vi.stubEnv('VERCEL_URL', 'preview.example.test');
+  runtime.tick.mockResolvedValue({ pending: false, busy: true });
+  const fetcher = vi.fn(async () => new Response(null, { status: 202 })); vi.stubGlobal('fetch', fetcher);
+  await POST(new Request('https://example.test/api/runner/tick', { method: 'POST', headers: { authorization: 'Bearer test_tick_secret' } }));
+  await hooks.after.shift()!();
+  expect(hooks.after).toHaveLength(1);
+  const chained = hooks.after.shift()!();
+  await vi.advanceTimersByTimeAsync(busyDelayMs - 1);
+  expect(fetcher).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1); await chained;
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it('chains again after a tick exception', async () => {
+  vi.stubEnv('CRON_SECRET', 'test_tick_secret'); vi.stubEnv('VERCEL_URL', 'preview.example.test');
+  runtime.tick.mockRejectedValue(new Error('Database unavailable'));
+  const fetcher = vi.fn(async () => new Response(null, { status: 202 })); vi.stubGlobal('fetch', fetcher);
+  await POST(new Request('https://example.test/api/runner/tick', { method: 'POST', headers: { authorization: 'Bearer test_tick_secret' } }));
+  await hooks.after.shift()!();
+  expect(hooks.after).toHaveLength(1);
+  await hooks.after.shift()!();
+  expect(fetcher).toHaveBeenCalledTimes(1);
 });
 it('uses deployment configuration for secrets, never the incoming Host', () => {
   expect(runnerUrl({ VERCEL_URL: 'preview.example.test' })?.origin).toBe('https://preview.example.test');

@@ -111,3 +111,36 @@ it('gives a viewer the terminal report and still refuses a viewer write', async 
   await expect(db.member(viewer, (sql) => sql.query('SELECT nazir.read_report($1)', [created.id]))).rejects.toThrow(/cannot do this/);
   expect((await db.owner.query("SELECT action FROM nazir.audit_events WHERE action='report.created' AND target_id=$1", [created.id])).rows).toHaveLength(1);
 });
+
+it('enriches legacy dates after role projection under RLS without changing stored bodies or hashes', async () => {
+  const legacy = await seed(db, 'LegacyDates');
+  const finished = '2026-11-09T08:00:00Z';
+  await db.owner.query("UPDATE nazir.runs SET status='cancelled',started_at=NULL,finished_at=$2 WHERE id=$1", [legacy.ids.runs, finished]);
+  const stored = async () => (await db.owner.query<{ body: ReportBody; body_hash: string }>('SELECT body,body_hash FROM nazir.reports WHERE id=$1', [legacy.ids.reports])).rows[0]!;
+  const before = await stored();
+  expect(before.body.run.finished_at).toBeUndefined();
+  const viewerId = await db.createMember(legacy.workspace_id, ['viewer'], 'Bilal');
+  const supplierId = await db.createMember(legacy.workspace_id, ['supplier_maintainer'], 'Yusuf');
+  for (const member of [legacy.member_id, viewerId, supplierId]) {
+    const row = (await listReports(db.driver, member)).reports.find((r) => r.id === legacy.ids.reports)!;
+    expect(new Date(row.body.run.finished_at!).toISOString()).toBe(new Date(finished).toISOString());
+    expect(row.body.run.started_at).toBeNull();
+  }
+  expect(await stored()).toEqual(before);
+  expect((await listReports(db.driver, owner)).reports.some((r) => r.id === legacy.ids.reports)).toBe(false);
+  const newerRun = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,status,frozen_manifest,runner_version,started_at,finished_at)
+    VALUES($1,$2,$3,$4,'cancelled','{}','1','2026-11-10T07:00:00Z','2026-11-10T08:00:00Z') RETURNING id`, [legacy.workspace_id, legacy.ids.plans, legacy.ids.agent_versions, legacy.ids.rule_pack_versions])).rows[0]!;
+  const newerReport = await createReport(db.driver, legacy.member_id, { run_id: newerRun.id });
+  const newerBody = await readFullReport(db.driver, legacy.member_id, newerReport.id);
+  expect(new Date(newerBody.run.started_at!).toISOString()).toBe('2026-11-10T07:00:00.000Z');
+  const created = await createReport(db.driver, legacy.member_id, { run_id: legacy.ids.runs });
+  const fresh = await readFullReport(db.driver, legacy.member_id, created.id);
+  expect(new Date(fresh.run.finished_at!).toISOString()).toBe(new Date(finished).toISOString());
+  expect(fresh.run.started_at).toBeNull();
+  expect(await stored()).toEqual(before);
+  const ordered = (await listReports(db.driver, legacy.member_id)).reports.map((r) => r.id);
+  expect(ordered.indexOf(newerReport.id)).toBeLessThan(ordered.indexOf(created.id));
+  const repeated = await createReport(db.driver, legacy.member_id, { run_id: legacy.ids.runs });
+  expect(repeated.id).toBe(created.id);
+  expect(repeated.body_hash).toBe(created.body_hash);
+});

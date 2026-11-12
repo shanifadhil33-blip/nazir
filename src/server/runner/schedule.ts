@@ -16,11 +16,14 @@ export function runnerUrl(env: Record<string, string | undefined> = process.env)
 
 /** Register after the enqueue transaction commits, before returning Start's response.
  * The tick responds immediately and owns its work with after(), so closing the phone cannot stop it. */
-export function scheduleRunner() {
+export const busyDelayMs = 1000;
+
+export function scheduleRunner({ busy = false }: { busy?: boolean } = {}) {
   const secret = process.env.CRON_SECRET;
   const url = runnerUrl();
   if (!secret || !url) return false;
   after(async () => {
+    if (busy) await new Promise((resolve) => setTimeout(resolve, busyDelayMs));
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const response = await fetch(url, { method: 'POST', headers: { authorization: `Bearer ${secret}` }, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10_000) });

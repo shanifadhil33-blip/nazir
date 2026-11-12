@@ -59,10 +59,11 @@ export async function startQuickCheck(workspaceId: string, lang: Lang, fetcher: 
 
 /** Shared server progress. The browser never drives conversations or creates reports. */
 export async function readActiveRuns(workspaceId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<RunProgress[] | null> {
-  const response = await fetcher(`/api/workspaces/${workspaceId}/runs?active=1`, { headers: { 'accept-language': lang }, cache: 'no-store' }).catch(() => null);
+  const response = await fetcher(`/api/workspaces/${workspaceId}/runs?active=1`, { headers: { 'accept-language': lang }, cache: 'no-store', signal: AbortSignal.timeout(10_000) }).catch(() => null);
   if (!response?.ok) return null;
   const payload = await response.json().catch(() => null) as { runs?: { run_id: string; tries_done: number; tries_total: number }[] } | null;
-  return payload?.runs?.map((run) => ({ runId: run.run_id, done: run.tries_done, total: run.tries_total })) ?? null;
+  if (!Array.isArray(payload?.runs) || payload.runs.some((run) => !run || typeof run.run_id !== 'string' || !Number.isInteger(run.tries_done) || !Number.isInteger(run.tries_total))) return null;
+  return payload.runs.map((run) => ({ runId: run.run_id, done: run.tries_done, total: run.tries_total }));
 }
 export async function kickRun(workspaceId: string, runId: string, fetcher: Fetcher = fetch) {
   await fetcher(`/api/workspaces/${workspaceId}/runs/${runId}/kick`, { method: 'POST' }).catch(() => null);

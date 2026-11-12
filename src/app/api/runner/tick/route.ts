@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   after(async () => {
     try {
       const result = await tick({ driver: runtimeDriver(), inspectionDriver: inspectionRuntimeDriver(), lock: runnerLock });
-      if (result.pending) scheduleRunner();
+      if (result.pending || result.busy) scheduleRunner({ busy: result.busy });
     } catch {
       // Recovery will inspect existing conversation leases, never duplicate completed answers.
       scheduleRunner();

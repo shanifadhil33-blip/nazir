@@ -33,6 +33,7 @@ export type ChecksViewProps = {
   openQuestion: string | null;
   running: RunProgress | null;
   active?: RunProgress[];
+  activeStatus?: 'loading' | 'ready' | 'error';
   busy: 'starting' | 'stopping' | 'suggesting' | null;
   note: ChecksNote;
   onOpenCheck?: (id: string) => void;
@@ -56,6 +57,8 @@ export function ChecksView(props: ChecksViewProps) {
   const open = checks.find((item) => item.id === openId) ?? null;
   const showCheck = open ?? (checks[0] ?? null);
   const view = open ? 'check' : 'list';
+  const active = props.active ?? (running ? [running] : []);
+  const canStart = access.start && (props.activeStatus ?? 'ready') === 'ready' && active.length === 0;
   return (
     <main className="nz-shell nz-checks" {...attrs} data-seat={seat} data-state={phase} data-view={view}>
       <div className="nz-shell-desk">
@@ -77,8 +80,9 @@ export function ChecksView(props: ChecksViewProps) {
             {note && note !== 'limit' && note !== 'unreachable' ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
             <div className="nz-checks-body">
               <div className="nz-checks-list">
-                {(props.active ?? (running ? [running] : [])).map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
-                {checks.length === 0 && !running ? <StateCard kind="empty" title={copy.shell.emptyTitle} action={access.start ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
+                {active.map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
+                {props.activeStatus && props.activeStatus !== 'ready' ? <PhaseCard phase={props.activeStatus} copy={copy} onRetry={props.onRetry} fallback={links.home} /> : null}
+                {checks.length === 0 && active.length === 0 && (props.activeStatus ?? 'ready') === 'ready' ? <StateCard kind="empty" title={copy.shell.emptyTitle} action={canStart ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
                 {checks.map((item) => {
                   const clean = !item.stopped && item.toFix === 0;
                   return (
@@ -93,15 +97,15 @@ export function ChecksView(props: ChecksViewProps) {
                     </button>
                   );
                 })}
-                {access.start && checks.length > 0 && !running ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
+                {canStart && checks.length > 0 ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
               </div>
               {showCheck ? <CheckDetail lang={lang} check={showCheck} now={now} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} /> : null}
             </div>
           </>}
         </div>
       </div>
-      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={access.start} current="checks" links={navLinks(links, seat)} />
-      <SideNav lang={lang} seat={seat} copy={copy} canStart={access.start} current="checks" links={navLinks(links, seat)} />
+      <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="checks" links={navLinks(links, seat)} />
+      <SideNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="checks" links={navLinks(links, seat)} />
     </main>
   );
 }
