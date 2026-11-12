@@ -84,11 +84,12 @@ it('drives a queued run one conversation per call for roles that start runs only
   await expect(stepRun(db.driver, f.members.reviewer, 'not-a-run', deps, ready)).rejects.toMatchObject({ code: 'validation' });
 });
 
-it('counts progress in tests, not tries: a test with repeats left is waiting, and the total never shrinks', async () => {
+it('counts every finished pass while keeping the question verdict waiting for its remaining passes', async () => {
   const { enqueueRun } = await import('../../src/server/runner/enqueue');
   const { stepRun } = await import('../../src/server/livetest/drive');
   const run = await enqueueRun(db.driver, { workspaceId: f.workspaceId, planId: f.planId, agentVersionId: f.versions.find((v) => v.registry_id === 'planted_wrong_queue')!.id, scenarioIds: [f.scenarios['complaint_vs_suggestion_trap_en']!], repeats: 3, idempotencyKey: crypto.randomUUID() });
   const first = await stepRun(db.driver, f.members.reviewer, run.id, deps, ready);
+  expect(first).toMatchObject({ tries_done: 1, tries_total: 3 });
   expect(first.results).toHaveLength(1);
   expect(first.passed + first.failed + first.inconclusive + first.waiting).toBe(1);
   expect(first.waiting).toBe(1);
@@ -97,6 +98,6 @@ it('counts progress in tests, not tries: a test with repeats left is waiting, an
     last = await stepRun(db.driver, f.members.reviewer, run.id, deps, ready);
     expect(last.passed + last.failed + last.inconclusive + last.waiting).toBe(1);
   }
-  expect(last).toMatchObject({ done: true, waiting: 0 });
+  expect(last).toMatchObject({ done: true, waiting: 0, tries_done: 3, tries_total: 3 });
   expect(last.passed + last.failed + last.inconclusive).toBe(1);
 });

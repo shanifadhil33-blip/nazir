@@ -16,7 +16,7 @@ export const packSchema = z.strictObject({
   runner: z.enum(['government_sandbox', 'estate_sandbox', 'shop_sandbox', 'clinic_sandbox', 'school_sandbox', 'none']),
   name: both, summary: both,
   synthetic_data: z.literal(true),
-  quick: z.strictObject({ version: z.string().regex(/^\d+\.\d+\.\d+$/), keys: z.array(text).length(16).refine((keys) => new Set(keys).size === 16, 'Quick keys must be unique.') }),
+  quick: z.strictObject({ version: z.string().regex(/^\d+\.\d+\.\d+$/), keys: z.array(text).length(8).refine((keys) => new Set(keys).size === 8, 'Quick keys must be unique.'), previous: z.array(z.strictObject({ version: text, keys: z.array(text).length(16) })).optional() }),
   cases: z.union([
     z.strictObject({ source: z.literal('library'), directory: text, families: z.number().int(), count: z.number().int().positive(), languages: z.strictObject({ en: z.number().int().positive(), ar: z.number().int().positive() }) }),
     z.strictObject({ source: z.literal('inline'), file: text, count: z.number().int().positive(), languages: z.strictObject({ en: z.number().int().positive(), ar: z.number().int().positive() }) }),

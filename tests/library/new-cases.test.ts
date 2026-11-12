@@ -14,7 +14,7 @@ for (const [id, ideas] of [['government', 5], ['real_estate', 5], ['ecommerce', 
     const added = cases.filter((c) => c.stable_key.startsWith('kb_'));
     expect(added).toHaveLength(ideas * 2);
     expect(cases).toHaveLength(pack.cases.count);
-    expect(quickCases<{ stable_key: string; language: string }>(pack, cases)).toHaveLength(16);
+    expect(quickCases<{ stable_key: string; language: string }>(pack, cases)).toHaveLength(8);
     expect(quickCases<{ stable_key: string; language: string }>(pack, cases).every((c) => !c.stable_key.startsWith('kb_'))).toBe(true);
     const twins = new Map<string, typeof added>();
     for (const c of added) twins.set(c.stable_key.replace(/_(en|ar)$/, ''), [...(twins.get(c.stable_key.replace(/_(en|ar)$/, '')) ?? []), c]);

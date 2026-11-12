@@ -52,9 +52,11 @@ const proposeInput = z.object({ size: planSize.default('full'), repeat_count: z.
 /** Nazir proposes the next plan. It stays proposed until a reviewer or owner approves it. */
 export async function proposeNextPlan(driver: TransactionDriver, workspaceId: string, value: unknown) {
   const input = proposeInput.parse(value);
+  input.repeat_count = input.size === 'quick' ? 1 : 3;
   return withWorker(driver, workspaceId, async (sql) => {
     const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages, input.size);
     const plan = planOrder(scenarios, failures, lessons);
+    if (input.size === 'quick') { plan.familyRepeats = {}; plan.repeatsFor = {}; }
     if (!plan.scenarioIds.length) throw new Error('No approved scenarios');
     const row = (await sql.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,lessons_used,repeat_count)
       VALUES(nazir.current_workspace_id(),'Next plan from history and lessons',$1,$2,$3,$4,$8,$5,$6::jsonb,'nazir',$7::jsonb,$8) RETURNING id`,
@@ -71,6 +73,8 @@ export async function approvePlan(driver: TransactionDriver, memberId: string, v
     const plan = (await sql.query<{ stop_rules: { scenario_ids?: string[]; budget?: { kind: string; perCall?: number }; [key: string]: unknown } }>("SELECT stop_rules FROM nazir.plans WHERE id=$1 AND status='proposed' FOR UPDATE", [input.id])).rows[0];
     if (!plan) throw new Error('Plan is not waiting');
     const rules = { ...plan.stop_rules };
+    input.repeat_count = rules.size === 'quick' && rules.quick_version === '2.0.0' ? 1 : 3;
+    if (input.repeat_count === 1) { rules.repeats_for = {}; rules.family_repeats = {}; }
     if (input.size && input.size !== (rules.size ?? 'full')) throw new Error('Approve the proposed plan size.');
     if (rules.scenario_ids?.length) {
       rules.calls_per_attempt = callsPerScenario;

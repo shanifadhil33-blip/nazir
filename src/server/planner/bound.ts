@@ -161,6 +161,7 @@ export async function visibleCandidates(driver: TransactionDriver, memberId: str
 /** Proposes a bounded plan for the signed in member, who must hold plan.propose. Nazir is the proposer of record; approval stays with a person. */
 export async function proposeBoundedPlan(driver: TransactionDriver, memberId: string, value: unknown) {
   const input = proposeInput.parse(value);
+  input.repeat_count = input.size === 'quick' ? 1 : 3;
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.propose');
     const version = (await sql.query<{ id: string; agent_id: string }>('SELECT id,agent_id FROM nazir.agent_versions WHERE id=$1', [input.agent_version_id])).rows[0];
@@ -172,6 +173,7 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
     const held = plannerPermissions.filter((action) => can(roles, action));
     const { scenarios, failures, lessons } = await planInputs(sql, input.families, input.languages, input.size);
     const ordered = planOrder(scenarios, failures, lessons);
+    if (input.size === 'quick') ordered.repeatsFor = {};
     if (!ordered.scenarioIds.length) throw new Coded(409, 'no_tests', 'There is no approved test to plan.');
     const byId = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
     const candidates = ordered.scenarioIds.flatMap((id) => {
@@ -188,7 +190,7 @@ export async function proposeBoundedPlan(driver: TransactionDriver, memberId: st
       heldPermissions: held,
       ...(input.permissions ? { requestedPermissions: input.permissions } : {}),
     });
-    if (input.size === 'quick' && plan.scenarioIds.length !== 16) throw new Coded(400, 'budget_too_small', 'The budget is too small for a quick check.');
+    if (input.size === 'quick' && plan.scenarioIds.length !== 8) throw new Coded(400, 'budget_too_small', 'The budget is too small for a quick check.');
     const packId = (await sql.query<{ pack: string }>('SELECT nazir.current_focus_pack() AS pack')).rows[0]!.pack;
     const repeatsFor = Object.fromEntries(Object.entries(ordered.repeatsFor).filter(([id]) => plan.scenarioIds.includes(id)));
     const languages = input.languages ?? [...new Set(scenarios.filter((scenario) => plan.scenarioIds.includes(scenario.id)).map((scenario) => scenario.language))];
