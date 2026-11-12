@@ -168,7 +168,7 @@ export function WorkspaceScreen({
         </div>
         <button type="button" className="nz-compact" onClick={() => open('score')}>
           <span>{model.agentName}</span>
-          <ScoreFigure value={model.metrics.score} compact />
+          {model.stopped ? <span>{model.stopped}</span> : <ScoreFigure value={model.metrics.score} compact />}
           <span className="nz-compact-counts">{copy.ui.pass} {model.metrics.pass} · {copy.ui.fail} {model.metrics.fail} · {copy.ui.critical} {model.metrics.critical}</span>
         </button>
         <div className="nz-scroll">
@@ -211,12 +211,12 @@ export function WorkspaceScreen({
           <div className="nz-score-top">
             <div>
               <button type="button" className="nz-agent nz-agent-btn" data-action="agent-card" aria-label={copy.settings.open} onClick={onSettings}><AgentAvatar value={avatar} size={28} />{model.agentName}</button>
-              <ScoreFigure value={model.metrics.score} named={screen !== 'report'} caption={copy.ui.outOf} />
+              {model.stopped ? <p>{model.stopped}</p> : <ScoreFigure value={model.metrics.score} named={screen !== 'report'} caption={copy.ui.outOf} />}
             </div>
           </div>
           <Counters copy={copy} metrics={model.metrics} />
           {model.outcomes?.map((c) => <p key={c.id}>{c.label} {c.flaky ? <span className="nz-chip">{copy.ui.flaky}</span> : null}</p>)}
-          <Bars copy={copy} metrics={model.metrics} lang={lang} />
+          {!model.stopped ? <Bars copy={copy} metrics={model.metrics} lang={lang} /> : null}
           <button type="button" className="nz-btn nz-btn-ghost" onClick={() => open('report')}>{copy.ui.report}</button>
         </section>
         <section className="nz-panel nz-failure" id="nz-failures" aria-label={copy.ui.failures}
@@ -239,7 +239,7 @@ export function WorkspaceScreen({
         {model.empty ? <p className="nz-empty" data-state="first-report">{copy.ui.firstReport}</p> : <>
         {model.sample ? <p>{copy.shell.sample}</p> : null}
         {model.suiteLabel ? <p>{model.suiteLabel}</p> : null}
-        {model.before ? <div className="nz-report-scores">
+        {model.stopped ? <p>{model.stopped}</p> : model.before ? <div className="nz-report-scores">
           <div><p>{copy.ui.before}</p><ScoreFigure value={model.before.score} ring="coral" /></div>
           <span className="nz-arrow" aria-hidden="true">→</span>
           <div><p>{copy.ui.after}</p><ScoreFigure value={model.metrics.score} ring="teal" named={screen === 'report'} /></div>
@@ -259,7 +259,7 @@ export function WorkspaceScreen({
             })}
           </tbody>
         </table> : null}
-        {measured ? <MeasuredTable copy={copy} lang={lang} data={measured} /> : null}
+        {measured && !model.stopped ? <MeasuredTable copy={copy} lang={lang} data={measured} /> : null}
         <h3>{copy.ui.fixesApplied}</h3>
         {model.fixes.length === 0 ? <p className="nz-empty">{copy.ui.noRepair}</p> : <ul className="nz-fixes">{model.fixes.map((fix) => <li key={fix.id}><strong>{fix.title}</strong><span>{fill(copy.ui.approvedBy, { name: fix.name, role: fix.role })} {dubaiStamp(fix.at, lang)}, {copy.ui.dubai}</span></li>)}</ul>}
         <p className="nz-coverage">{model.coverage}</p>

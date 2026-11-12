@@ -3,7 +3,7 @@ import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, errorLines, Forbidden, NotFound } from '../http/errors';
 import { packById } from '../packs/catalog';
-import { countsOf, reportRunDate, reportTestTitle, type ReportBody, type ReportConversation } from './build';
+import { isCompleteReport, reportRunDate, reportTestTitle, type ReportBody } from './build';
 import type { PdfExtras } from './pdf';
 import { readFullReport } from './read';
 
@@ -40,7 +40,7 @@ export async function readPdfReport(driver: TransactionDriver, memberId: string,
         WHERE c.run_b_id=$1 AND a.created_at<b.created_at ORDER BY c.created_at DESC,c.id LIMIT 1`, [body.run.id])).rows[0]?.id;
     }
     const before = beforeRun ? (await sql.query<{ body: ReportBody }>('SELECT body FROM nazir.reports WHERE run_id=$1 ORDER BY created_at DESC,id LIMIT 1', [beforeRun])).rows[0]?.body : null;
-    const beforeCounts = before?.counts ?? (beforeRun ? countsOf((await sql.query<ReportConversation>('SELECT id,status,language,scenario_id,attempt_number FROM nazir.conversations WHERE run_id=$1', [beforeRun])).rows, 0) : null);
+    const beforeCounts = before && isCompleteReport(before) ? before.counts : null;
     const runDate = reportRunDate(header.run_date, lang);
     return {
       lang, agentName: header.agent_name, focusPack: packById(header.focus_pack ?? '')?.name[lang] ?? (lang === 'ar' ? 'غير مسجلة' : 'Not recorded'), runDate,

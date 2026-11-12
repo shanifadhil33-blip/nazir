@@ -9,7 +9,7 @@ import { liveTestReady, type StepDeps } from './live-test';
 import { conversationBudget } from './budget';
 
 export type RunNote = { code: ErrorCode; en: string; ar: string };
-export type RunProgress = { run_id: string; status: string; done: boolean; passed: number; failed: number; inconclusive: number; waiting: number; results?: CaseResult[]; notes: RunNote[] };
+export type RunProgress = { run_id: string; status: string; done: boolean; tries_done: number; tries_total: number; passed: number; failed: number; inconclusive: number; waiting: number; results?: CaseResult[]; notes: RunNote[] };
 
 /** Plain lines for why conversations ended without a verdict, or are waiting for a retry. One line per kind. */
 export function runNotes(rows: { status: string; inconclusive_reason?: string | null; last_error?: string | null }[]): RunNote[] {
@@ -22,16 +22,16 @@ export function runNotes(rows: { status: string; inconclusive_reason?: string | 
   return [...notes.values()];
 }
 
-async function progress(driver: TransactionDriver, workspaceId: string, runId: string): Promise<RunProgress> {
+export async function progress(driver: TransactionDriver, workspaceId: string, runId: string): Promise<RunProgress> {
   return withWorker(driver, workspaceId, async (sql) => {
     const row = (await sql.query<{ status: string }>('SELECT status FROM nazir.runs WHERE id=$1', [runId])).rows[0];
     if (!row) throw new NotFound();
     const conversations = (await sql.query<ReportConversation & { last_error: string | null }>('SELECT id,status,scenario_id,attempt_number,language,inconclusive_reason,last_error FROM nazir.conversations WHERE run_id=$1 ORDER BY created_at,id', [runId])).rows;
     const results = caseResults(conversations);
-    // Progress is counted in tests, not tries: a test is finished only when none of its repeats is still waiting.
+    // Question verdicts stay grouped. The progress bar counts every finished answer pass.
     const unfinished = (c: (typeof results)[number]) => c.attempts.some((a) => ['queued', 'running', 'planned'].includes(a.status));
     const finished = results.filter((c) => !unfinished(c));
-    return { run_id: runId, status: row.status, done: ['passed', 'failed', 'inconclusive', 'cancelled'].includes(row.status), passed: finished.filter((c) => c.status === 'passed').length, failed: finished.filter((c) => c.status === 'failed').length, inconclusive: finished.filter((c) => c.status === 'inconclusive').length, waiting: results.length - finished.length, results, notes: runNotes(conversations) };
+    return { tries_done: conversations.filter((c) => ['passed', 'failed', 'inconclusive'].includes(c.status)).length, tries_total: conversations.length, run_id: runId, status: row.status, done: ['passed', 'failed', 'inconclusive', 'cancelled'].includes(row.status), passed: finished.filter((c) => c.status === 'passed').length, failed: finished.filter((c) => c.status === 'failed').length, inconclusive: finished.filter((c) => c.status === 'inconclusive').length, waiting: results.length - finished.length, results, notes: runNotes(conversations) };
   });
 }
 

@@ -1,9 +1,7 @@
-import { driveSteps, type StepOutcome } from '@/components/ocean/step-loop';
 import type { Lang } from '@/components/ocean/copy';
 import { approvalMessage } from './checks-model';
 
 export type RunProgress = { runId: string; done: number; total: number };
-export type RunEnd = 'done' | 'stopped' | 'failed';
 
 const uuid = /^[0-9a-f-]{36}$/i;
 
@@ -17,7 +15,6 @@ export function runIdOf(data: unknown): string | null {
   return typeof id === 'string' && uuid.test(id) ? id : null;
 }
 
-export const storeKey = (workspaceId: string) => `nz-check-run-${workspaceId}`;
 
 type Fetcher = typeof fetch;
 
@@ -60,32 +57,15 @@ export async function startQuickCheck(workspaceId: string, lang: Lang, fetcher: 
   return 'runId' in outcome ? outcome.runId : null;
 }
 
-type StepBody = { done: boolean; passed: number; failed: number; inconclusive: number; waiting: number };
-
-/** Drives one run with the existing step endpoint and reports progress after every step. */
-export async function driveRun(workspaceId: string, runId: string, lang: Lang, onProgress: (progress: RunProgress) => void, isStopped: () => boolean, fetcher: Fetcher = fetch): Promise<RunEnd> {
-  let last = -1;
-  let failed = false;
-  const end = await driveSteps(async (): Promise<StepOutcome> => {
-    if (isStopped()) return 'stop';
-    const response = await fetcher(`/api/workspaces/${workspaceId}/runs/${runId}/step`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
-    if (isStopped()) return 'stop';
-    if (!response?.ok) {
-      if (response && response.status < 500 && response.status !== 503) { failed = true; return 'stop'; }
-      return 'error';
-    }
-    const body = await response.json().catch(() => null) as StepBody | null;
-    if (!body) { failed = true; return 'stop'; }
-    const finished = body.passed + body.failed + body.inconclusive;
-    onProgress({ runId, done: finished, total: finished + body.waiting });
-    if (body.done || body.waiting === 0) return 'done';
-    if (finished === last) return 'idle';
-    last = finished;
-    return 'progress';
-  });
-  if (isStopped()) return 'stopped';
-  if (end === 'done') return 'done';
-  return failed || end !== 'stop' ? 'failed' : 'stopped';
+/** Shared server progress. The browser never drives conversations or creates reports. */
+export async function readActiveRuns(workspaceId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<RunProgress[] | null> {
+  const response = await fetcher(`/api/workspaces/${workspaceId}/runs?active=1`, { headers: { 'accept-language': lang }, cache: 'no-store' }).catch(() => null);
+  if (!response?.ok) return null;
+  const payload = await response.json().catch(() => null) as { runs?: { run_id: string; tries_done: number; tries_total: number }[] } | null;
+  return payload?.runs?.map((run) => ({ runId: run.run_id, done: run.tries_done, total: run.tries_total })) ?? null;
+}
+export async function kickRun(workspaceId: string, runId: string, fetcher: Fetcher = fetch) {
+  await fetcher(`/api/workspaces/${workspaceId}/runs/${runId}/kick`, { method: 'POST' }).catch(() => null);
 }
 
 export async function stopRun(workspaceId: string, runId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<boolean> {

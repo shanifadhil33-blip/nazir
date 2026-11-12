@@ -2,7 +2,7 @@ import { fill, type Lang, type Messages } from '@/components/ocean/copy';
 import { canApprove, canRunRecheck } from '@/components/ocean/model';
 import { presentRecord } from '@/components/ocean/plain';
 import { can, type Role } from '@/server/auth/roles';
-import { caseResults, type ReportBody } from '@/server/reports/build';
+import { isCompleteReport, caseResults, type ReportBody } from '@/server/reports/build';
 
 export type FixStatus = 'waiting' | 'approved' | 'turnedDown';
 export type Tab = 'waiting' | 'done';
@@ -170,7 +170,7 @@ function rate(body: ReportBody, language: string): number | null {
 
 /** Sample checks are independent examples, so they never establish a measured repair. */
 export function measuredChange(before: ReportBody, after: ReportBody): Change | null {
-  return before.sample || after.sample ? null : changeBetween(before, after);
+  return before.sample || after.sample || !isCompleteReport(before) || !isCompleteReport(after) ? null : changeBetween(before, after);
 }
 
 /** Before and after from two saved checks. Questions are paired by their scenario, so each answer is counted once. */

@@ -17,7 +17,7 @@ const run = (id: string, conversations: ConversationRow[], manifest: Record<stri
 
 it('pairs only the same scenario, language and repeat and classifies every pair', () => {
   const a = run('a', [conv('k1_en:en:1', 'failed'), conv('k1_ar:ar:1', 'failed'), conv('k2_en:en:1', 'passed'), conv('k3_en:en:1', 'failed'), conv('k4_en:en:1', 'passed'), conv('k5_en:en:1', 'inconclusive'), conv('k6_en:en:1', 'passed'), conv('k1_en:en:2', 'failed')]);
-  const b = run('b', [conv('k1_en:en:1', 'passed'), conv('k1_ar:ar:1', 'passed'), conv('k2_en:en:1', 'failed'), conv('k3_en:en:1', 'failed'), conv('k4_en:en:1', 'passed'), conv('k5_en:en:1', 'passed'), conv('k7_en:en:1', 'passed'), conv('k1_en:en:2', 'cancelled')]);
+  const b = run('b', [conv('k1_en:en:1', 'passed'), conv('k1_ar:ar:1', 'passed'), conv('k2_en:en:1', 'failed'), conv('k3_en:en:1', 'failed'), conv('k4_en:en:1', 'passed'), conv('k5_en:en:1', 'passed'), conv('k7_en:en:1', 'passed'), conv('k1_en:en:2', 'inconclusive')]);
   const { summary, pairs } = buildComparison(a, b);
   const cls = Object.fromEntries(pairs.map((p) => [p.key, p.class]));
   expect(cls).toMatchObject({ 'k1_en:en:1': 'improved', 'k1_ar:ar:1': 'improved', 'k2_en:en:1': 'regressed', 'k3_en:en:1': 'still_failing', 'k4_en:en:1': 'still_passing', 'k5_en:en:1': 'inconclusive', 'k1_en:en:2': 'inconclusive', 'k6_en:en:1': 'unpaired', 'k7_en:en:1': 'unpaired' });
@@ -58,7 +58,10 @@ it('flags changed settings and never pairs a changed scenario', () => {
   expect(summary.totals.paired).toBe(0);
   expect(settingsDiffer({ a: 1 }, { a: 2 })).toEqual([]);
 });
-it('refuses unfinished runs', () => {
+it('refuses unfinished and stopped checks before measuring improvement', () => {
+  const complete = run('a', [conv('k_en:en:1', 'failed')]);
+  expect(() => buildComparison(complete, { ...run('b', [conv('k_en:en:1', 'passed')]), status: 'cancelled' })).toThrow('finished');
+  expect(() => buildComparison(complete, run('b', [conv('k_en:en:1', 'passed'), conv('j_en:en:1', 'cancelled')]))).toThrow('finished');
   expect(() => buildComparison({ ...run('a', []), status: 'running' }, run('b', []))).toThrow('finished');
 });
 it('reports language parity with denominators and the review line', () => {

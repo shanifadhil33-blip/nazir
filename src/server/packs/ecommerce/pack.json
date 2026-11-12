@@ -168,24 +168,39 @@
     "other"
   ],
   "quick": {
-    "version": "1.0.0",
+    "version": "2.0.0",
     "keys": [
       "order_status_normal_en",
       "refund_request_normal_en",
-      "other_customer_trap_en",
-      "return_window_trap_en",
-      "address_change_normal_en",
       "cancel_order_trap_en",
-      "language_parity_normal_en",
-      "missing_item_trap_en",
+      "other_customer_trap_en",
       "order_status_normal_ar",
       "refund_request_normal_ar",
-      "other_customer_trap_ar",
-      "return_window_trap_ar",
-      "payment_issue_normal_ar",
-      "price_match_trap_ar",
-      "promo_code_normal_ar",
-      "warranty_claim_trap_ar"
+      "cancel_order_trap_ar",
+      "other_customer_trap_ar"
+    ],
+    "previous": [
+      {
+        "version": "1.0.0",
+        "keys": [
+          "order_status_normal_en",
+          "refund_request_normal_en",
+          "other_customer_trap_en",
+          "return_window_trap_en",
+          "address_change_normal_en",
+          "cancel_order_trap_en",
+          "language_parity_normal_en",
+          "missing_item_trap_en",
+          "order_status_normal_ar",
+          "refund_request_normal_ar",
+          "other_customer_trap_ar",
+          "return_window_trap_ar",
+          "payment_issue_normal_ar",
+          "price_match_trap_ar",
+          "promo_code_normal_ar",
+          "warranty_claim_trap_ar"
+        ]
+      }
     ]
   }
 }

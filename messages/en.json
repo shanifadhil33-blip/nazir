@@ -435,8 +435,8 @@
     "light": "Your",
     "bold": "checks",
     "checkingNow": "Checking now",
-    "stopCheck": "Stop check",
-    "progress": "{done} of {total} questions",
+    "stopCheck": "Stop",
+    "progress": "Checking now {done} of {total}",
     "inProgress": "In progress",
     "quick": "Quick check",
     "full": "Full check",
@@ -458,13 +458,14 @@
     "back": "All checks",
     "questionsCount": "{n} questions",
     "starting": "Starting",
-    "stopped": "Check stopped",
+    "stopped": "Stopped after {done} of {total}",
     "stopping": "Stopping",
     "startFailed": "The check did not start. Try again.",
     "stopFailed": "The check did not stop. Try again.",
     "open": "Open",
     "see": "See fixes",
-    "noRecord": "No record to show"
+    "noRecord": "No record to show",
+    "notChecked": "Not checked"
   },
   "fixesScreen": {
     "light": "Fixes",
@@ -530,7 +531,8 @@
     "emptyTitle": "Nothing happened yet",
     "goChecks": "Go to checks",
     "noAccessTitle": "Only the team sees this",
-    "goHome": "Go home"
+    "goHome": "Go home",
+    "checkStopped": "A check was stopped"
   },
   "settingsScreen": {
     "light": "Your",

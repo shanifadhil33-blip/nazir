@@ -69,8 +69,8 @@ it('handles zero conversations honestly in both languages', async () => {
   for (const lang of ['en', 'ar'] as const) {
     const options = await extras(lang);
     const sections = clientReportSections(empty, options);
-    expect(sections[0]?.lines).toEqual(['0 / 100']);
-    expect(sections[1]?.lines.every((line) => line.includes('0 / 100'))).toBe(true);
+    expect(sections[0]?.title).toBe(lang === 'en' ? 'Stopped after 0 of 0' : 'توقف الفحص بعد 0 من 0');
+    expect(JSON.stringify(sections)).not.toContain('/ 100');
     expect((await PDFDocument.load(await buildReportPdf(empty, options))).getPageCount()).toBe(1);
   }
 });

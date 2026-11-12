@@ -1,12 +1,12 @@
 import { fill, type Lang, type Messages } from '@/components/ocean/copy';
-import { caseResults, type ReportBody } from '@/server/reports/build';
+import { caseResults, completionOf, isCompleteReport, type ReportBody } from '@/server/reports/build';
 import { presentQuote, presentRecord } from '@/components/ocean/plain';
 import { can, type Role } from '@/server/auth/roles';
 import { daysBetween } from './home-model';
 
-export type Mark = 'right' | 'wrong' | 'unsure';
+export type Mark = 'right' | 'wrong' | 'unsure' | 'notChecked';
 export type QuestionRow = { id: string; question: string; mark: Mark; said: string; record: string; findingId: string | null };
-export type CheckRow = { sample?: boolean; id: string; kind: 'quick' | 'full'; at: Date; toFix: number; questions: QuestionRow[] };
+export type CheckRow = { sample?: boolean; stopped?: { done: number; total: number }; id: string; kind: 'quick' | 'full'; at: Date; toFix: number; questions: QuestionRow[] };
 export type ChecksAccess = { start: boolean; stop: boolean; suggest: boolean };
 
 /** Buttons follow the server role matrix: start and stop follow plan.propose and plan.approve, suggest follows proposal.create. */
@@ -18,12 +18,12 @@ export function checksAccess(roles: readonly string[]): ChecksAccess {
 export function markFor(status: string): Mark {
   if (status === 'passed') return 'right';
   if (status === 'failed') return 'wrong';
-  return 'unsure';
+  return ['cancelled', 'queued', 'running', 'planned'].includes(status) ? 'notChecked' : 'unsure';
 }
 
 /** One row per question. The question is the first thing the person asked, the answer is the last reply the assistant saved. */
 export function checkFromReport(id: string, createdAt: string, body: ReportBody, lang: Lang, copy: Messages): CheckRow {
-  const cases = caseResults(body.conversations).filter((row) => ['passed', 'failed', 'inconclusive'].includes(row.status));
+  const cases = caseResults(body.conversations);
   const empty = { en: copy.checksScreen.noReply, ar: copy.checksScreen.noReply };
   const questions = cases.map((row, index): QuestionRow => {
     const ids = new Set(row.attempts.map((attempt) => attempt.id));
@@ -44,6 +44,7 @@ export function checkFromReport(id: string, createdAt: string, body: ReportBody,
   });
   return {
     id,
+    ...(!isCompleteReport(body) ? { stopped: { done: completionOf(body).tries_done, total: completionOf(body).tries_total } } : {}),
     sample: body.sample === true,
     kind: body.run.size === 'full' ? 'full' : 'quick',
     at: new Date(createdAt),
@@ -91,4 +92,8 @@ export function approvalMessage(planId: string, lang: Lang) {
   return lang === 'ar'
     ? `أوافق على الخطة ${planId} وأبدأ التشغيل لأن مراجعتي لحجم الفحص والتكلفة تمت. اطلعت على الدليل.`
     : `I approve plan ${planId} and start the run because I reviewed the check size and cost. I opened the evidence.`;
+}
+
+export function checkResultLabel(check: CheckRow, copy: Messages) {
+  return check.stopped ? fill(copy.checksScreen.stopped, { done: String(check.stopped.done), total: String(check.stopped.total) }) : resultLabel(check.toFix, copy);
 }

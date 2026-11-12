@@ -1,3 +1,4 @@
+import { scheduleRunner } from '@/server/runner/schedule';
 import { runtimeDriver } from '@/server/db/runtime';
 import { memberRoute, requestLanguage } from '@/server/http/route';
 import { cancelRunAsMember } from '@/server/runner/cancel';
@@ -5,5 +6,9 @@ import { cancelRunAsMember } from '@/server/runner/cancel';
 export const dynamic = 'force-dynamic';
 export async function POST(request: Request, context: { params: Promise<{ workspaceId: string; runId: string }> }) {
   const { workspaceId, runId } = await context.params;
-  return memberRoute(workspaceId, (memberId) => cancelRunAsMember(runtimeDriver(), memberId, runId), 200, requestLanguage(request));
+  return memberRoute(workspaceId, async (memberId) => {
+    const result = await cancelRunAsMember(runtimeDriver(), memberId, runId);
+    scheduleRunner();
+    return result;
+  }, 200, requestLanguage(request));
 }

@@ -12,6 +12,9 @@ beforeAll(async () => {
   const hidden = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.scenarios(workspace_id,meaning_id,stable_key,version,family,language,split,persona,starting_state,allowed_actions,forbidden_actions,expected_state,source_clause,expectation_kind,severity,rubric_version,status) VALUES($1,$2,'hidden_m',1,'test','ar','hidden','{}','{}','{}','{}','{}','fictional','fictional_demo_rule','high','1','approved') RETURNING id`, [s.workspace_id, s.ids.scenario_meanings])).rows[0]!.id;
   await db.owner.query("INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,idempotency_key,status) VALUES($1,$2,$3,'ar','hidden_m','failed')", [s.workspace_id, s.ids.runs, hidden]);
   outsider = (await seed(db, 'Other')).member_id;
+  // Only finished checks contribute to measured report values.
+  for (const status of ['queued', 'running', 'passed']) await db.owner.query('UPDATE nazir.conversations SET status=$2 WHERE id=$1', [s.ids.conversations, status]);
+  for (const status of ['queued', 'running', 'failed']) await db.owner.query('UPDATE nazir.runs SET status=$2 WHERE id=$1', [s.ids.runs, status]);
   await db.owner.query("INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,idempotency_key,status,result_summary) VALUES($1,$2,$3,'en','measured','passed',$4)", [s.workspace_id, s.ids.runs, s.ids.scenarios, JSON.stringify({ records: [{ id: 'case_exists', status: 'pass' }], semantic: { status: 'supported' } })]);
 }, 60000);
 afterAll(async () => { await db?.close(); });
@@ -26,4 +29,11 @@ it('measures saved runs inside the workspace, keeps hidden cases from a supplier
   expect(a.metrics.find((m) => m.id === 'action_correctness')).toMatchObject({ numerator: 1, denominator: 1 });
   expect(v).toMatchObject({ restricted: true, metrics: [] });
   expect(o.metrics.find((m) => m.id === 'action_correctness')!.denominator).toBe(0);
+});
+
+it('excludes answered questions from a stopped check when measuring a workspace', async () => {
+  const source = (await db.owner.query<{ id: string }>('SELECT r.id FROM nazir.runs r JOIN nazir.members m ON m.workspace_id=r.workspace_id WHERE m.id=$1 ORDER BY r.created_at LIMIT 1', [owner])).rows[0]!.id;
+  const cancelled = (await db.owner.query<{ id: string }>("INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,status,frozen_manifest,runner_version,calls_budget,finished_at) SELECT workspace_id,plan_id,agent_version_id,rule_pack_version_id,'cancelled',frozen_manifest,runner_version,calls_budget,now() FROM nazir.runs WHERE id=$1 RETURNING id", [source])).rows[0]!.id;
+  await db.owner.query("INSERT INTO nazir.conversations(workspace_id,run_id,scenario_id,language,idempotency_key,status,result_summary) SELECT workspace_id,$2,scenario_id,language,'partial_answer','failed',result_summary FROM nazir.conversations WHERE run_id=$1 LIMIT 1", [source, cancelled]);
+  expect((await measuredResults(db.driver, owner)).conversations).toBe(3);
 });

@@ -33,6 +33,7 @@ export type ReportBody = {
   scope: { en: string; ar: string };
   run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number };
   counts: ReportCounts;
+  completion?: { complete: boolean; tries_done: number; tries_total: number };
   cases?: CaseResult[];
   conversations: ReportConversation[];
   findings: ReportFinding[];
@@ -55,7 +56,8 @@ export function caseResults(conversations: ReportConversation[]): CaseResult[] {
     const unfinished = attempts.some((r) => ['queued', 'running', 'planned'].includes(r.status));
     // A finished inconclusive attempt cannot establish a safe pass.
     const uncertain = attempts.some((r) => r.status === 'inconclusive');
-    const status = failed ? 'failed' : uncertain ? 'inconclusive' : unfinished ? 'running' : passed ? 'passed' : 'cancelled';
+    const cancelled = attempts.some((r) => r.status === 'cancelled');
+    const status = failed ? 'failed' : uncertain ? 'inconclusive' : unfinished ? 'running' : cancelled ? 'cancelled' : passed ? 'passed' : 'cancelled';
     return { ...attempts[0]!, status, passed, total: attempts.length, flaky: passed > 0 && failed > 0, outcome: { en: attemptOutcome(passed, attempts.length, 'en'), ar: attemptOutcome(passed, attempts.length, 'ar') }, attempts };
   });
 }
@@ -103,6 +105,7 @@ export function assembleReport(input: { run: ReportBody['run']; conversations: R
     scope: scopeLine,
     run: input.run,
     counts,
+    completion: completionOf(input),
     conversations: input.conversations,
     cases: caseResults(input.conversations),
     findings: input.findings,
@@ -126,6 +129,7 @@ export function projectReport(full: ReportBody, mode: 'full' | 'development'): R
     cases: caseResults(conversations),
     messages,
     counts,
+    completion: { ...completionOf({ run: full.run, conversations }), complete: completionOf(full).complete && completionOf({ run: full.run, conversations }).complete },
     hidden_findings: full.findings.filter((finding) => finding.split === 'hidden').length,
     sentences: sentences(counts, conversations),
     scope: scopeLine,
@@ -157,4 +161,20 @@ export function reportRunDate(value: string, lang: 'en' | 'ar'): string {
     timeZone: 'Asia/Dubai', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).format(new Date(value));
   return `${date} ${lang === 'ar' ? 'بتوقيت دبي' : 'Dubai time'}`;
+}
+
+/** A wrong answer is a completed answer. Cancelled and unasked questions never establish a score. */
+export function completionOf(body: Pick<ReportBody, 'run' | 'conversations' | 'completion'>) {
+  const finished = new Set(['passed', 'failed', 'inconclusive']);
+  const tries_total = body.conversations?.length ?? 0;
+  const tries_done = (body.conversations ?? []).filter((row) => finished.has(row.status)).length;
+  const complete = body.completion?.complete !== false && ['passed', 'failed', 'inconclusive'].includes(body.run?.status) && tries_total > 0 && tries_done === tries_total;
+  return { complete, tries_done, tries_total };
+}
+export function isCompleteReport(body: ReportBody) {
+  return completionOf(body).complete;
+}
+export function stoppedLine(body: ReportBody, lang: 'en' | 'ar') {
+  const progress = completionOf(body);
+  return (lang === 'ar' ? ar : en).checksScreen.stopped.replace('{done}', String(progress.tries_done)).replace('{total}', String(progress.tries_total));
 }

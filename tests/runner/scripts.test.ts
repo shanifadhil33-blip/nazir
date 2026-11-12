@@ -25,5 +25,5 @@ it.skipIf(!hasRegisterHooks)('resolves quick data through the actual runner load
   const output = await execFile(runnerNode, ['--input-type=module', '-e',
     'import("./scripts/runner-loader.mjs").then(()=>import("./src/server/packs/quick.ts")).then(async q=>{const {focusPacks}=await import("./src/server/packs/catalog.ts"); console.log(focusPacks.map(p=>q.selectSize(p.id,p.quick.keys.map(stable_key=>({stable_key,language:stable_key.endsWith("_ar")?"ar":"en"})),q.planSize.parse(process.env.SIZE)).length).join(","))})',
   ], { encoding: 'utf8', env: { ...process.env, SIZE: 'quick' } });
-  expect(output.stdout.trim()).toBe('16,16,16,16,16');
+  expect(output.stdout.trim()).toBe('8,8,8,8,8');
 });

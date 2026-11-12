@@ -89,7 +89,7 @@ it('executes all attempts, deduplicates failed checks, and preserves counts thro
   const runs = await listRuns(db.driver, owner);
   expect(runs.find((r) => r.id === run.id)?.results).toEqual(expect.arrayContaining([expect.objectContaining({ total: 3, passed: 0 })]));
 });
-it('only an owner or reviewer can select a validated count when approving', async () => {
+it('only an owner or reviewer approves, with Full kept at three passes', async () => {
   const roles = ['service_owner', 'quality_reviewer', 'viewer'] as const;
   for (const [i, role] of roles.entries()) {
     const member = await db.createMember(f.workspaceId, [role]);
@@ -100,8 +100,8 @@ it('only an owner or reviewer can select a validated count when approving', asyn
     else {
       await approvePlan(db.driver, member, approval);
       const saved = (await db.owner.query('SELECT repeat_count,stop_rules FROM nazir.plans WHERE id=$1', [plan.id])).rows[0]!;
-      expect(saved.repeat_count).toBe(i + 1);
-      expect(saved.stop_rules).toMatchObject({ planned_calls: 8 * (i + 1), planned_cost: 16 * (i + 1) });
+      expect(saved.repeat_count).toBe(3);
+      expect(saved.stop_rules).toMatchObject({ planned_calls: 8 * 3, planned_cost: 16 * 3 });
     }
     await expect(approvePlan(db.driver, member, { ...approval, repeat_count: 4 })).rejects.toThrow();
   }

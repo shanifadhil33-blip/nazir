@@ -58,7 +58,7 @@ export function ReportView(props: ReportViewProps) {
           <p className="nz-rep-caption">{captionText(facts, props.assistant || copy.shell.helpDesk, now, copy)}</p>
         </section>
         <ul className="nz-rep-rows">
-          <Row icon="tick" tone="right" label={text.fixed} value={facts.fixedThisWeek} />
+          {!facts.stopped ? <Row icon="tick" tone="right" label={text.fixed} value={facts.fixedThisWeek} /> : null}
           <Row icon="alert" tone="wrong" label={text.still} value={facts.toFix} />
           <Row icon="globe" tone="plain" label={languageRow(facts, copy)} dot />
         </ul>

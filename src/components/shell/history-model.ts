@@ -1,10 +1,10 @@
 import { fill, type Lang, type Messages } from '@/components/ocean/copy';
 import { can, type Role } from '@/server/auth/roles';
-import type { ReportBody } from '@/server/reports/build';
+import { isCompleteReport, stoppedLine, type ReportBody } from '@/server/reports/build';
 import { daysBetween } from './home-model';
 import type { StoredFix } from './fixes-model';
 
-export type HistoryKind = 'checkDone' | 'suggested' | 'approved' | 'turnedDown';
+export type HistoryKind = 'checkDone' | 'checkStopped' | 'suggested' | 'approved' | 'turnedDown';
 
 export type HistoryItem = {
   id: string;
@@ -32,7 +32,7 @@ export function buildHistory(reports: readonly (Saved & { id: string })[], fixes
   for (const report of reports) {
     const at = new Date(report.created_at);
     if (Number.isNaN(at.getTime())) continue;
-    items.push({ id: `r-${report.id}`, kind: 'checkDone', who: null, detail: fill(text.questions, { n: String(report.body.counts.conversations) }), at });
+    items.push({ id: `r-${report.id}`, kind: isCompleteReport(report.body) ? 'checkDone' : 'checkStopped', who: null, detail: isCompleteReport(report.body) ? fill(text.questions, { n: String(report.body.counts.conversations) }) : stoppedLine(report.body, lang), at });
   }
   for (const fix of fixes) {
     const title = lang === 'ar' ? fix.title.ar : fix.title.en;
@@ -47,6 +47,7 @@ export function buildHistory(reports: readonly (Saved & { id: string })[], fixes
 export function sentenceFor(item: HistoryItem, copy: Messages): string {
   const text = copy.historyScreen;
   if (item.kind === 'checkDone') return text.checkDone;
+  if (item.kind === 'checkStopped') return text.checkStopped;
   return fill(text[item.kind], { name: item.who?.name ?? '' });
 }
 
