@@ -5,14 +5,14 @@ import type { SqlConnection } from '../db/driver';
  * Plans and runs are never deleted: finished records are immutable and no role holds DELETE.
  * The only change made is the one the runner already allows, cancelling a run that is stuck.
  */
-export const staleAfterMs = 24 * 60 * 60 * 1000;
+export const staleAfterMs = 60 * 60 * 1000;
 /** A plan goal that starts like a test or smoke check marks a leftover from manual QA. */
 export const qaGoalPattern = /^\s*(?:\[?(?:qa|test|testing|smoke|probe|live check|dummy)\]?)(?![a-z])/i;
 
 export type PlanRow = { id: string; goal: string; status: string; created_at: string | Date };
 export type RunRow = { id: string; plan_id: string; status: string; created_at: string | Date };
 export type StaleSelection = {
-  /** Runs queued, running or planned for more than a day. These are the only rows the cleanup changes. */
+  /** Runs queued, running or planned for more than an hour. These are the only rows the cleanup changes. */
   stuckRunIds: string[];
   /** Report only. Finished records stay for the audit trail. */
   cancelledRunIds: string[];
@@ -61,9 +61,12 @@ export async function loadStaleRows(sql: SqlConnection) {
  * Call it inside a worker context for one workspace. Running it twice changes nothing the second time.
  */
 export async function cancelStuckRuns(sql: SqlConnection, runIds: string[]) {
+  // Enforce the boundary here too: callers cannot use this demo path in a real workspace.
+  const demo = (await sql.query<{ ok: boolean }>("SELECT EXISTS(SELECT 1 FROM nazir.workspaces WHERE id=nazir.current_workspace_id() AND kind='demo') AS ok")).rows[0]?.ok;
+  if (!demo) return 0;
   let cancelled = 0;
   for (const runId of runIds) {
-    const run = (await sql.query("SELECT id FROM nazir.runs WHERE id=$1 AND status IN ('planned','queued','running') FOR UPDATE", [runId])).rows[0];
+    const run = (await sql.query("SELECT id FROM nazir.runs WHERE id=$1 AND workspace_id=nazir.current_workspace_id() AND status IN ('planned','queued','running') FOR UPDATE", [runId])).rows[0];
     if (!run) continue;
     const conversations = await sql.query<{ id: string; model_provider: string | null; model_id: string | null; failover: boolean }>(
       "UPDATE nazir.conversations SET status='cancelled',finished_at=clock_timestamp() WHERE run_id=$1 AND status IN ('planned','queued','running') RETURNING id,model_provider,model_id,failover", [runId]);

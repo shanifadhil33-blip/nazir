@@ -4,7 +4,7 @@ import { migrate } from '../../src/server/db/migrate';
 import { withMember, withWorker } from '../../src/server/db/context';
 import type { SqlConnection, TransactionDriver } from '../../src/server/db/driver';
 
-export async function testDatabase() {
+export async function testDatabase(migrationRoot?: string) {
   const pg = new PGlite();
   const wrap = (db: Pick<PGlite, 'query' | 'exec'>): SqlConnection => ({
     async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]) {
@@ -15,7 +15,7 @@ export async function testDatabase() {
   });
   const owner = wrap(pg);
   const driver: TransactionDriver = { transaction: (work) => pg.transaction((tx) => work(wrap(tx))) };
-  const migrations = await migrate(driver);
+  const migrations = await migrate(driver, migrationRoot);
   return {
     pg, owner, driver, migrations,
     member: <T>(id: string, work: (db: SqlConnection) => Promise<T>) => withMember(driver, id, work),

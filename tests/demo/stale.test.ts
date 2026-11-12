@@ -7,26 +7,27 @@ import { seed, testDatabase, type TestDatabase } from '../helpers/pglite';
 
 const now = new Date('2026-11-03T12:00:00Z');
 const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
-const day = staleAfterMs;
+const hour = staleAfterMs;
 
 describe('selectStale', () => {
   const plans: PlanRow[] = [
-    { id: 'p1', goal: 'Check the complaint flow before the demo', status: 'approved', created_at: ago(5 * day) },
-    { id: 'p2', goal: 'Check refunds', status: 'cancelled', created_at: ago(2 * day) },
-    { id: 'p3', goal: 'QA smoke check', status: 'proposed', created_at: ago(2 * day) },
+    { id: 'p1', goal: 'Check the complaint flow before the demo', status: 'approved', created_at: ago(5 * hour) },
+    { id: 'p2', goal: 'Check refunds', status: 'cancelled', created_at: ago(2 * hour) },
+    { id: 'p3', goal: 'QA smoke check', status: 'proposed', created_at: ago(2 * hour) },
     { id: 'p4', goal: 'Check refunds again', status: 'proposed', created_at: ago(1000) },
-    { id: 'p5', goal: '  [test] checkout', status: 'approved', created_at: ago(day / 2) },
+    { id: 'p5', goal: '  [test] checkout', status: 'approved', created_at: ago(hour / 2) },
   ];
   const runs: RunRow[] = [
-    { id: 'r1', plan_id: 'p1', status: 'running', created_at: ago(2 * day) },
-    { id: 'r2', plan_id: 'p1', status: 'queued', created_at: ago(day + 1000) },
-    { id: 'r3', plan_id: 'p1', status: 'queued', created_at: ago(day - 1000) },
-    { id: 'r4', plan_id: 'p1', status: 'passed', created_at: ago(9 * day) },
-    { id: 'r5', plan_id: 'p2', status: 'cancelled', created_at: ago(3 * day) },
-    { id: 'r6', plan_id: 'p5', status: 'failed', created_at: ago(day / 2) },
-    { id: 'r7', plan_id: 'p1', status: 'planned', created_at: ago(3 * day) },
+    { id: 'r1', plan_id: 'p1', status: 'running', created_at: ago(2 * hour) },
+    { id: 'r2', plan_id: 'p1', status: 'queued', created_at: ago(hour + 1000) },
+    { id: 'r3', plan_id: 'p1', status: 'queued', created_at: ago(hour - 1000) },
+    { id: 'r4', plan_id: 'p1', status: 'passed', created_at: ago(9 * hour) },
+    { id: 'r5', plan_id: 'p2', status: 'cancelled', created_at: ago(3 * hour) },
+    { id: 'r6', plan_id: 'p5', status: 'failed', created_at: ago(hour / 2) },
+    { id: 'boundary', plan_id: 'p1', status: 'running', created_at: ago(hour) },
+    { id: 'r7', plan_id: 'p1', status: 'planned', created_at: ago(3 * hour) },
   ];
-  it('picks stuck runs older than a day and never finished ones', () => {
+  it('picks stuck runs older than an hour and never finished ones', () => {
     const picked = selectStale({ plans, runs, now });
     expect(picked.stuckRunIds).toEqual(['r1', 'r2', 'r7']);
     expect(picked.cancelledRunIds).toEqual(['r5']);
@@ -42,7 +43,7 @@ describe('selectStale', () => {
   it('is deterministic and handles dates and bad input', () => {
     const shuffled = selectStale({ plans: [...plans].reverse(), runs: [...runs].reverse(), now });
     expect(shuffled).toEqual(selectStale({ plans, runs, now }));
-    const asDate = selectStale({ plans: [], runs: [{ id: 'x', plan_id: 'p', status: 'running', created_at: new Date(now.getTime() - 2 * day) }], now });
+    const asDate = selectStale({ plans: [], runs: [{ id: 'x', plan_id: 'p', status: 'running', created_at: new Date(now.getTime() - 2 * hour) }], now });
     expect(asDate.stuckRunIds).toEqual(['x']);
     expect(selectStale({ plans: [], runs: [{ id: 'y', plan_id: 'p', status: 'running', created_at: 'not a date' }], now }).stuckRunIds).toEqual([]);
   });
@@ -85,9 +86,9 @@ describe('demo cleanup against a local database', () => {
     demo = await seed(db, 'Tariq');
     real = await seed(db, 'Faisal');
     await db.owner.query("UPDATE nazir.workspaces SET kind='real' WHERE id=$1", [real.workspace_id]);
-    demoOld = await stuckRun(demo, 'running', '3 days');
-    demoFresh = await stuckRun(demo, 'queued', '1 hour');
-    realOld = await stuckRun(real, 'running', '3 days');
+    demoOld = await stuckRun(demo, 'running', '3 hours');
+    demoFresh = await stuckRun(demo, 'queued', '30 minutes');
+    realOld = await stuckRun(real, 'running', '1 hour');
   }, 60000);
   afterAll(async () => { await db?.close(); });
 
@@ -103,6 +104,11 @@ describe('demo cleanup against a local database', () => {
     await expect(runDemoCleanup(db.driver, stale, { workspace: real.workspace_id }, log)).rejects.toThrow(/not a demo/);
     expect(await statusOf('runs', realOld.run)).toBe('running');
   });
+  it('the demo helper itself refuses to cancel real runs, even when handed their ids', async () => {
+    expect(await db.worker(real.workspace_id, (sql) => stale.closeStuckRuns(sql))).toBe(0);
+    expect(await db.worker(real.workspace_id, (sql) => stale.cancelStuckRuns(sql, [realOld.run]))).toBe(0);
+    expect(await statusOf('runs', realOld.run)).toBe('running');
+  });
   it('apply cancels only stuck demo runs and is safe to run twice', async () => {
     const first = await runDemoCleanup(db.driver, stale, { apply: true }, log);
     expect(first.cancelledNow).toBe(1);
@@ -116,14 +122,14 @@ describe('demo cleanup against a local database', () => {
     const audit = (await db.owner.query<{ n: number }>("SELECT count(*)::int n FROM nazir.audit_events WHERE action='run_cancelled' AND target_id=$1", [demoOld.run])).rows[0]!.n;
     expect(audit).toBe(1);
   });
-  it('the demo reset also closes runs stuck for over a day, and twice is the same as once', async () => {
-    const again = await stuckRun(demo, 'running', '2 days');
+  it('the demo reset also closes runs stuck for over an hour, and twice is the same as once', async () => {
+    const again = await stuckRun(demo, 'running', '2 hours');
     const owner = demo.member_id;
     const result = await resetDemoNow(db.driver, owner, demo.workspace_id);
     expect(result.stuckRunsCancelled).toBe(1);
     expect(await statusOf('runs', again.run)).toBe('cancelled');
     expect((await resetDemoNow(db.driver, owner, demo.workspace_id)).stuckRunsCancelled).toBe(0);
-    const stuckScheduled = await stuckRun(demo, 'queued', '2 days');
+    const stuckScheduled = await stuckRun(demo, 'queued', '2 hours');
     const scheduled = (await resetDemosDue(db.driver)).find((row) => row.workspaceId === demo.workspace_id)!;
     expect(scheduled.stuckRunsCancelled).toBe(1);
     expect(await statusOf('runs', stuckScheduled.run)).toBe('cancelled');
