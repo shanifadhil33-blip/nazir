@@ -19,6 +19,8 @@ beforeAll(async () => {
   supplier = await db.createMember(workspaceId, ['supplier_maintainer'], 'PDF Supplier');
   outsider = (await seed(db, 'OtherClientPdf')).member_id;
   session.driver = db.driver;
+  const { cancelRunAsMember } = await import('../../src/server/runner/cancel');
+  await cancelRunAsMember(db.driver, owner, seeded.ids.runs);
   reportId = (await createReport(db.driver, owner, { run_id: seeded.ids.runs })).id;
 }, 60000);
 afterAll(async () => { await db?.close(); });

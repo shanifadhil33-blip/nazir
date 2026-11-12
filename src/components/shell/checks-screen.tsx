@@ -6,7 +6,7 @@ import { seatFromRoles } from '@/components/ocean/model';
 import type { ReportBody } from '@/server/reports/build';
 import { ChecksView, type ChecksNote } from './checks';
 import { checksAccess, checksFromReports, suggestMessage, type CheckRow } from './checks-model';
-import { driveRun, startQuickCheckOutcome, stopRun, storeKey, type RunProgress } from './checks-run';
+import { readActiveRuns, kickRun, startQuickCheckOutcome, stopRun, type RunProgress } from './checks-run';
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
 import { idOf, readStore, storeKeyFor, titleOf, upsertFix } from './fixes-model';
@@ -20,14 +20,14 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
   const { lang, phase, reports, roles, assistant, person, setReports } = data;
   const [openId, setOpenId] = useState<string | null>(initialCheck ?? null);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
-  const [running, setRunning] = useState<RunProgress | null>(null);
+  const [running, setRunning] = useState<RunProgress[]>([]);
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'suggesting' | null>(null);
   const [note, setNote] = useState<ChecksNote>(null);
   const auto = useRef(false);
   const langRef = useRef(lang);
   useEffect(() => { langRef.current = lang; }, [lang]);
-  const stopped = useRef(new Set<string>());
-  const driving = useRef<string | null>(null);
+  const kicking = useRef(new Map<string, number>());
+  const refreshing = useRef<Promise<void> | null>(null);
   const alive = useRef(true);
 
   const loadReports = useCallback(async () => {
@@ -39,38 +39,40 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     return true;
   }, [workspaceId, setReports]);
 
-  const track = useCallback(async (runId: string) => {
-    if (driving.current === runId) return;
-    driving.current = runId;
-    sessionStorage.setItem(storeKey(workspaceId), runId);
-    setRunning((current) => current ?? { runId, done: 0, total: 0 });
-    const end = await driveRun(workspaceId, runId, langRef.current, (progress) => { if (alive.current) setRunning(progress); }, () => stopped.current.has(runId));
-    driving.current = null;
-    sessionStorage.removeItem(storeKey(workspaceId));
-    if (!alive.current) return;
-    setRunning(null);
-    setBusy(null);
-    if (end === 'done') {
-      await fetch(`/api/workspaces/${workspaceId}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': langRef.current }, body: JSON.stringify({ run_id: runId }) }).catch(() => null);
-      await loadReports();
-    } else setNote(end === 'stopped' ? 'stopped' : 'startFailed');
+  const refresh = useCallback(async function read(force = false): Promise<void> {
+    if (refreshing.current) {
+      await refreshing.current;
+      if (force) return read();
+      return;
+    }
+    const task = (async () => {
+      const [active] = await Promise.all([readActiveRuns(workspaceId, langRef.current), loadReports()]);
+      if (!alive.current || !active) return;
+      setRunning(active);
+      for (const run of active) {
+        if (Date.now() - (kicking.current.get(run.runId) ?? 0) >= 20_000) {
+          kicking.current.set(run.runId, Date.now());
+          void kickRun(workspaceId, run.runId);
+        }
+      }
+    })();
+    refreshing.current = task;
+    try { await task; } finally { refreshing.current = null; }
   }, [workspaceId, loadReports]);
 
   useEffect(() => {
     alive.current = true;
     if (phase !== 'ready') return () => { alive.current = false; };
-    // The Start buttons arrive here with start=1: begin once, then drop it from the address so a reload does not start another.
     const wanted = new URLSearchParams(window.location.search);
     if (wanted.get('start') === '1') {
       wanted.delete('start');
       window.history.replaceState(null, '', `${window.location.pathname}${wanted.size ? `?${wanted}` : ''}`);
-      if (!sessionStorage.getItem(storeKey(workspaceId))) auto.current = true;
+      auto.current = true;
     }
-    // A check started on this page keeps going after the person leaves and comes back.
-    const resume = sessionStorage.getItem(storeKey(workspaceId));
-    if (resume && checksAccess(roles).start) void track(resume);
-    return () => { alive.current = false; };
-  }, [workspaceId, phase, roles, track]);
+    void refresh();
+    const timer = setInterval(() => { void refresh(); }, 5000);
+    return () => { alive.current = false; clearInterval(timer); };
+  }, [phase, refresh]);
 
   const access = checksAccess(roles);
   const copy = messagesFor(lang);
@@ -79,7 +81,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
   useEffect(() => {
     if (!auto.current || phase !== 'ready') return;
     auto.current = false;
-    if (access.start && !running && !busy) void start();
+    if (access.start && running.length === 0 && !busy) void start();
     // start reads the state of the render it runs in, so only these inputs matter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, access.start]);
@@ -91,17 +93,18 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     const outcome = await startQuickCheckOutcome(workspaceId, langRef.current);
     setBusy(null);
     if ('fail' in outcome) { setNote(outcome.fail === 'limit' ? 'limit' : outcome.fail === 'unreachable' ? 'unreachable' : 'startFailed'); return; }
-    void track(outcome.runId);
+    await refresh(true);
   }
 
-  async function stop() {
-    const runId = running?.runId;
+  async function stop(requested?: string) {
+    const runId = requested ?? running[0]?.runId;
     if (!runId || !access.stop || busy) return;
     setNote(null);
     setBusy('stopping');
-    stopped.current.add(runId);
     const ok = await stopRun(workspaceId, runId, langRef.current);
-    if (!ok) { stopped.current.delete(runId); setBusy(null); setNote('stopFailed'); }
+    setBusy(null);
+    if (!ok) setNote('stopFailed');
+    await refresh(true);
   }
 
   async function suggest(findingId: string) {
@@ -139,14 +142,15 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       now={new Date()}
       openId={openId}
       openQuestion={openQuestion}
-      running={running}
+      running={running[0] ?? null}
+      active={running}
       busy={busy}
       note={note}
       onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setNote(null); }}
       onBack={() => { setOpenId(null); setNote(null); }}
       onOpenQuestion={(id) => setOpenQuestion((current) => current === id ? '' : id)}
       onStart={() => void start()}
-      onStop={() => void stop()}
+      onStop={(id) => void stop(id)}
       onSuggest={(id) => void suggest(id)}
       onRetry={data.reload}
     />

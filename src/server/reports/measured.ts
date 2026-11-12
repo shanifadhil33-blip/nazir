@@ -58,6 +58,8 @@ export async function measuredResults(driver: TransactionDriver, memberId: strin
         EXISTS(SELECT 1 FROM nazir.state_readings r WHERE r.conversation_id=c.id) AS has_reading
       FROM nazir.conversations c JOIN nazir.runs ru ON ru.id=c.run_id LEFT JOIN nazir.agent_versions v ON v.id=coalesce(c.agent_version_id,ru.agent_version_id) LEFT JOIN nazir.scenarios s ON s.id=c.scenario_id
       WHERE c.workspace_id=nazir.current_workspace_id() AND (c.scenario_id IS NULL OR s.id IS NOT NULL)
+        AND ru.status IN ('passed','failed','inconclusive')
+        AND NOT EXISTS(SELECT FROM nazir.conversations unfinished WHERE unfinished.run_id=ru.id AND unfinished.status NOT IN ('passed','failed','inconclusive'))
       ORDER BY c.created_at DESC LIMIT 2000`)).rows;
     const runs = Number((await sql.query<{ n: string }>('SELECT count(*) AS n FROM nazir.runs')).rows[0]!.n);
     return { ...measure(rows.map((r) => ({ ...r, records: r.records as MeasureRow['records'], calls: Number(r.calls) }))), runs, cost_money: 0, restricted: false };

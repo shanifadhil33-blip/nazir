@@ -4,7 +4,7 @@ import { requireRole } from '../auth/guard';
 import { can, type Role } from '../auth/roles';
 import { withMember } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
-import { Forbidden, NotFound } from '../http/errors';
+import { Coded, Forbidden, NotFound } from '../http/errors';
 import { assembleReport, projectReport, type ReportBody, type ReportConversation, type ReportFinding, type ReportMessage } from './build';
 
 const createInput = z.object({ run_id: z.uuid() }).strict();
@@ -36,6 +36,12 @@ export async function createReport(driver: TransactionDriver, memberId: string, 
   const input = createInput.parse(value);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'report.create');
+    await sql.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`report:${input.run_id}`]);
+    const status = (await sql.query<{ status: string }>('SELECT status FROM nazir.runs WHERE id=$1', [input.run_id])).rows[0]?.status;
+    if (!status) throw new NotFound();
+    if (!['passed', 'failed', 'inconclusive', 'cancelled'].includes(status)) throw new Coded(409, 'validation', 'Check the details and try again.');
+    const existing = (await sql.query<{ id: string; body_hash: string; body: ReportBody }>("SELECT id,body_hash,body FROM nazir.reports WHERE run_id=$1 AND body->'run'->>'status' IN ('passed','failed','inconclusive','cancelled') ORDER BY created_at,id LIMIT 1", [input.run_id])).rows[0];
+    if (existing) return { id: existing.id, body_hash: existing.body_hash, scope: existing.body.scope, counts: existing.body.counts };
     const full = await evidence(sql, input.run_id);
     const supplier = projectReport(full, 'development');
     const row = (await sql.query<{ id: string; body_hash: string }>(`INSERT INTO nazir.reports(workspace_id,run_id,body,supplier_body,viewer_body)

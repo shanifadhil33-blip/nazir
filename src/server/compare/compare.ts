@@ -21,7 +21,7 @@ export type Side = { conversation_id: string; status: RunStatus; reason: string 
 export type Pair = { key: string; scenario_key: string; language: 'en' | 'ar'; repeat: number; family: string; split: string; a: Side | null; b: Side | null; class: PairClass; check_regressions: string[]; check_improvements: string[]; failover: boolean; better?: 'A' | 'B' | 'same' | 'uncertain' };
 type Counts = { paired: number; improved: number; regressed: number; still_failing: number; still_passing: number; inconclusive: number; failover: number };
 
-const finalStatus = new Set<RunStatus>(['passed', 'failed', 'inconclusive', 'cancelled']);
+const finalStatus = new Set<RunStatus>(['passed', 'failed', 'inconclusive']);
 // Settings that must stay the same for a fair comparison (brief section 12, control 9).
 const frozenKeys = ['aiChainOrder', 'judgeChainOrder', 'rubricVersion', 'judgePromptHash', 'recordsOnly', 'rulePackHash', 'toolManifestHash', 'runnerVersion'] as const;
 
@@ -82,7 +82,7 @@ export function sentences(t: Counts, unpaired: number) {
 }
 /** Pure comparison of two finished runs. Pairs only the same scenario, language and repeat with the same scenario hash. */
 export function buildComparison(runA: RunData, runB: RunData) {
-  if (!finalStatus.has(runA.status) || !finalStatus.has(runB.status)) throw new Error('Both runs must be finished');
+  if (!finalStatus.has(runA.status) || !finalStatus.has(runB.status) || [...runA.conversations, ...runB.conversations].some((row) => !finalStatus.has(row.status))) throw new Error('Both runs must be finished');
   const index = (r: RunData) => new Map(r.conversations.map((c) => [c.idempotency_key, c]));
   const A = index(runA), B = index(runB);
   const keys = [...new Set([...A.keys(), ...B.keys()])].sort();

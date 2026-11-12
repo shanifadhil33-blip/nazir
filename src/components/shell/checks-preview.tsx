@@ -33,9 +33,10 @@ export function ChecksPreview({ lang, seat, state }: { lang: Lang; seat: Seat; s
   const [openId, setOpenId] = useState<string | null>(state === 'check' ? 'quick' : null);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
   const [running, setRunning] = useState(state === 'running' ? { runId: 'preview', done: 9, total: 16 } : null);
-  const [note, setNote] = useState<'stopped' | 'suggested' | 'limit' | 'unreachable' | null>(state === 'limit' ? 'limit' : state === 'offline' ? 'unreachable' : null);
+  const [note, setNote] = useState<'suggested' | 'limit' | 'unreachable' | null>(state === 'limit' ? 'limit' : state === 'offline' ? 'unreachable' : null);
+  const [stopped, setStopped] = useState<{ done: number; total: number } | null>(null);
   const copy = messagesFor(lang);
-  const checks = state === 'empty' ? [] : previewChecks(lang, now);
+  const checks = state === 'empty' ? [] : previewChecks(lang, now).map((check, index) => index === 0 && stopped ? { ...check, stopped } : check);
   return <ChecksView
     lang={lang} seat={seat} phase={state === 'loading' || state === 'error' ? state : 'ready'} checks={checks}
     access={checksAccess(rolesForSeat(seat))} assistant={copy.shell.helpDesk} links={homeLinks('preview')} now={now}
@@ -43,8 +44,8 @@ export function ChecksPreview({ lang, seat, state }: { lang: Lang; seat: Seat; s
     onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setNote(null); }}
     onBack={() => setOpenId(null)}
     onOpenQuestion={(id) => setOpenQuestion((current) => current === id ? '' : id)}
-    onStart={() => setRunning({ runId: 'preview', done: 0, total: 16 })}
-    onStop={() => { setRunning(null); setNote('stopped'); }}
+    onStart={() => { setStopped(null); setRunning({ runId: 'preview', done: 0, total: 8 }); }}
+    onStop={() => { if (running) setStopped({ done: running.done, total: running.total }); setRunning(null); }}
     onSuggest={() => setNote('suggested')}
   />;
 }

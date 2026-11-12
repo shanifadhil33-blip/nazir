@@ -1,11 +1,12 @@
 import { fill, type Messages } from '@/components/ocean/copy';
 import { can, type Role } from '@/server/auth/roles';
-import { caseResults, type ReportBody } from '@/server/reports/build';
+import { caseResults, completionOf, isCompleteReport, type ReportBody } from '@/server/reports/build';
 import { changeBetween } from './fixes-model';
 import { lastCheckText } from './home-model';
 
 export type ReportFacts = {
   sample?: boolean;
+  stopped?: { done: number; total: number };
   id: string;
   right: number;
   total: number;
@@ -27,22 +28,24 @@ export function factsFromReports(reports: readonly Saved[], now: Date): ReportFa
   const latest = reports[0];
   if (!latest) return null;
   const week = 7 * 86_400_000;
-  const base = [...reports].slice(1).filter((item) => now.getTime() - new Date(item.created_at).getTime() <= week).pop();
+  const base = [...reports].slice(1).filter((item) => isCompleteReport(item.body) && now.getTime() - new Date(item.created_at).getTime() <= week).pop();
   const rows = caseResults(latest.body.conversations);
   const has = (language: string) => rows.some((row) => row.language === language);
   return {
     id: latest.id,
+    ...(!isCompleteReport(latest.body) ? { stopped: { done: completionOf(latest.body).tries_done, total: completionOf(latest.body).tries_total } } : {}),
     sample: latest.body.sample === true,
     right: latest.body.counts.passed,
     total: latest.body.counts.conversations,
     toFix: latest.body.counts.failed,
-    fixedThisWeek: base && !base.body.sample && !latest.body.sample ? changeBetween(base.body, latest.body).fixed : 0,
+    fixedThisWeek: base && isCompleteReport(latest.body) && !base.body.sample && !latest.body.sample ? changeBetween(base.body, latest.body).fixed : 0,
     languages: { en: has('en'), ar: has('ar') },
     at: new Date(latest.created_at),
   };
 }
 
 export function headlineText(facts: ReportFacts, copy: Messages): string {
+  if (facts.stopped) return fill(copy.checksScreen.stopped, { done: String(facts.stopped.done), total: String(facts.stopped.total) });
   return fill(copy.reportScreen.headline, { n: String(facts.right), total: String(facts.total) });
 }
 

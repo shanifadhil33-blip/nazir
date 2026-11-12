@@ -71,7 +71,11 @@ beforeAll(async () => {
 }, 60000);
 afterAll(async () => { await db?.close(); });
 
-it('gives a viewer the normal report and still refuses a viewer write', async () => {
+it('gives a viewer the terminal report and still refuses a viewer write', async () => {
+  await expect(createReport(db.driver, owner, { run_id: runId })).rejects.toMatchObject({ status: 409 });
+  // Report snapshots are now finalized by the server only after a check ends.
+  const { cancelRunAsMember } = await import('../../src/server/runner/cancel');
+  await cancelRunAsMember(db.driver, owner, runId);
   const created = await createReport(db.driver, owner, { run_id: runId });
   expect(created.scope.en).toContain('within tested scope, not a certificate');
   const full = await readFullReport(db.driver, reviewer, created.id);

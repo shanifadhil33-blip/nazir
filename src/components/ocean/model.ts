@@ -1,4 +1,4 @@
-import { suiteLabel, caseResults, type ReportBody } from '@/server/reports/build';
+import { suiteLabel, caseResults, isCompleteReport, stoppedLine, type ReportBody } from '@/server/reports/build';
 import { fill, messagesFor, type Lang, type Messages } from './copy';
 import { presentQuote, presentRecord } from './plain';
 
@@ -60,6 +60,7 @@ export type ScreenModel = {
   fixes: FixRow[];
   coverage: string;
   suiteLabel?: string;
+  stopped?: string;
   sample: boolean;
   outcomes?: { id: string; label: string; flaky: boolean }[];
   /** True when the workspace has no saved report yet. */
@@ -201,12 +202,14 @@ function arTab(copy: Messages, which: 'refund' | 'visa') {
 
 export function modelFromReports(latest: ReportBody, previous: ReportBody | null, copy: Messages, lang: Lang, agentName: string, sample: boolean): ScreenModel {
   const metrics = metricsFromReport(latest);
-  const before = previous && !latest.sample && !previous.sample ? metricsFromReport(previous) : null;
+  const complete = isCompleteReport(latest);
+  const stopped = complete ? undefined : stoppedLine(latest, lang);
+  const before = complete && previous && isCompleteReport(previous) && !latest.sample && !previous.sample ? metricsFromReport(previous) : null;
   const lines = lang === 'ar' ? latest.sentences.ar : latest.sentences.en;
   const findings = [...latest.findings].sort((a, b) => Number(b.severity === 'critical') - Number(a.severity === 'critical'));
   const events: LogEvent[] = [
     { id: 'suite', kind: 'suite', title: copy.ui.suiteOpened, body: lines[0] ?? '' },
-    { id: 'score', kind: 'score', title: copy.ui.scorePosted, body: lines.slice(1).join(' ') },
+    { id: 'score', kind: stopped ? 'note' : 'score', title: stopped ? '' : copy.ui.scorePosted, body: stopped ?? lines.slice(1).join(' ') },
   ];
   const emptyQuote = { en: messagesFor('en').ui.noQuote, ar: messagesFor('ar').ui.noQuote };
   findings.forEach((finding, index) => {
@@ -233,6 +236,7 @@ export function modelFromReports(latest: ReportBody, previous: ReportBody | null
     sample: sample || latest.sample === true,
     coverage,
     suiteLabel: suiteLabel(latest, lang),
+    stopped,
     outcomes: caseResults(latest.conversations).map((c, index) => ({ id: c.id, label: `${copy.ui.caseWord} ${index + 1}: ` + fill(copy.ui.attemptOutcome, { passed: String(c.passed), total: String(c.total) }), flaky: c.flaky })),
     fixes: [],
     events,

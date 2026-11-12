@@ -4,7 +4,7 @@ import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
 import { Bell } from './bell';
 import { Chip } from './chip';
-import { dayLabel, kindLabel, progressLine, progressPercent, resultLabel, type CheckRow, type ChecksAccess, type Mark } from './checks-model';
+import { dayLabel, kindLabel, progressLine, progressPercent, checkResultLabel, type CheckRow, type ChecksAccess, type Mark } from './checks-model';
 import type { RunProgress } from './checks-run';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
@@ -15,7 +15,7 @@ import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
 
-export type ChecksNote = 'limit' | 'unreachable' | 'stopped' | 'startFailed' | 'stopFailed' | 'suggested' | 'suggestFailed' | null;
+export type ChecksNote = 'limit' | 'unreachable' | 'startFailed' | 'stopFailed' | 'suggested' | 'suggestFailed' | null;
 
 export type ChecksViewProps = {
   lang: Lang;
@@ -32,18 +32,19 @@ export type ChecksViewProps = {
   /** Question card opened inside the check being read. */
   openQuestion: string | null;
   running: RunProgress | null;
+  active?: RunProgress[];
   busy: 'starting' | 'stopping' | 'suggesting' | null;
   note: ChecksNote;
   onOpenCheck?: (id: string) => void;
   onBack?: () => void;
   onOpenQuestion?: (id: string) => void;
   onStart?: () => void;
-  onStop?: () => void;
+  onStop?: (runId?: string) => void;
   onSuggest?: (findingId: string) => void;
   onRetry?: () => void;
 };
 
-const noteKey = { stopped: 'stopped', startFailed: 'startFailed', stopFailed: 'stopFailed', suggested: 'suggested', suggestFailed: 'suggestFailed' } as const;
+const noteKey = { startFailed: 'startFailed', stopFailed: 'stopFailed', suggested: 'suggested', suggestFailed: 'suggestFailed' } as const;
 
 /** The checks screen. Plain props in, markup out, so the same view renders signed in and in tests. */
 export function ChecksView(props: ChecksViewProps) {
@@ -76,17 +77,17 @@ export function ChecksView(props: ChecksViewProps) {
             {note && note !== 'limit' && note !== 'unreachable' ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
             <div className="nz-checks-body">
               <div className="nz-checks-list">
-                {running ? <RunningCard lang={lang} running={running} canStop={access.stop} stopping={busy === 'stopping'} onStop={props.onStop} /> : null}
+                {(props.active ?? (running ? [running] : [])).map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
                 {checks.length === 0 && !running ? <StateCard kind="empty" title={copy.shell.emptyTitle} action={access.start ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
                 {checks.map((item) => {
-                  const clean = item.toFix === 0;
+                  const clean = !item.stopped && item.toFix === 0;
                   return (
                     <button key={item.id} type="button" className="nz-check-card" data-check={item.kind} data-clean={clean} aria-pressed={showCheck?.id === item.id} onClick={() => props.onOpenCheck?.(item.id)}>
                       <span className={clean ? 'nz-check-mark nz-check-mark-right' : 'nz-check-mark nz-check-mark-wrong'}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
                       <span className="nz-check-text">
                         <strong>{kindLabel(item.kind, copy)}{lang === 'ar' ? '، ' : ', '}{dayLabel(item.at, now, lang, copy)}</strong>
                         {item.sample ? <small>{copy.shell.sample}</small> : null}
-                        <small className={clean ? 'nz-check-right' : 'nz-check-wrong'}>{resultLabel(item.toFix, copy)}</small>
+                        <small className={clean ? 'nz-check-right' : 'nz-check-wrong'}>{checkResultLabel(item, copy)}</small>
                       </span>
                       <span className="nz-check-go"><ShellIcon name="play" directional /></span>
                     </button>
@@ -117,18 +118,17 @@ function RunningCard({ lang, running, canStop, stopping, onStop }: { lang: Lang;
   return (
     <section className="nz-running" aria-label={text.checkingNow} data-running="true">
       <div className="nz-running-top">
-        <p className="nz-running-title"><span className="nz-live-dot" aria-hidden="true" /><strong>{text.checkingNow}</strong></p>
+        <p className="nz-running-title"><span className="nz-live-dot" aria-hidden="true" /><strong>{progressLine(running.done, running.total, copy)}</strong></p>
         {canStop ? <button type="button" className="nz-quiet-btn" disabled={stopping} onClick={onStop}>{stopping ? text.stopping : text.stopCheck}</button> : null}
       </div>
       <div className="nz-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={progressLine(running.done, running.total, copy)}><span style={{ inlineSize: `${percent}%` }} /></div>
-      <p className="nz-running-meta"><span>{progressLine(running.done, running.total, copy)}</span><em>{text.inProgress}</em></p>
     </section>
   );
 }
 
 const markLabel = (mark: Mark, lang: Lang) => {
   const text = messagesFor(lang).checksScreen;
-  return mark === 'right' ? text.right : mark === 'wrong' ? text.wrong : text.unsure;
+  return mark === 'notChecked' ? text.notChecked : mark === 'right' ? text.right : mark === 'wrong' ? text.wrong : text.unsure;
 };
 
 function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest }: {
@@ -141,7 +141,7 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
   return (
     <section className="nz-check-page" aria-label={kindLabel(check.kind, copy)}>
       <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
-      <Heading as="h2" light={kindLabel(check.kind, copy)} bold={resultLabel(check.toFix, copy)} lang={lang} flow="inline" />
+      <Heading as="h2" light={kindLabel(check.kind, copy)} bold={checkResultLabel(check, copy)} lang={lang} flow="inline" />
       <p className="nz-check-sub">{dayLabel(check.at, now, lang, copy)}{lang === 'ar' ? '، ' : ', '}{fill(text.questionsCount, { n: String(check.questions.length) })}</p>
       {check.sample ? <p className="nz-check-sub">{copy.shell.sample}</p> : null}
       <ul className="nz-questions">
@@ -151,7 +151,7 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
             <li key={item.id} className="nz-question" data-mark={item.mark} data-open={isOpen}>
               <button type="button" className="nz-question-head" aria-expanded={isOpen} onClick={() => onOpenQuestion?.(item.id)}>
                 <span className="nz-question-text" dir="auto">{item.question}</span>
-                <Chip kind={item.mark} label={markLabel(item.mark, lang)} />
+                <Chip kind={item.mark === 'notChecked' ? 'unsure' : item.mark} label={markLabel(item.mark, lang)} />
               </button>
               {isOpen ? <div className="nz-question-body">
                 <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.said}</p><p dir="auto">{item.said}</p></div>

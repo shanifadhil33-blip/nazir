@@ -1,5 +1,7 @@
 'use client';
 
+import { assembleReport } from '@/server/reports/build';
+
 import { useState } from 'react';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { rolesForSeat, type Seat } from '@/components/ocean/model';
@@ -29,7 +31,8 @@ function previewItems(lang: Lang, state: MorePreviewState, now: Date) {
     id: 'a', findingId: 'a', status: 'approved', by: { name: copy.shell.omar, initials: 'OS', mine: false }, title, recheck: 12, rerun: false,
     at: at(0, 9, 15).toISOString(), decided: { at: at(0, 11, 40).toISOString(), name: copy.shell.yusuf, initials: 'YR', status: 'approved' },
   }];
-  const reports = [{ id: 'c', created_at: at(1, 15, 20).toISOString(), body: { counts: { conversations: 16 } } as never }, { id: 'd', created_at: at(4, 10, 5).toISOString(), body: { counts: { conversations: 12 } } as never }];
+  const snapshot = (id: string, count: number) => assembleReport({ run: { id, status: 'passed', calls_used: 0, calls_budget: count }, conversations: Array.from({ length: count }, (_, i) => ({ id: `${id}-${i}`, status: 'passed', split: 'development', language: 'en' })), findings: [], messages: [] });
+  const reports = [{ id: 'c', created_at: at(1, 15, 20).toISOString(), body: snapshot('c', 16) }, { id: 'd', created_at: at(4, 10, 5).toISOString(), body: snapshot('d', 12) }];
   return buildHistory(reports, fixes, lang, copy);
 }
 

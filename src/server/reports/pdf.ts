@@ -2,7 +2,7 @@ import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
 import en from '../../../messages/en.json';
 import ar from '../../../messages/ar.json';
-import { caseResults, suiteLabel, attemptOutcome, type ReportBody, type ReportCounts } from './build';
+import { caseResults, isCompleteReport, stoppedLine, suiteLabel, attemptOutcome, type ReportBody, type ReportCounts } from './build';
 import { shapePdfLine, wrapPdfText } from './pdf-text';
 
 export type PdfExtras = {
@@ -47,6 +47,7 @@ export function reportScore(counts: Pick<ReportCounts, 'conversations' | 'passed
 /** Only explicitly selected client facing fields enter the document. No transcripts or metadata. */
 export function clientReportSections(body: ReportBody, extras: PdfExtras) {
   const c = copy[extras.lang];
+  const complete = isCompleteReport(body);
   const cases = caseResults(body.conversations);
   const languageLines = (['en', 'ar'] as const).map((language) => {
     const rows = cases.filter((row) => row.language === language);
@@ -54,22 +55,22 @@ export function clientReportSections(body: ReportBody, extras: PdfExtras) {
   });
   const fixes = body.sample ? [] : extras.appliedFixes ?? [];
   const changes = [...fixes];
-  if (extras.before && !body.sample) {
+  if (complete && extras.before && !body.sample) {
     changes.push(`${c.before}: ${reportScore(extras.before.counts)} / 100 (${c.run} ${extras.before.runId.slice(0, 8)})`);
     changes.push(`${c.after}: ${reportScore(body.counts)} / 100 (${c.run} ${body.run.id.slice(0, 8)})`, c.comparison);
   }
   if (!changes.length) changes.push(c.noChanges);
-  const fixed = new Set(body.sample ? [] : extras.fixedFindingIds ?? []);
+  const fixed = new Set(body.sample || !complete ? [] : extras.fixedFindingIds ?? []);
   const issues = body.findings.filter((f) => !fixed.has(f.id)).map((f) => {
     const severity = f.severity === 'critical' || f.severity === 'high' || f.severity === 'medium' || f.severity === 'low' ? c[f.severity] : c.unknown;
     return `${severity}: ${extras.lang === 'ar' ? f.title_ar || f.title : f.title}`;
   });
   return [
-    { title: c.score, lines: [`${reportScore(body.counts)} / 100`] },
-    { title: c.languages, lines: languageLines },
+    ...(complete ? [{ title: c.score, lines: [`${reportScore(body.counts)} / 100`] }, { title: c.languages, lines: languageLines }] : [{ title: stoppedLine(body, extras.lang), lines: [] }]),
     { title: `${c.tests}: ${body.counts.conversations}`, lines: [
       `${c.passed}: ${body.counts.passed}   ${c.failed}: ${body.counts.failed}   ${c.inconclusive}: ${body.counts.inconclusive}`,
       ...cases.map((row, i) => {
+        if (!['passed', 'failed', 'inconclusive'].includes(row.status)) return `${extras.testNames?.[row.id] || `${c.test} ${i + 1}`} (${row.language === 'ar' ? c.ar : c.en}): ${(extras.lang === 'ar' ? ar : en).checksScreen.notChecked}`;
         const status = row.status === 'passed' ? c.passed : row.status === 'failed' ? c.failed : row.status === 'inconclusive' ? c.inconclusive : c.pending;
         return `${extras.testNames?.[row.id] || `${c.test} ${i + 1}`} (${row.language === 'ar' ? c.ar : c.en}): ${attemptOutcome(row.passed, row.total, extras.lang)} (${status})${row.flaky ? extras.lang === 'ar' ? ' متقلب' : ' Flaky' : ''}`;
       }),

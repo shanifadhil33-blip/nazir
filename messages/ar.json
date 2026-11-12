@@ -435,8 +435,8 @@
     "light": "فحوصاتك",
     "bold": "الأخيرة",
     "checkingNow": "نفحص الآن",
-    "stopCheck": "أوقف الفحص",
-    "progress": "{done} من {total} سؤالاً",
+    "stopCheck": "إيقاف",
+    "progress": "نفحص الآن {done} من {total}",
     "inProgress": "قيد التنفيذ",
     "quick": "فحص سريع",
     "full": "فحص كامل",
@@ -458,13 +458,14 @@
     "back": "كل الفحوصات",
     "questionsCount": "{n} سؤالاً",
     "starting": "جار البدء",
-    "stopped": "تم إيقاف الفحص",
+    "stopped": "توقف الفحص بعد {done} من {total}",
     "stopping": "جار الإيقاف",
     "startFailed": "لم يبدأ الفحص. حاول مرة أخرى.",
     "stopFailed": "لم يتوقف الفحص. حاول مرة أخرى.",
     "open": "فتح",
     "see": "اعرض الإصلاحات",
-    "noRecord": "لا يوجد سجل للعرض"
+    "noRecord": "لا يوجد سجل للعرض",
+    "notChecked": "لم يُفحص"
   },
   "fixesScreen": {
     "light": "إصلاحات",
@@ -530,7 +531,8 @@
     "emptyTitle": "لم يحدث شيء بعد",
     "goChecks": "اذهب إلى الفحوصات",
     "noAccessTitle": "الفريق فقط يرى هذا",
-    "goHome": "اذهب إلى الرئيسية"
+    "goHome": "اذهب إلى الرئيسية",
+    "checkStopped": "تم إيقاف فحص"
   },
   "settingsScreen": {
     "light": "هذه",

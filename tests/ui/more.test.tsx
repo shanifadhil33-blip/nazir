@@ -29,8 +29,8 @@ const fixes: StoredFix[] = [{
   at: '2026-11-04T05:15:00Z', decided: { at: '2026-11-04T07:40:00Z', name: 'Yusuf', initials: 'YR', status: 'approved' },
 }];
 const reports = [
-  { id: 'r1', created_at: '2026-11-03T11:20:00Z', body: { counts: { conversations: 16, passed: 14, failed: 2, inconclusive: 0 }, conversations: [], findings: [] } as unknown as ReportBody },
-  { id: 'r0', created_at: '2026-10-20T11:20:00Z', body: { counts: { conversations: 12, passed: 9, failed: 3, inconclusive: 0 }, conversations: [], findings: [] } as unknown as ReportBody },
+  { id: 'r1', created_at: '2026-11-03T11:20:00Z', body: { run: { status: 'failed' }, counts: { conversations: 16, passed: 14, failed: 2, inconclusive: 0 }, conversations: [{ id: 'completed', status: 'passed', split: 'development', language: 'en' }], findings: [] } as unknown as ReportBody },
+  { id: 'r0', created_at: '2026-10-20T11:20:00Z', body: { run: { status: 'failed' }, counts: { conversations: 12, passed: 9, failed: 3, inconclusive: 0 }, conversations: [{ id: 'completed', status: 'passed', split: 'development', language: 'en' }], findings: [] } as unknown as ReportBody },
 ];
 
 const history = (lang: Lang, seat: Seat, extra: Partial<Parameters<typeof HistoryView>[0]> = {}) => renderToStaticMarkup(

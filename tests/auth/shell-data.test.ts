@@ -20,6 +20,8 @@ beforeAll(async () => {
   db = await testDatabase(); fake.runtimeDriver.mockReturnValue(db.driver);
   const s = await seed(db, 'Shell'); workspace = s.workspace_id;
   for (const role of ['service_owner', 'quality_reviewer', 'viewer', 'supplier_maintainer'] as Role[]) members[role] = await db.createMember(workspace, [role], role);
+  const { cancelRunAsMember } = await import('../../src/server/runner/cancel');
+  await cancelRunAsMember(db.driver, s.member_id, s.ids.runs);
   await createReport(db.driver, s.member_id, { run_id: s.ids.runs });
 });
 afterAll(async () => db?.close());

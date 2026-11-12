@@ -31,9 +31,8 @@ it('follows the server role matrix for start, stop and suggest', () => {
 it('shows the running card with progress and a quiet stop to someone who may stop', () => {
   const html = render('en', 'owner', { running: { runId: 'r', done: 9, total: 16 } });
   expect(html).toContain('Checking now');
-  expect(html).toContain('9 of 16 questions');
-  expect(html).toContain('In progress');
-  expect(html).toContain('Stop check');
+  expect(html).toContain('Checking now 9 of 16');
+  expect(html).toContain('>Stop</button>');
   expect(html).toContain('aria-valuenow="56"');
   expect(html).toContain('Quick check, Today');
   expect(html).toContain('3 to fix');
@@ -41,10 +40,10 @@ it('shows the running card with progress and a quiet stop to someone who may sto
 });
 
 it('hides Stop check when nothing runs and for a viewer', () => {
-  expect(render('en', 'owner')).not.toContain('Stop check');
+  expect(render('en', 'owner')).not.toContain('>Stop</button>');
   const viewer = render('en', 'viewer', { running: { runId: 'r', done: 1, total: 4 } });
   expect(viewer).toContain('Checking now');
-  expect(viewer).not.toContain('Stop check');
+  expect(viewer).not.toContain('>Stop</button>');
   expect(viewer).not.toContain('Start a check');
   expect(viewer).not.toContain('data-nav="start"');
 });
@@ -77,10 +76,10 @@ it('uses one currency, AED, in the sample answers', () => {
 
 it('renders Arabic right to left with Arabic words', () => {
   const html = render('ar', 'supplier', { openId: 'quick', running: { runId: 'r', done: 9, total: 16 } });
-  expect(render('ar', 'editor', { running: { runId: 'r', done: 9, total: 16 } })).toContain('أوقف الفحص');
+  expect(render('ar', 'editor', { running: { runId: 'r', done: 9, total: 16 } })).toContain('إيقاف');
   expect(html).toContain('dir="rtl"');
   expect(html).toContain('lang="ar"');
-  for (const word of ['نفحص الآن', '9 من 16 سؤالاً', 'قال مساعدك', 'السجل يقول', 'اقترح إصلاحاً', 'خطأ']) expect(html, word).toContain(word);
+  for (const word of ['نفحص الآن', 'نفحص الآن 9 من 16', 'قال مساعدك', 'السجل يقول', 'اقترح إصلاحاً', 'خطأ']) expect(html, word).toContain(word);
   expect(html).not.toContain('Checking now');
 });
 
@@ -124,7 +123,7 @@ it('words the check lines from real counts and days', () => {
   const copy = messagesFor('en');
   expect(resultLabel(3, copy)).toBe('3 to fix');
   expect(resultLabel(0, copy)).toBe('all right');
-  expect(progressLine(9, 16, copy)).toBe('9 of 16 questions');
+  expect(progressLine(9, 16, copy)).toBe('Checking now 9 of 16');
   expect(progressPercent(9, 16)).toBe(56);
   expect(progressPercent(0, 0)).toBe(0);
   expect(dayLabel(now, now, 'en', copy)).toBe('Today');
