@@ -237,6 +237,7 @@ export function WorkspaceScreen({
       <section className="nz-panel nz-report" id="nz-report" aria-label={copy.ui.report}>
         <h2>{copy.ui.report}</h2>
         {model.empty ? <p className="nz-empty" data-state="first-report">{copy.ui.firstReport}</p> : <>
+        {model.sample ? <p>{copy.shell.sample}</p> : null}
         {model.suiteLabel ? <p>{model.suiteLabel}</p> : null}
         {model.before ? <div className="nz-report-scores">
           <div><p>{copy.ui.before}</p><ScoreFigure value={model.before.score} ring="coral" /></div>

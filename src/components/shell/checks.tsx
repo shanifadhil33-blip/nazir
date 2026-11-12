@@ -85,6 +85,7 @@ export function ChecksView(props: ChecksViewProps) {
                       <span className={clean ? 'nz-check-mark nz-check-mark-right' : 'nz-check-mark nz-check-mark-wrong'}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
                       <span className="nz-check-text">
                         <strong>{kindLabel(item.kind, copy)}{lang === 'ar' ? '، ' : ', '}{dayLabel(item.at, now, lang, copy)}</strong>
+                        {item.sample ? <small>{copy.shell.sample}</small> : null}
                         <small className={clean ? 'nz-check-right' : 'nz-check-wrong'}>{resultLabel(item.toFix, copy)}</small>
                       </span>
                       <span className="nz-check-go"><ShellIcon name="play" directional /></span>
@@ -142,6 +143,7 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
       <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
       <Heading as="h2" light={kindLabel(check.kind, copy)} bold={resultLabel(check.toFix, copy)} lang={lang} flow="inline" />
       <p className="nz-check-sub">{dayLabel(check.at, now, lang, copy)}{lang === 'ar' ? '، ' : ', '}{fill(text.questionsCount, { n: String(check.questions.length) })}</p>
+      {check.sample ? <p className="nz-check-sub">{copy.shell.sample}</p> : null}
       <ul className="nz-questions">
         {check.questions.map((item) => {
           const isOpen = opened === item.id;

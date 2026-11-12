@@ -5,6 +5,7 @@ import { changeBetween } from './fixes-model';
 import { lastCheckText } from './home-model';
 
 export type ReportFacts = {
+  sample?: boolean;
   id: string;
   right: number;
   total: number;
@@ -31,10 +32,11 @@ export function factsFromReports(reports: readonly Saved[], now: Date): ReportFa
   const has = (language: string) => rows.some((row) => row.language === language);
   return {
     id: latest.id,
+    sample: latest.body.sample === true,
     right: latest.body.counts.passed,
     total: latest.body.counts.conversations,
     toFix: latest.body.counts.failed,
-    fixedThisWeek: base ? changeBetween(base.body, latest.body).fixed : 0,
+    fixedThisWeek: base && !base.body.sample && !latest.body.sample ? changeBetween(base.body, latest.body).fixed : 0,
     languages: { en: has('en'), ar: has('ar') },
     at: new Date(latest.created_at),
   };

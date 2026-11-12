@@ -22,11 +22,13 @@ it('fills the demo workspace with two finished checks, findings and two fixes wh
   expect(statuses).toEqual(['approved', 'proposed']);
 });
 
-it('every role sees the saved checks, newest first, with the second check better than the first', async () => {
+it('every role sees the saved checks, newest first, as independent labelled samples', async () => {
   for (const [role, id] of Object.entries(member)) {
     const { reports } = await listReports(db.driver, id);
     expect(reports, role).toHaveLength(2);
     const [latest, first] = reports.map((r) => r.body as ReportBody);
+    expect(first!.sample).toBe(true);
+    expect(latest!.sample).toBe(true);
     expect(first!.counts).toMatchObject({ conversations: 8, passed: 5, failed: 3, findings: 3 });
     expect(latest!.counts).toMatchObject({ conversations: 8, passed: 6, failed: 2, findings: 2 });
     expect(caseResults(latest!.conversations).filter((c) => c.status === 'failed')).toHaveLength(2);
@@ -65,9 +67,9 @@ it('does not seed twice, and refills at a demo sign in once the last check is ol
     await sql.query('SET LOCAL ROLE nazir_auth');
     await sql.query("SELECT * FROM nazir.auth_demo_session('viewer',$1,now()+interval '1 hour')", [sessionHash('refill')]);
   });
-  expect(await count('reports')).toBe(4);
+  expect(await count('reports')).toBe(2);
   const { reports } = await listReports(db.driver, member.viewer);
-  expect(reports).toHaveLength(4);
+  expect(reports).toHaveLength(2);
 });
 
 it('lists the two fixes for every role, with titles, people and times but no evidence or patch', async () => {
@@ -99,4 +101,85 @@ it('lets the reviewer approve the waiting fix like any real fix, and refuses the
   expect(done.retest!.retest.length).toBeGreaterThan(0);
   const { listProposals } = await import('../../src/server/repair/list');
   expect((await listProposals(db.driver, member.viewer)).proposals.find((p) => p.id === waiting)!.status).toBe('approved');
+});
+
+it('uses a different faulty version for each sample, consistently across its plan, run and answers', async () => {
+  const rows = (await db.owner.query<{ registry: string; matches: boolean; failed: string[] }>(`SELECT v.config->>'registry_id' AS registry,
+    bool_and(c.agent_version_id=r.agent_version_id AND p.agent_version_id=r.agent_version_id AND (f.id IS NULL OR f.agent_version_id=r.agent_version_id)) AS matches,
+    array_agg(DISTINCT s.stable_key ORDER BY s.stable_key) FILTER(WHERE c.status='failed') AS failed
+    FROM nazir.runs r JOIN nazir.plans p ON p.id=r.plan_id JOIN nazir.agent_versions v ON v.id=r.agent_version_id
+    JOIN nazir.conversations c ON c.run_id=r.id JOIN nazir.scenarios s ON s.id=c.scenario_id
+    LEFT JOIN nazir.findings f ON f.conversation_id=c.id
+    WHERE r.idempotency_key LIKE 'demo-seed-%' GROUP BY r.id,v.config ORDER BY r.created_at`)).rows;
+  expect(rows.map((r) => r.registry)).toEqual(['planted_wrong_queue', 'planted_false_submit']);
+  expect(rows.every((r) => r.matches)).toBe(true);
+  expect(rows[0]!.failed).not.toEqual(rows[1]!.failed);
+  expect((await db.owner.query("SELECT id FROM nazir.findings WHERE workspace_id=$1 AND status='retest_passed'", [demoWorkspaceId])).rows).toHaveLength(0);
+});
+
+it('keeps normal deletes and updates blocked, including forged cleanup flags', async () => {
+  for (const table of ['reports', 'conversation_messages', 'approvals', 'audit_events']) {
+    await expect(db.owner.query(`DELETE FROM nazir.${table} WHERE workspace_id=$1`, [demoWorkspaceId])).rejects.toThrow(/cannot change|Append only/);
+  }
+  await expect(db.owner.query("UPDATE nazir.reports SET body=body WHERE workspace_id=$1", [demoWorkspaceId])).rejects.toThrow(/cannot change/);
+  const row = (await db.owner.query('SELECT * FROM nazir.reports WHERE workspace_id=$1 LIMIT 1', [demoWorkspaceId])).rows[0]!;
+  await db.member(member.owner, async (sql) => {
+    await sql.query("SELECT set_config('app.demo_seed_cleanup','on',true)");
+    expect((await sql.query<{ ok: boolean }>("SELECT nazir.demo_seed_delete_ok('reports',$1::jsonb) AS ok", [JSON.stringify(row)])).rows[0]!.ok).toBe(false);
+  });
+  await expect(db.member(member.owner, (sql) => sql.query('SELECT nazir.demo_seed_clear()'))).rejects.toThrow(/permission denied/);
+  await expect(db.worker(demoWorkspaceId, (sql) => sql.query('SELECT nazir.demo_seed_rows()'))).rejects.toThrow(/permission denied/);
+  await expect(db.member(member.owner, (sql) => sql.query('SELECT nazir.worker_demo_reseed($1)', [demoWorkspaceId]))).rejects.toThrow(/permission denied/);
+});
+
+it('replaces one entire seeded graph while preserving visitor checks, other workspaces and the audit chain', async () => {
+  const audit = (await db.owner.query('SELECT * FROM nazir.audit_events WHERE workspace_id=$1 ORDER BY seq', [demoWorkspaceId])).rows;
+  const first = (await db.owner.query<{ run: string; plan: string; conversation: string; finding: string }>(`SELECT r.id AS run,r.plan_id AS plan,c.id AS conversation,f.id AS finding
+    FROM nazir.runs r JOIN nazir.conversations c ON c.run_id=r.id JOIN nazir.findings f ON f.conversation_id=c.id
+    WHERE r.idempotency_key LIKE 'demo-seed-%' ORDER BY r.created_at LIMIT 1`)).rows[0]!;
+  const visitorPlan = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.plans(workspace_id,goal,agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,proposed_by)
+    SELECT workspace_id,'Visitor check',agent_version_id,rule_pack_version_id,families,languages,repeats,budget_calls,stop_rules,proposed_by_type,proposed_by FROM nazir.plans WHERE id=$1 RETURNING id`, [first.plan])).rows[0]!.id;
+  const visitorRun = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.runs(workspace_id,plan_id,agent_version_id,rule_pack_version_id,frozen_manifest,runner_version,idempotency_key)
+    SELECT workspace_id,$2,agent_version_id,rule_pack_version_id,frozen_manifest,runner_version,'visitor-started' FROM nazir.runs WHERE id=$1 RETURNING id`, [first.run, visitorPlan])).rows[0]!.id;
+  await db.owner.query(`INSERT INTO nazir.finding_attempts(workspace_id,finding_id,conversation_id) VALUES($1,$2,$3)`, [demoWorkspaceId, first.finding, first.conversation]);
+  await db.owner.query(`INSERT INTO nazir.tool_events(workspace_id,conversation_id,seq,tool_name,request,response,outcome) VALUES($1,$2,1,'create_case','{}','{}','ok')`, [demoWorkspaceId, first.conversation]);
+  await db.owner.query(`INSERT INTO nazir.state_readings(workspace_id,conversation_id,source,reading) VALUES($1,$2,'inspection_channel','{}')`, [demoWorkspaceId, first.conversation]);
+  const runs = (await db.owner.query<{ id: string }>("SELECT id FROM nazir.runs WHERE idempotency_key LIKE 'demo-seed-%' ORDER BY created_at")).rows;
+  await db.owner.query(`INSERT INTO nazir.comparisons(workspace_id,run_a_id,run_b_id,created_by,comparer_version,summary,pairs) VALUES($1,$2,$3,$4,'n17','{}','[]')`, [demoWorkspaceId, runs[0]!.id, runs[1]!.id, member.owner]);
+  await expect(db.owner.query('DELETE FROM nazir.comparisons WHERE workspace_id=$1', [demoWorkspaceId])).rejects.toThrow(/cannot change/);
+  // Reports are immutable in the app. Move their clock only in this local fixture.
+  await db.owner.query('ALTER TABLE nazir.reports DISABLE TRIGGER report_frozen');
+  await db.owner.query("UPDATE nazir.reports SET created_at=created_at-interval '4 days' WHERE workspace_id=$1", [demoWorkspaceId]);
+  await db.owner.query('ALTER TABLE nazir.reports ENABLE TRIGGER report_frozen');
+  expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok).toBe(true);
+  expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok).toBe(false);
+  expect(await count('reports')).toBe(2);
+  expect(await count('conversations')).toBe(16);
+  expect(await count('findings')).toBe(5);
+  expect(await count('proposals')).toBe(2);
+  expect(await count('approvals')).toBe(2); // The unrelated rule approval is preserved too.
+  for (const table of ['tool_events', 'state_readings', 'finding_attempts', 'comparisons']) expect(await count(table), table).toBe(0);
+  expect((await db.owner.query('SELECT id FROM nazir.runs WHERE id=$1', [visitorRun])).rows).toHaveLength(1);
+  expect((await db.owner.query('SELECT id FROM nazir.plans WHERE id=$1', [visitorPlan])).rows).toHaveLength(1);
+  expect((await db.owner.query('SELECT id FROM nazir.runs WHERE id=$1', [first.run])).rows).toHaveLength(0);
+  expect((await db.owner.query('SELECT * FROM nazir.audit_events WHERE workspace_id=$1 AND seq<=$2 ORDER BY seq', [demoWorkspaceId, audit.at(-1)!.seq])).rows).toEqual(audit);
+});
+
+it('explicit reset seeds once immediately despite recent reports, and refuses a real workspace', async () => {
+  const { resetDemoNow } = await import('../../src/server/demo/reset');
+  const before = (await db.owner.query('SELECT id FROM nazir.reports WHERE workspace_id=$1', [demoWorkspaceId])).rows;
+  await resetDemoNow(db.driver, member.owner, demoWorkspaceId);
+  expect(await count('reports')).toBe(2);
+  const after = (await db.owner.query('SELECT id FROM nazir.reports WHERE workspace_id=$1', [demoWorkspaceId])).rows;
+  expect(after.every((row) => !before.some((old) => old.id === row.id))).toBe(true);
+  await resetDemoNow(db.driver, member.owner, demoWorkspaceId);
+  expect(await count('reports')).toBe(2);
+  expect(await count('proposals')).toBe(2);
+  await db.owner.query("UPDATE nazir.workspaces SET kind='real' WHERE id=$1", [demoWorkspaceId]);
+  try {
+    expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok).toBe(false);
+    await expect(resetDemoNow(db.driver, member.owner, demoWorkspaceId)).rejects.toThrow(/not a demo/);
+    await expect(db.worker(demoWorkspaceId, (sql) => sql.query('SELECT nazir.worker_demo_reseed($1)', [demoWorkspaceId]))).rejects.toThrow(/not a demo/);
+    expect(await count('reports')).toBe(2);
+  } finally { await db.owner.query("UPDATE nazir.workspaces SET kind='demo' WHERE id=$1", [demoWorkspaceId]); }
 });

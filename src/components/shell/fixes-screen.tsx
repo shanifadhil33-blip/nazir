@@ -7,7 +7,7 @@ import { AfterView } from './after';
 import { DocumentLocale } from './document-locale';
 import { FixesView, type FixAction, type FixesNote } from './fixes';
 import {
-  cardsFrom, changeBetween, decisionMessage, fixesAccess, mergeServerFixes, patchFix, readStore, recheckCount, recheckMessage, storeKeyFor,
+  cardsFrom, measuredChange, decisionMessage, fixesAccess, mergeServerFixes, patchFix, readStore, recheckCount, recheckMessage, storeKeyFor,
   type StoredFix, type Tab,
 } from './fixes-model';
 import { homeLinks } from './home-model';
@@ -39,7 +39,7 @@ export function FixesScreen({ workspaceId, initialLang, mode }: { workspaceId: s
   const seat = seatFromRoles(roles);
   const canStart = roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
   const cards = useMemo(() => cardsFrom(stored, reports.map((row) => row.body), lang, copy, person?.name ?? personFor(seat, copy).name), [stored, reports, lang, copy, person, seat]);
-  const change = reports.length >= 2 ? changeBetween(reports[1]!.body, reports[0]!.body) : null;
+  const change = reports.length >= 2 ? measuredChange(reports[1]!.body, reports[0]!.body) : null;
   const links = homeLinks(workspaceId);
 
   function save(next: StoredFix[]) {

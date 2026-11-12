@@ -168,6 +168,11 @@ function rate(body: ReportBody, language: string): number | null {
   return rows.length === 0 ? null : Math.round((rows.filter((row) => row.status === 'passed').length / rows.length) * 100);
 }
 
+/** Sample checks are independent examples, so they never establish a measured repair. */
+export function measuredChange(before: ReportBody, after: ReportBody): Change | null {
+  return before.sample || after.sample ? null : changeBetween(before, after);
+}
+
 /** Before and after from two saved checks. Questions are paired by their scenario, so each answer is counted once. */
 export function changeBetween(before: ReportBody, after: ReportBody): Change {
   const was = new Map(caseResults(before.conversations).map((row) => [keyOf(row), row.status]));

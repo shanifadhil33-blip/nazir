@@ -29,6 +29,7 @@ export type ReportConversation = { id: string; status: string; split: string; la
 export type CaseResult = ReportConversation & { passed: number; total: number; flaky: boolean; attempts: ReportConversation[]; outcome: { en: string; ar: string } };
 export type ReportCounts = { conversations: number; passed: number; failed: number; inconclusive: number; findings: number };
 export type ReportBody = {
+  sample?: boolean;
   scope: { en: string; ar: string };
   run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number };
   counts: ReportCounts;
