@@ -1114,6 +1114,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-tab:active { transform: scale(.97); }
 .nz-tab:focus-visible, .nz-fix-head:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .nz-fix-list { display: grid; gap: 16px; align-content: start; min-inline-size: 0; }
+.nz-fix-cards { display: grid; gap: 16px; min-inline-size: 0; }
 .nz-fix { display: grid; gap: 12px; padding: 20px; border-radius: var(--radius-card); min-inline-size: 0; }
 .nz-fix-waiting { background: var(--peach); }
 .nz-fix-approved { background: var(--mint); }
@@ -1153,7 +1154,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-after-ico-wrong { background: var(--peach); color: var(--wrong); }
 .nz-after-lang { justify-self: start; margin: 0; padding: 6px 14px; border-radius: var(--radius-pill); background: var(--sky); color: #3f6a93; font-size: 13px; font-weight: 600; }
 @media (min-width: 1024px) {
-  .nz-fix-list { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+  .nz-fix-cards { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
   .nz-fix-list > .nz-fix-change, .nz-fix-list > .nz-state, .nz-fix-list > .nz-pill-btn { grid-column: 1 / -1; justify-self: start; }
   .nz-after-stats { grid-template-columns: 1fr 1.4fr; }
   .nz-after-stats .nz-pastel-stat { min-block-size: 168px; }
@@ -1247,6 +1248,21 @@ a.nz-rep-btn { text-decoration: none; }
 .nz-demo-next { margin: 0; font-size: 13px; color: color-mix(in srgb, var(--ink) 70%, transparent); }
 .nz-demo-note { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
 
-@media (max-width: 899px) {
-  .nz-shell.nz-fixpage { padding-block-end: calc(120px + env(safe-area-inset-bottom)); }
+@media (max-width: 1023px) {
+  /* Bound the cards, not the action: even a short list can exceed a phone's
+     available height when details are open. The one action follows the cards
+     and stays in flow above the 64px nav, its 12px offset and the safe area. */
+  .nz-shell.nz-fixpage {
+    box-sizing: border-box;
+    block-size: 100svh;
+    min-block-size: 0;
+    padding-block-end: calc(92px + env(safe-area-inset-bottom));
+    display: flex;
+  }
+  .nz-fixpage > .nz-shell-desk { display: flex; flex-direction: column; min-block-size: 0; }
+  .nz-fixpage .nz-shell-head { flex: none; }
+  .nz-fixpage .nz-shell-stack { display: flex; flex-direction: column; min-block-size: 0; }
+  .nz-fixpage .nz-fix-list { display: flex; flex-direction: column; min-block-size: 0; }
+  .nz-fixpage .nz-fix-cards { overflow-y: auto; min-block-size: 0; scrollbar-gutter: stable; }
+  .nz-fixpage .nz-fix-change { flex: none; }
 }

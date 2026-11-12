@@ -1,3 +1,4 @@
+import { checkDate } from '@/server/reports/date';
 import { fill, type Lang, type Messages } from '@/components/ocean/copy';
 import { can, type Role } from '@/server/auth/roles';
 import { isCompleteReport, stoppedLine, type ReportBody } from '@/server/reports/build';
@@ -30,7 +31,7 @@ export function buildHistory(reports: readonly (Saved & { id: string })[], fixes
   const text = copy.historyScreen;
   const items: HistoryItem[] = [];
   for (const report of reports) {
-    const at = new Date(report.created_at);
+    const at = checkDate(report.created_at, report.body);
     if (Number.isNaN(at.getTime())) continue;
     items.push({ id: `r-${report.id}`, kind: isCompleteReport(report.body) ? 'checkDone' : 'checkStopped', who: null, detail: isCompleteReport(report.body) ? fill(text.questions, { n: String(report.body.counts.conversations) }) : stoppedLine(report.body, lang), at });
   }

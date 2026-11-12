@@ -1,3 +1,4 @@
+import { checkDate } from '@/server/reports/date';
 import { fill, type Lang, type Messages } from '@/components/ocean/copy';
 import { caseResults, completionOf, isCompleteReport, type ReportBody } from '@/server/reports/build';
 import { presentQuote, presentRecord } from '@/components/ocean/plain';
@@ -47,7 +48,7 @@ export function checkFromReport(id: string, createdAt: string, body: ReportBody,
     ...(!isCompleteReport(body) ? { stopped: { done: completionOf(body).tries_done, total: completionOf(body).tries_total } } : {}),
     sample: body.sample === true,
     kind: body.run.size === 'full' ? 'full' : 'quick',
-    at: new Date(createdAt),
+    at: checkDate(createdAt, body),
     toFix: questions.filter((item) => item.mark === 'wrong').length,
     questions,
   };

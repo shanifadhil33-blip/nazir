@@ -18,7 +18,8 @@ it.each(['home', 'checks', 'fixes', 'after', 'settings', 'history', 'report'])('
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
   const props = { workspaceId: 'workspace', initialLang: 'en' as const };
   const content = screen === 'home' ? <HomeScreen {...props} /> : screen === 'checks' ? <ChecksScreen {...props} /> : screen === 'settings' ? <SettingsScreen {...props} /> : screen === 'history' ? <HistoryScreen {...props} /> : screen === 'report' ? <ReportScreen {...props} /> : <FixesScreen {...props} mode={screen === 'after' ? 'after' : 'fixes'} />;
-  const html = renderToStaticMarkup(<MemberSnapshotProvider value={snapshot}>{content}</MemberSnapshotProvider>);
+  const value = screen === 'checks' ? { ...snapshot, activeRuns: [] } : snapshot;
+  const html = renderToStaticMarkup(<MemberSnapshotProvider value={value}>{content}</MemberSnapshotProvider>);
   expect(html).not.toContain('Loading');
   expect(html).not.toContain('aria-busy="true"');
   expect(html).toContain('<main');

@@ -197,3 +197,11 @@ it('shows what was approved, not only that something was', () => {
   expect(html).toContain('Restore the approved complaint routing');
   expect(html).toContain('Ready to check again');
 });
+
+
+it.each(['en', 'ar'] as const)('keeps one Before and after action after the scrollable fix cards in %s', (lang) => {
+  const html = render(lang, 'editor');
+  expect(html.match(/class="[^"]*nz-fix-change/g)).toHaveLength(1);
+  expect(html).toContain('class="nz-fix-cards"');
+  expect(html.indexOf('nz-fix-change')).toBeGreaterThan(html.lastIndexOf('</article>'));
+});

@@ -1,5 +1,7 @@
 'use client';
 
+import { checkDate } from '@/server/reports/date';
+
 import { isCompleteReport } from '@/server/reports/build';
 import type { Lang } from '@/components/ocean/copy';
 import { metricsFromReport, seatFromRoles } from '@/components/ocean/model';
@@ -17,7 +19,7 @@ export function HomeScreen({ workspaceId, initialLang }: { workspaceId: string; 
   const metrics = latest ? metricsFromReport(latest.body) : null;
   const view = buildHomeView(data.roles, {
     checks: completed.length, score: metrics?.score ?? 0, right: metrics?.pass ?? 0,
-    toFix: metrics?.fail ?? 0, lastAt: latest ? new Date(latest.created_at) : null,
+    toFix: metrics?.fail ?? 0, lastAt: latest ? checkDate(latest.created_at, latest.body) : null,
   }, data.assistant);
   const seat = seatFromRoles(data.roles);
   const ready = phase === 'ready';

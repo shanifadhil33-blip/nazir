@@ -75,7 +75,9 @@ export function FixesView(props: FixesViewProps) {
             </div>
             {note ? <p className="nz-note-line" role="status" data-note={note}>{text[note]}</p> : null}
             <div className="nz-fix-list">
+              <div className="nz-fix-cards">
               {shown.length === 0 ? <StateCard kind="empty" title={tab === 'waiting' ? text.emptyWaitingTitle : text.emptyDoneTitle} action={{ label: text.goChecks, href: links.checks }} /> : shown.map((item) => <FixCardView key={item.id} lang={lang} item={item} access={access} open={open === item.id} busy={busy?.id === item.id ? busy.action : null} links={links} onToggle={props.onToggle} onAction={props.onAction} />)}
+              </div>
               {fixes.length > 0 ? <PillButton className="nz-fix-change" icon="report" label={text.seeChange} href={links.after} /> : null}
             </div>
           </>}

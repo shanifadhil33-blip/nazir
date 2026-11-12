@@ -7,12 +7,12 @@ import { MemberSnapshotProvider, type MemberSnapshot } from '@/components/shell/
 import { Unauthorized } from '@/server/http/errors';
 import { loadMemberSnapshot } from './member-data';
 
-export async function MemberShell({ workspaceId, lang, pinned, withReports = true, withFixes = false, children }: {
-  workspaceId: string; lang: Lang; pinned: boolean; withReports?: boolean; withFixes?: boolean; children: ReactNode;
+export async function MemberShell({ workspaceId, lang, pinned, withReports = true, withFixes = false, withActive = false, children }: {
+  workspaceId: string; lang: Lang; pinned: boolean; withReports?: boolean; withFixes?: boolean; withActive?: boolean; children: ReactNode;
 }) {
   let value: MemberSnapshot | undefined;
   try {
-    value = await loadMemberSnapshot(workspaceId, lang, pinned, withReports, withFixes);
+    value = await loadMemberSnapshot(workspaceId, lang, pinned, withReports, withFixes, withActive);
   } catch (error) {
     if (error instanceof Unauthorized) redirect('/signin');
     // Preserve the existing client error/retry path if first-paint reads fail.

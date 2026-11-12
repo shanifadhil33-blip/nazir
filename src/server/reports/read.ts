@@ -5,6 +5,7 @@ import { can, type Role } from '../auth/roles';
 import { withMember } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { Coded, Forbidden, NotFound } from '../http/errors';
+import { checkDate } from './date';
 import { assembleReport, projectReport, type ReportBody, type ReportConversation, type ReportFinding, type ReportMessage } from './build';
 
 const createInput = z.object({ run_id: z.uuid() }).strict();
@@ -15,7 +16,7 @@ async function rolesOf(sql: SqlConnection) {
 }
 
 async function evidence(sql: SqlConnection, runId: string) {
-  const run = (await sql.query<{ id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number }>(`SELECT id,status,calls_used,calls_budget,frozen_manifest->>'size' AS size,(frozen_manifest->>'testCount')::int AS test_count FROM nazir.runs WHERE id=$1`, [runId])).rows[0];
+  const run = (await sql.query<ReportBody['run']>(`SELECT id,status,calls_used,calls_budget,finished_at::text,started_at::text,frozen_manifest->>'size' AS size,(frozen_manifest->>'testCount')::int AS test_count FROM nazir.runs WHERE id=$1`, [runId])).rows[0];
   if (!run) throw new NotFound();
   const conversations = (await sql.query<ReportConversation>(`SELECT c.id,c.status,s.split,c.language,c.scenario_id,c.attempt_number,c.inconclusive_reason FROM nazir.conversations c JOIN nazir.scenarios s ON s.id=c.scenario_id WHERE c.run_id=$1 ORDER BY c.created_at,c.id`, [runId])).rows;
   const findings = (await sql.query<ReportFinding>(`SELECT f.id,f.check_id,f.scenario_id,f.conversation_id,greatest(1,(SELECT count(*)::int FROM nazir.finding_attempts a WHERE a.finding_id=f.id)) AS failed_attempts,f.severity,f.title,f.title_ar,f.really_happened,f.really_happened_ar,f.agent_said,f.evidence,s.split,s.family,f.language
@@ -73,8 +74,19 @@ export async function listReports(driver: TransactionDriver, memberId: string) {
       `SELECT r.id, r.created_at, r.run_id, nazir.${fn}(r.id) AS body FROM nazir.list_reports() r ORDER BY r.created_at DESC, r.id DESC`,
     )).rows;
     if (reports.some((row) => !row.body)) throw new NotFound();
+    // Enrich only the projected response. These run reads stay under member RLS;
+    // stored evidence and its hash are never rewritten, including legacy reports.
+    const dates = (await sql.query<{ id: string; finished_at: string | null; started_at: string | null }>(
+      'SELECT id,finished_at::text,started_at::text FROM nazir.runs WHERE id=ANY($1::uuid[])',
+      [reports.map((row) => row.run_id)],
+    )).rows;
+    const byRun = new Map(dates.map((row) => [row.id, row]));
+    const enriched = reports.map((row) => {
+      const date = byRun.get(row.run_id);
+      return date ? { ...row, body: { ...row.body, run: { ...row.body.run, finished_at: date.finished_at, started_at: date.started_at } } } : row;
+    }).sort((a, b) => checkDate(b.created_at, b.body).getTime() - checkDate(a.created_at, a.body).getTime() || b.id.localeCompare(a.id));
     // Every role that may list reports may also read runs; the count drives the first step card.
     const runs = can(roles, 'run.read') ? Number((await sql.query<{ n: string }>('SELECT count(*) AS n FROM nazir.runs')).rows[0]!.n) : reports.length;
-    return { reports, runs };
+    return { reports: enriched, runs };
   });
 }

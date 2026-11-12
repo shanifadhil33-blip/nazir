@@ -13,7 +13,7 @@ export type HomeFacts = {
   score: number;
   right: number;
   toFix: number;
-  /** When the latest saved report was made. */
+  /** When the latest completed check ended, or began if no end time was saved. */
   lastAt: Date | null;
 };
 

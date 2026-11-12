@@ -1,4 +1,13 @@
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
+import type { TransactionDriver } from '../../src/server/db/driver';
+const hooks = vi.hoisted(() => ({ after: [] as (() => Promise<void>)[], driver: null as TransactionDriver | null, lock: null as Parameters<typeof tick>[0]['lock'] | null, run: null as typeof runNextConversation | null }));
+vi.mock('next/server', () => ({ after: (fn: () => Promise<void>) => { hooks.after.push(fn); } }));
+vi.mock('../../src/server/db/runtime', () => ({ runtimeDriver: () => hooks.driver, inspectionRuntimeDriver: () => hooks.driver, runnerLock: () => hooks.lock!() }));
+vi.mock('../../src/server/runner/tick', async (original) => {
+  const real = await original<typeof import('../../src/server/runner/tick')>();
+  return { ...real, tick: (input: Parameters<typeof real.tick>[0]) => real.tick({ ...input, ...(input.run ? {} : { run: hooks.run! }) }) };
+});
+import { POST } from '../../src/app/api/runner/tick/route';
 import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { createLibraryFixture } from '../../src/server/runner/library-fixture';
 import { enqueueRun } from '../../src/server/runner/enqueue';
@@ -22,12 +31,16 @@ const lock = async () => {
 };
 beforeAll(async () => { db = await testDatabase(); f = await db.driver.transaction(createLibraryFixture); }, 60000);
 afterAll(async () => { await db?.close(); });
-async function enqueue(trusted = true) {
+afterEach(() => { hooks.after = []; vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+async function enqueue(trusted = true, size: 'quick' | 'full' = 'quick', ordered = false) {
   const rules = (await db.owner.query<{ rule_pack_version_id: string }>('SELECT rule_pack_version_id FROM nazir.plans WHERE id=$1', [f.planId])).rows[0]!.rule_pack_version_id;
   const version = f.versions.find((v) => v.registry_id === 'baseline')!.id;
-  const plan = await proposeBoundedPlan(db.driver, f.members.author, { size: 'quick', agent_version_id: version, rule_pack_version_id: rules });
+  const plan = await proposeBoundedPlan(db.driver, f.members.author, { size, agent_version_id: version, rule_pack_version_id: rules });
   await approvePlan(db.driver, f.members.reviewer, { id: plan.id, reason: 'I reviewed these questions.', evidence_opened: true });
-  return enqueueRun(db.driver, { workspaceId: f.workspaceId, planId: plan.id, agentVersionId: version, scenarioIds: plan.scenarioIds, repeats: 1, recordsOnly: true, idempotencyKey: crypto.randomUUID(), ...(trusted ? { startedBy: await runStarter(db.driver, f.members.author) } : {}) });
+  return enqueueRun(db.driver, { workspaceId: f.workspaceId, planId: plan.id, agentVersionId: version, scenarioIds: plan.scenarioIds, ...(ordered ? { order: [...plan.scenarioIds].reverse() } : {}), repeats: 1, recordsOnly: true, idempotencyKey: crypto.randomUUID(), ...(trusted ? { startedBy: await runStarter(db.driver, f.members.author) } : {}) });
+}
+async function freshStarter() {
+  f = { ...f, members: { ...f.members, author: await db.createMember(f.workspaceId, ['service_owner'], 'Fresh starter') } };
 }
 const fakeRun: typeof runNextConversation = (input) => runNextConversation({ ...input, chatModelFactory: () => async () => ({ content: 'I cannot do that.' }) });
 const reportsFor = async (id: string) => (await db.owner.query<{ id: string; body: Parameters<typeof completionOf>[0] }>('SELECT id,body FROM nazir.reports WHERE run_id=$1', [id])).rows;
@@ -68,7 +81,7 @@ it('does no work in a second concurrent tick and releases the lock after the fir
   expect(await reportsFor(run.id)).toHaveLength(1);
 });
 
-it('recovers a killed worker lease and preserves completed answers', async () => {
+it('ends a killed Quick worker at its limit and preserves completed answers', async () => {
   const run = await enqueue();
   await fakeRun({ driver: db.driver, inspectionDriver: db.driver, runId: run.id, workerId: 'finished_before_kill' });
   const first = (await db.owner.query<{ id: string }>("SELECT id FROM nazir.conversations WHERE run_id=$1 AND status IN ('passed','failed','inconclusive')", [run.id])).rows[0]!.id;
@@ -76,7 +89,8 @@ it('recovers a killed worker lease and preserves completed answers', async () =>
   await db.owner.query("UPDATE nazir.conversations SET lease_expires_at=now()-interval '1 minute' WHERE run_id=$1 AND status='running'", [run.id]);
   await tick({ driver: db.driver, inspectionDriver: db.driver, lock, run: fakeRun });
   expect((await db.owner.query('SELECT attempt FROM nazir.conversations WHERE id=$1', [first])).rows[0]!.attempt).toBe(1);
-  expect((await db.owner.query('SELECT max(attempt)::int AS n FROM nazir.conversations WHERE run_id=$1', [run.id])).rows[0]!.n).toBe(2);
+  expect((await db.owner.query('SELECT max(attempt)::int AS n FROM nazir.conversations WHERE run_id=$1', [run.id])).rows[0]!.n).toBe(1);
+  expect((await db.owner.query("SELECT status,last_error,attempt FROM nazir.conversations WHERE run_id=$1 AND last_error='step_stalled'", [run.id])).rows).toEqual([{ status: 'inconclusive', last_error: 'step_stalled', attempt: 1 }]);
   expect(await reportsFor(run.id)).toHaveLength(1);
 });
 
@@ -165,4 +179,67 @@ it('releases exclusivity even when discovery fails', async () => {
   const broken = { transaction: async () => { throw new Error('Database unavailable'); } };
   await expect(tick({ driver: broken, inspectionDriver: db.driver, lock })).rejects.toThrow('Database unavailable');
   expect(held).toBe(false);
+});
+
+
+it.each(['quick', 'full'] as const)('persists %s infrastructure limits on both conversation insert paths', async (size) => {
+  await freshStarter();
+  for (const ordered of [false, true]) {
+    const run = await enqueue(true, size, ordered);
+    const rows = (await db.owner.query<{ max_attempts: number }>('SELECT max_attempts FROM nazir.conversations WHERE run_id=$1', [run.id])).rows;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.max_attempts === (size === 'quick' ? 1 : 3))).toBe(true);
+    if (size === 'quick') expect(rows).toHaveLength(8);
+    await cancelRunAsMember(db.driver, f.members.author, run.id);
+    await createReport(db.driver, f.members.author, { run_id: run.id });
+  }
+});
+
+it.each(['quick', 'full'] as const)('a genuine %s model timeout obeys the persisted attempt limit', async (size) => {
+  await freshStarter();
+  const run = await enqueue(true, size);
+  const timed = await runNextConversation({ driver: db.driver, inspectionDriver: db.driver, runId: run.id, workerId: 'timeout_limit', conversationTimeoutMs: 60, chatModelFactory: () => () => new Promise(() => {}) });
+  expect(timed).toMatchObject({ attempt: 1, status: size === 'quick' ? 'inconclusive' : 'queued', reason: 'timeout' });
+  const row = (await db.owner.query<{ id: string; attempt: number; max_attempts: number; last_error: string }>('SELECT id,attempt,max_attempts,last_error FROM nazir.conversations WHERE id=$1', [timed!.conversation_id])).rows[0]!;
+  expect(row).toMatchObject({ attempt: 1, max_attempts: size === 'quick' ? 1 : 3, last_error: 'timeout' });
+  if (size === 'full') {
+    // Keep this timed-out question first so the next claim proves an actual retry.
+    await db.owner.query("UPDATE nazir.conversations SET available_at=now()-interval '1 second',created_at=now()-interval '1 day' WHERE id=$1", [row.id]);
+    expect(await fakeRun({ driver: db.driver, inspectionDriver: db.driver, runId: run.id, workerId: 'after_timeout' })).toMatchObject({ conversation_id: row.id, attempt: 2 });
+  } else {
+    await tick({ driver: db.driver, inspectionDriver: db.driver, lock, run: fakeRun });
+    expect((await db.owner.query('SELECT attempt,status FROM nazir.conversations WHERE id=$1', [row.id])).rows[0]).toEqual({ attempt: 1, status: 'inconclusive' });
+  }
+  await cancelRunAsMember(db.driver, f.members.author, run.id).catch(() => {});
+  await createReport(db.driver, f.members.author, { run_id: run.id });
+});
+
+it('Stop then Start survives an older lock holder through the authenticated server chain, without a browser kick', async () => {
+  await freshStarter();
+  const old = await enqueue();
+  let entered!: () => void, release!: () => void, clock = 0;
+  const ready = new Promise<void>((resolve) => { entered = resolve; });
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const blocked: typeof runNextConversation = async () => { entered(); await gate; clock = 30_000; return null; };
+  const previous = tick({ driver: db.driver, inspectionDriver: db.driver, lock, run: blocked, budgetMs: 30_000, now: () => clock });
+  await ready;
+  await cancelRunAsMember(db.driver, f.members.reviewer, old.id);
+  const next = await enqueue();
+  expect((await activeRuns(db.driver, f.members.author)).runs.map((r) => r.run_id)).toContain(next.id);
+  hooks.driver = db.driver; hooks.lock = lock; hooks.run = fakeRun;
+  vi.stubEnv('CRON_SECRET', 'test_tick_secret'); vi.stubEnv('AUTH_URL', 'https://example.test');
+  const request = () => new Request('https://example.test/api/runner/tick', { method: 'POST', headers: { authorization: 'Bearer test_tick_secret' } });
+  const fetcher = vi.fn(async () => POST(request()));
+  vi.stubGlobal('fetch', fetcher);
+  expect((await POST(request())).status).toBe(202);
+  await hooks.after.shift()!(); // Start's tick is busy and must leave another callback.
+  expect(hooks.after).toHaveLength(1);
+  expect(await reportsFor(next.id)).toHaveLength(0);
+  release(); await previous;
+  await hooks.after.shift()!(); // The delayed authenticated fetch schedules work after its response.
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await hooks.after.shift()!();
+  expect(await reportsFor(next.id)).toHaveLength(1);
+  expect(completionOf((await reportsFor(next.id))[0]!.body).complete).toBe(true);
+  expect(hooks.after).toHaveLength(0);
 });
