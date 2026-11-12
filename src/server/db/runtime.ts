@@ -33,3 +33,19 @@ export function inspectionRuntimeDriver() {
   inspectionPool ??= new Pool({ connectionString: process.env.INSPECT_DATABASE_URL, connectionTimeoutMillis: 3000, query_timeout: 3000 });
   return poolDriver(inspectionPool);
 }
+
+/** Reserve one session for the entire tick. Never keep a transaction open during model calls. */
+export async function runnerLock() {
+  const connection = await getPool().connect();
+  let held = false;
+  try {
+    held = (await connection.query<{ held: boolean }>("SELECT pg_try_advisory_lock(hashtextextended('nazir:runner:tick',0)) AS held")).rows[0]?.held === true;
+    if (!held) { connection.release(); return null; }
+  } catch (error) { connection.release(true); throw error; }
+  return async () => {
+    try {
+      const released = (await connection.query<{ released: boolean }>("SELECT pg_advisory_unlock(hashtextextended('nazir:runner:tick',0)) AS released")).rows[0]?.released;
+      connection.release(released ? undefined : true);
+    } catch { connection.release(true); }
+  };
+}
