@@ -18,6 +18,8 @@ Existing failing expectations were updated for eight by one, Full by three, term
 
 ## Live checks and known gaps
 
+Production unique `VERCEL_URL` hosts are SSO protected, so the runner must tick the public `AUTH_URL` origin. `AUTH_URL` was added in production for this reason and takes effect on the next deploy. It must win over both Vercel URL fallbacks, since another production alias is also SSO protected.
+
 1. Deploy the preview after the migration preparation and outside-sandbox gate. Confirm CRON_SECRET is configured and the configured deployment tick URL accepts the internal authenticated POST. Do not print the secret. The existing daily demo-reset cron stays unchanged.
 2. At 390, start a check and close the browser within five seconds after Start succeeds. Open a fresh browser about two minutes later. Record Start to report time and require under three minutes.
 3. Keep a second signed-in browser open during another check. Verify shared progress and Stop from that browser. Quick must end at 8 of 8; Full counts every repetition.

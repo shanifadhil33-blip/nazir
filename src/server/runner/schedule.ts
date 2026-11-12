@@ -3,7 +3,11 @@ import { after } from 'next/server';
 
 /** Only deployment configuration chooses the destination. Never forward a secret to a request Host header. */
 export function runnerUrl(env: Record<string, string | undefined> = process.env): URL | null {
-  const configured = env.VERCEL_URL ? `https://${env.VERCEL_URL}` : env.AUTH_URL ?? (env.NODE_ENV === 'development' ? 'http://localhost:3000' : null);
+  const productionUrl = env.VERCEL_PROJECT_PRODUCTION_URL;
+  const configured = env.AUTH_URL
+    || (productionUrl ? (productionUrl.includes('://') ? productionUrl : `https://${productionUrl}`) : null)
+    || (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : null)
+    || (env.NODE_ENV === 'development' ? 'http://localhost:3000' : null);
   if (!configured) return null;
   const url = new URL('/api/runner/tick', configured);
   if (url.username || url.password || (url.protocol !== 'https:' && !(env.NODE_ENV === 'development' && url.hostname === 'localhost'))) return null;
