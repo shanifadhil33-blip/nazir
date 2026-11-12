@@ -49,3 +49,11 @@ it('keeps checked connections public even when the legacy development DNS flag i
     await expect(checkedHttpsAddress('https://198.19.0.1')).rejects.toMatchObject({ code: 'external_private_address' });
   } finally { vi.unstubAllEnvs(); }
 });
+
+it('revalidates A2A DNS for polling and refuses a rebound address before the second send', async () => {
+  const { sendA2A } = await import('../../src/server/connect/a2a');
+  const resolve = vi.fn().mockResolvedValueOnce([{ address: '93.184.215.14' }]).mockResolvedValue([{ address: '10.0.0.1' }]);
+  const fetcher = vi.fn(async () => Response.json({ result: { task: { id: 't', status: { state: 'working' } } } }));
+  await expect(sendA2A({ url: row.endpoint, transport: 'JSONRPC', version: '1.0' }, row.endpoint, 'Hello', 's', {}, { resolve, fetcher })).rejects.toMatchObject({ code: 'external_private_address' });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});

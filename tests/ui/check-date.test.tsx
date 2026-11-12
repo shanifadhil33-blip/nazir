@@ -45,12 +45,14 @@ it.each(['en', 'ar'] as const)('dates a stopped 9 Nov check reported on 12 Nov c
 
 it.each(['en', 'ar'] as const)('Home uses the completed check date and ignores a newer stopped score in %s', (lang) => {
   vi.useFakeTimers(); vi.setSystemTime(now);
-  const snapshot: MemberSnapshot = { workspaceId: 'w', lang, roles: ['service_owner'], assistant: 'City Help Desk', person: undefined, fullName: '', settings: null, fixes: [], reports: [
+  const snapshot: MemberSnapshot = { workspaceId: 'w', lang, kind: 'real', connection: { name: 'City Help Desk', host: 'agent.example.com', ready: true }, roles: ['service_owner'], assistant: 'City Help Desk', person: undefined, fullName: '', settings: null, fixes: [], reports: [
     { id: 'stopped', created_at: made, body: report({ status: 'cancelled', finished_at: made, started_at: null }, 'cancelled') },
     { id: 'done', created_at: made, body: report({ finished_at: ended, started_at: started }) },
   ] };
   const html = renderToStaticMarkup(<MemberSnapshotProvider value={snapshot}><HomeScreen workspaceId="w" initialLang={lang} /></MemberSnapshotProvider>);
-  expect(html).toContain(lastCheckText(new Date(ended), now, messagesFor(lang)));
+  expect(html).toContain(dayLabel(new Date(ended), now, lang, messagesFor(lang)));
+  expect(html).toContain('12:00');
+  expect(html).toContain('check=done');
   expect(html).not.toContain(messagesFor(lang).shell.noChecksYet);
 });
 

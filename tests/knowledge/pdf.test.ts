@@ -77,7 +77,7 @@ it('refuses reviewer and viewer uploads using the existing owner only rule', asy
   for (const memberId of [reviewer, viewer]) {
     const response = await upload(form(pdf('Only owners can add this document.')), memberId, 'ar');
     expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: { code: 'forbidden', message: 'دورك لا يسمح بهذا.' } });
+    expect(await response.json()).toEqual({ error: { code: 'forbidden', message: 'لا يمكنك فعل هذا.' } });
   }
 });
 

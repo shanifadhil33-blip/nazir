@@ -7,6 +7,8 @@ import { lastCheckText } from './home-model';
 
 export type ReportFacts = {
   sample?: boolean;
+  repliesOnly?: boolean;
+  agentName?: string | null;
   stopped?: { done: number; total: number };
   id: string;
   right: number;
@@ -36,6 +38,8 @@ export function factsFromReports(reports: readonly Saved[], now: Date): ReportFa
     id: latest.id,
     ...(!isCompleteReport(latest.body) ? { stopped: { done: completionOf(latest.body).tries_done, total: completionOf(latest.body).tries_total } } : {}),
     sample: latest.body.sample === true,
+    repliesOnly: latest.body.run.connection_scope === 'replies_only',
+    agentName: latest.body.run.agent_name,
     right: latest.body.counts.passed,
     total: latest.body.counts.conversations,
     toFix: latest.body.counts.failed,
@@ -51,7 +55,7 @@ export function headlineText(facts: ReportFacts, copy: Messages): string {
 }
 
 export function captionText(facts: ReportFacts, assistant: string, now: Date, copy: Messages): string {
-  return fill(copy.reportScreen.caption, { name: assistant, when: lastCheckText(facts.at, now, copy).toLowerCase() });
+  return fill(copy.reportScreen.caption, { name: facts.agentName ?? (facts.repliesOnly ? copy.settingsScreen.assistant : assistant), when: lastCheckText(facts.at, now, copy).toLowerCase() });
 }
 
 export function languageRow(facts: ReportFacts, copy: Messages): string {

@@ -31,13 +31,14 @@ it('starts all member requests before any has resolved and keeps every request n
   const fetch = vi.fn(() => new Promise<Response>((done) => resolve.push(done)));
   vi.stubGlobal('fetch', fetch);
   const loaded = fetchMemberSnapshot('workspace', 'en', false, true, true);
-  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(fetch).toHaveBeenCalledTimes(5);
   for (const call of fetch.mock.calls as unknown as [string, RequestInit][]) expect(call[1].cache).toBe('no-store');
   resolve[0]!(Response.json({ user: { name: 'Omar Haddad' }, memberships: [{ workspaceId: 'workspace', roles: ['viewer'], workspaceName: 'Desk' }] }));
   resolve[1]!(Response.json({ name: 'Assistant', language: 'ar' }));
   resolve[2]!(Response.json({ reports: [] }));
   resolve[3]!(Response.json({ proposals: [] }));
-  expect(await loaded).toMatchObject({ lang: 'ar', roles: ['viewer'], assistant: 'Assistant', reports: [], fixes: [] });
+  resolve[4]!(Response.json({ ready: true, name: 'Agent', connection_kind: 'api' }));
+  expect(await loaded).toMatchObject({ lang: 'ar', roles: ['viewer'], assistant: 'Agent · متصل', reports: [], fixes: [] });
 });
 
 it('preserves the sign-in result on 401, including expired membership requests', async () => {
@@ -48,8 +49,22 @@ it('preserves the sign-in result on 401, including expired membership requests',
 it('rejects another workspace and required report failures while tolerating optional settings/proposals failures', async () => {
   const me = { user: { name: 'Omar' }, memberships: [{ workspaceId: 'workspace', roles: ['viewer'], workspaceName: 'Desk' }] };
   vi.stubGlobal('fetch', vi.fn(async (path: string) => path === '/api/me' ? Response.json(me) : path.endsWith('/reports') ? Response.json({ reports: [] }) : new Response(null, { status: 403 })));
-  expect(await fetchMemberSnapshot('workspace', 'en', true, true, true)).toMatchObject({ assistant: 'Desk', settings: null, fixes: [] });
+  expect(await fetchMemberSnapshot('workspace', 'en', true, true, true)).toMatchObject({ assistant: 'No agent connected', connection: null, settings: null, fixes: [] });
   await expect(fetchMemberSnapshot('other', 'en', true, true, true)).rejects.toThrow();
   vi.stubGlobal('fetch', vi.fn(async (path: string) => path === '/api/me' ? Response.json(me) : new Response(null, { status: 403 })));
   await expect(fetchMemberSnapshot('workspace', 'en', true, true, true)).rejects.toThrow();
+});
+
+it('uses trusted account kind and connection on refresh, and never calls the workspace name an agent', async () => {
+  for (const kind of ['real', 'demo']) {
+    vi.stubGlobal('fetch', vi.fn(async (path: string) => path === '/api/me' ? Response.json({ user: { name: 'Omar' }, memberships: [{ workspaceId: 'workspace', roles: ['service_owner'], workspaceName: 'Nazir demo', kind }] }) : path.endsWith('/connection') ? Response.json({ name: 'Customer desk', host: 'agent.example.com', ready: true, connection_kind: 'api' }) : Response.json({ name: 'Old settings name' })));
+    expect(await fetchMemberSnapshot('workspace', 'en', true, false, false)).toMatchObject({ kind, connection: { ready: true }, assistant: kind === 'demo' ? 'City Help Desk · Connected' : 'Customer desk · Connected' });
+  }
+});
+it('withholds Start for real missing or untested connections and preserves demo and tested Start', () => {
+  for (const [kind, ready, start] of [['real', undefined, false], ['real', false, false], ['real', true, true], ['demo', undefined, true]] as const) {
+    const value = { ...snapshot, kind, activeRuns: [], connection: ready === undefined ? null : { name: 'Desk', host: 'agent.example.com', ready } };
+    const html = renderToStaticMarkup(<MemberSnapshotProvider value={value}><ChecksScreen workspaceId="workspace" initialLang="en" /></MemberSnapshotProvider>);
+    expect(html.includes('data-nav="start"'), `${kind} ${ready}`).toBe(start);
+  }
 });

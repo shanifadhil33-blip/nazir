@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
@@ -57,7 +58,7 @@ export function FixesView(props: FixesViewProps) {
       <div className="nz-shell-desk">
         <header className="nz-shell-head">
           <div className="nz-shell-who">
-            <Avatar initials={who.initials} label={who.full} />
+            <Link href={links.settings} aria-label={copy.shell.settings}><Avatar initials={who.initials} label={who.full} /></Link>
             <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(props.assistant, copy, phase === 'loading')}</small></p>
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
@@ -91,7 +92,7 @@ export function FixesView(props: FixesViewProps) {
 
 export function navLinks(go: HomeLinks, seat: Seat) {
   // A viewer cannot read History, so More opens Settings for them.
-  return { home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
+  return { settings: go.settings, home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
 }
 
 function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction }: {

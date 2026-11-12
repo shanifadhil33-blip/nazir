@@ -78,12 +78,12 @@ export type AgentSettings = {
   llm: { provider: LlmProvider; model: string; base_url?: string | null; key_last4?: string | null } | null; can_edit: boolean;
 };
 
-export async function readAgentSettings(driver: TransactionDriver, memberId: string): Promise<AgentSettings> {
+export async function readAgentSettings(driver: TransactionDriver, memberId: string, withConnection = true): Promise<AgentSettings> {
   const settings = await withMember(driver, memberId, async (sql) => {
     try { return (await sql.query<{ s: AgentSettings }>('SELECT nazir.read_agent_settings() AS s')).rows[0]!.s; }
     catch (error) { if (/cannot do this/.test(String((error as Error)?.message))) throw new Forbidden(); throw error; }
   });
-  return { ...settings, external_agent: await readExternalAgent(driver, memberId) };
+  return withConnection ? { ...settings, external_agent: await readExternalAgent(driver, memberId) } : settings;
 }
 
 export async function saveAgentSettings(driver: TransactionDriver, memberId: string, value: unknown, secret?: string, resolve?: Resolver) {

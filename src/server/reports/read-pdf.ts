@@ -4,6 +4,8 @@ import type { TransactionDriver } from '../db/driver';
 import { Coded, errorLines, Forbidden, NotFound } from '../http/errors';
 import { packById } from '../packs/catalog';
 import { isCompleteReport, reportRunDate, reportTestTitle, type ReportBody } from './build';
+import en from '../../../messages/en.json';
+import ar from '../../../messages/ar.json';
 import type { PdfExtras } from './pdf';
 import { readFullReport } from './read';
 
@@ -43,7 +45,7 @@ export async function readPdfReport(driver: TransactionDriver, memberId: string,
     const beforeCounts = before && isCompleteReport(before) ? before.counts : null;
     const runDate = reportRunDate(header.run_date, lang);
     return {
-      lang, agentName: header.agent_name, focusPack: packById(header.focus_pack ?? '')?.name[lang] ?? (lang === 'ar' ? 'غير مسجلة' : 'Not recorded'), runDate,
+      lang, agentName: body.run.connection_scope === 'replies_only' ? body.run.agent_name ?? (lang === 'ar' ? ar : en).settingsScreen.assistant : header.agent_name, focusPack: packById(header.focus_pack ?? '')?.name[lang] ?? (lang === 'ar' ? 'غير مسجلة' : 'Not recorded'), runDate,
       testNames: Object.fromEntries(tests.map((t) => [t.id, reportTestTitle(t.stable_key, t.expected_state, t.canonical, lang)])),
       appliedFixes: repairs.map((r) => lang === 'ar' ? r.title_ar || r.title : r.title),
       fixedFindingIds: fixed.map((r) => r.id),

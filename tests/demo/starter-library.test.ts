@@ -31,6 +31,11 @@ it('one owner starts a first Quick check on their own: tests and rules are insta
   expect(await count("SELECT count(*) AS n FROM nazir.scenarios WHERE workspace_id=$1 AND status='approved' AND library_hash IS NOT NULL")).toBeGreaterThanOrEqual(48);
   expect(await count("SELECT count(*) AS n FROM nazir.rule_pack_versions WHERE workspace_id=$1 AND status='approved'")).toBe(1);
   expect(await count("SELECT count(*) AS n FROM nazir.audit_events WHERE workspace_id=$1 AND action='library.starter_installed'")).toBe(1);
+  await expect(agentChat(db.driver, owner, { message: approvalMessage(planId, 'en') }, null)).resolves.toMatchObject({ done: false, data: { error: { code: 'external_not_ready' } } });
+  const { saveExternalAgent, testExternalAgent } = await import('../../src/server/settings/external-agent');
+  const resolve = async () => [{ address: '93.184.215.14' }];
+  await saveExternalAgent(db.driver, owner, { endpoint: 'https://agent.example.com/chat', format: 'simple_json' }, undefined, resolve);
+  await testExternalAgent(db.driver, owner, { message: 'Hello', language: 'en' }, { resolve, fetcher: async () => Response.json({ reply: 'Hello Omar' }) });
   const started = await agentChat(db.driver, owner, { message: approvalMessage(planId, 'en') }, null);
   expect(started.reply.en).toContain('queued');
   expect(started.reply.en).not.toContain('No test run was queued');

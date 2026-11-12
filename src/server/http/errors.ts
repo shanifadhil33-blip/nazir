@@ -2,17 +2,20 @@ import { ZodError } from 'zod';
 
 /** One plain line per code, in English and Modern Standard Arabic. */
 export const errorLines = {
+  external_needs_input: { en: 'Your agent needs more information. Change the test message and try again.', ar: 'يحتاج وكيلك إلى معلومات إضافية. عدل الرسالة التجريبية وحاول مجددا.' },
+  external_needs_auth: { en: 'Your agent needs a key. Add it and try again.', ar: 'يحتاج وكيلك إلى مفتاح. أضفه وحاول مجددا.' },
+  external_unsupported: { en: 'Nazir cannot use this connection yet. Choose another way to connect.', ar: 'لا يستطيع ناظر استخدام هذا الاتصال بعد. اختر طريقة ربط أخرى.' },
   external_private_address: { en: 'This link points to a private or local address, so Nazir will not call it for safety.', ar: 'يشير هذا الرابط إلى عنوان خاص أو محلي، لذلك لن يتصل به ناظر حفاظا على الأمان.' },
   external_safety: { en: 'The connection was refused by the safety check. Use a public HTTPS address on port 443 without redirects.', ar: 'رفض فحص الأمان الاتصال. استخدم عنوان HTTPS عاما على المنفذ 443 دون إعادة توجيه.' },
   external_timeout: { en: 'The agent took too long to reply. Try again.', ar: 'استغرق الوكيل وقتا طويلا للرد. أعد المحاولة.' },
   external_unreachable: { en: 'The agent could not be reached. Check the link and access key.', ar: 'تعذر الوصول إلى الوكيل. تحقق من الرابط ومفتاح الوصول.' },
   external_format: { en: 'The reply format was not accepted or the response exceeded 64 KB.', ar: 'لم تقبل صيغة الرد أو تجاوز حجم الاستجابة 64 كيلوبايت.' },
-  external_rate_limit: { en: 'This workspace has sent 20 test messages in the past hour. Try again later.', ar: 'أرسلت مساحة العمل 20 رسالة اختبار خلال الساعة الماضية. أعد المحاولة لاحقا.' },
+  external_rate_limit: { en: 'You have sent 20 test messages in the past hour. Try again later.', ar: 'أرسلت 20 رسالة اختبار خلال الساعة الماضية. أعد المحاولة لاحقا.' },
   external_changed: { en: 'The connection changed. Save it and send a test message again.', ar: 'تغير الاتصال. احفظه وأرسل رسالة اختبار مجددا.' },
-  external_not_ready: { en: 'Send a successful test message before running tests on this connection.', ar: 'أرسل رسالة اختبار ناجحة قبل تشغيل الاختبارات على هذا الاتصال.' },
+  external_not_ready: { en: 'Connect your agent and send a successful test message before starting a check.', ar: 'اربط وكيلك وأرسل رسالة تجريبية ناجحة قبل بدء الفحص.' },
   unauthorized: { en: 'Please sign in to continue.', ar: 'يرجى تسجيل الدخول للمتابعة.' },
   token_invalid: { en: 'The token is no longer valid.', ar: 'لم يعد الرمز صالحا.' },
-  forbidden: { en: 'Your role cannot do this.', ar: 'دورك لا يسمح بهذا.' },
+  forbidden: { en: 'You cannot do this.', ar: 'لا يمكنك فعل هذا.' },
   not_demo: { en: 'This workspace is not a demo.', ar: 'مساحة العمل هذه ليست للعرض.' },
   pack_not_running: { en: 'Test runs for this focus pack are not open yet. It is still a draft; pick a live pack to run tests.', ar: 'تشغيلات الاختبار لهذه الحزمة غير متاحة بعد. ما زالت مسودة؛ اختر حزمة متاحة لتشغيل الاختبارات.' },
   live_test_government_only: { en: 'The live complaint test uses the Government pack. Run this pack from a test plan instead.', ar: 'يستخدم اختبار الشكوى المباشر حزمة الخدمات الحكومية. شغل هذه الحزمة من خطة اختبار بدلا من ذلك.' },

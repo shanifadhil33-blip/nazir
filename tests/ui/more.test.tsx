@@ -14,7 +14,7 @@ import { MorePreview } from '../../src/components/shell/more-preview';
 import { ReportView } from '../../src/components/shell/report';
 import { captionText, factsFromReports, headlineText, languageRow, previewFacts, reportAccess } from '../../src/components/shell/report-model';
 import { SettingsViewScreen, type ResetState } from '../../src/components/shell/settings';
-import { previewPeople, roleWord, settingsAccess } from '../../src/components/shell/settings-model';
+import { previewPeople, settingsAccess } from '../../src/components/shell/settings-model';
 import { can, type Role } from '../../src/server/auth/roles';
 import type { ReportBody } from '../../src/server/reports/build';
 
@@ -82,16 +82,17 @@ it('shows Settings cards to everyone and chevrons only to people who can edit', 
     expect(settingsAccess([role]).reset, role).toBe(can([role], 'demo.reset'));
   }
   const owner = settings('en', 'owner');
-  for (const line of ['Your', 'settings', 'Assistant', 'City Help Desk', 'connected', 'Topic', 'Language', 'English', 'People', 'Khalid', 'Omar', 'Yusuf', 'Ahmed', 'Owner', 'Fixer', 'Reviewer', 'Viewer', 'Start again']) expect(owner, line).toContain(line);
-  expect(owner).toContain('>KH<');
+  for (const line of ['Your', 'settings', 'Your agent', 'City Help Desk', 'connected', 'Topic', 'Language', 'English', 'People', 'Omar', 'Start again']) expect(owner, line).toContain(line);
+  expect(owner).toContain('>OS<');
+  for (const word of ['Owner', 'Fixer', 'Reviewer', 'Viewer']) expect(owner).not.toContain(word);
   expect(owner).toContain(links.editor.replace('&', '&amp;'));
   expect(owner).not.toContain('You can view this');
   const viewer = settings('en', 'viewer');
   expect(viewer).toContain('You can view this');
   expect(viewer).not.toContain('Start again');
   expect(viewer).not.toContain('settings=open');
-  expect(viewer).not.toContain('nz-set-link');
-  expect(viewer).toContain('Assistant');
+  expect(viewer).toContain('?connect=quick');
+  expect(viewer).toContain('Your agent');
   expect(settings('en', 'editor')).not.toContain('Start again');
   expect(settings('en', 'supplier')).not.toContain('Start again');
 });
@@ -103,11 +104,10 @@ it('asks before starting the demo again, and says what happened', () => {
   expect(settings('en', 'owner', 'failed')).toContain('Could not start again');
 });
 
-it('names a person by their strongest role', () => {
-  expect(roleWord(['viewer'])).toBe('viewer');
-  expect(roleWord(['quality_reviewer'])).toBe('reviewer');
-  expect(roleWord(['supplier_maintainer', 'quality_reviewer'])).toBe('fixer');
-  expect(roleWord(['viewer', 'service_owner'])).toBe('owner');
+it('names one person without internal access words', () => {
+  expect(previewPeople(messagesFor('en'))).toEqual([{ initials: 'OS', name: 'Omar' }]);
+  expect(previewPeople(messagesFor('ar'))).toEqual([{ initials: 'OS', name: messagesFor('ar').shell.omar }]);
+  for (const lang of ['en', 'ar'] as const) expect(Object.keys(previewPeople(messagesFor(lang))[0]!)).toEqual(['initials', 'name']);
 });
 
 it('keeps Settings free of extra rows', () => {

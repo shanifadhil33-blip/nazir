@@ -3,7 +3,7 @@ import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
 import en from '../../../messages/en.json';
 import ar from '../../../messages/ar.json';
 import { caseResults, isCompleteReport, stoppedLine, suiteLabel, attemptOutcome, type ReportBody, type ReportCounts } from './build';
-import { shapePdfLine, wrapPdfText } from './pdf-text';
+import { reportConnectionScope, shapePdfLine, wrapPdfText } from './pdf-text';
 
 export type PdfExtras = {
   lang: 'en' | 'ar';
@@ -66,6 +66,7 @@ export function clientReportSections(body: ReportBody, extras: PdfExtras) {
     return `${severity}: ${extras.lang === 'ar' ? f.title_ar || f.title : f.title}`;
   });
   return [
+    ...(reportConnectionScope(body, extras.lang) ? [{ title: (extras.lang === 'ar' ? ar : en).agentStatus.repliesOnly, lines: [reportConnectionScope(body, extras.lang)!] }] : []),
     ...(complete ? [{ title: c.score, lines: [`${reportScore(body.counts)} / 100`] }, { title: c.languages, lines: languageLines }] : [{ title: stoppedLine(body, extras.lang), lines: [] }]),
     { title: `${c.tests}: ${body.counts.conversations}`, lines: [
       `${c.passed}: ${body.counts.passed}   ${c.failed}: ${body.counts.failed}   ${c.inconclusive}: ${body.counts.inconclusive}`,

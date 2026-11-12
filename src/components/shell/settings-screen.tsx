@@ -10,7 +10,7 @@ import { homeLinks } from './home-model';
 import { personFor } from './people';
 import { useMemberData } from './member-data';
 import { SettingsViewScreen, type ResetState } from './settings';
-import { roleWord, settingsAccess } from './settings-model';
+import { settingsAccess } from './settings-model';
 
 /** The signed in Settings. Only the member's own row is known to the app, so People lists the signed in person. */
 export function SettingsScreen({ workspaceId, initialLang }: { workspaceId: string; initialLang: Lang }) {
@@ -31,13 +31,13 @@ export function SettingsScreen({ workspaceId, initialLang }: { workspaceId: stri
   }
 
   const me = data.person ?? personFor(seat, copy);
-  const people = data.phase === 'ready' ? [{ initials: me.initials, name: me.name, role: roleWord(data.roles) }] : [];
+  const people = data.phase === 'ready' ? [{ initials: me.initials, name: me.name }] : [];
   return <>
     <DocumentLocale lang={data.lang} />
     <SettingsViewScreen
       lang={data.lang} seat={seat} phase={data.phase}
-      view={{ assistant: data.assistant, topic: data.settings?.focus_pack ?? 'government', language: data.settings?.language ?? data.lang, people }}
-      access={settingsAccess(data.roles)} history={historyAccess(data.roles)} canStart={data.roles.some((role) => role === 'service_owner' || role === 'quality_reviewer')}
+      view={{ demo: data.kind === 'demo', connected: data.connection?.ready, assistant: data.assistant, topic: data.settings?.focus_pack ?? 'government', language: data.settings?.language ?? data.lang, people }}
+      access={{ ...settingsAccess(data.roles), reset: data.kind === 'demo' && settingsAccess(data.roles).reset }} history={historyAccess(data.roles)} canStart={data.canStart}
       person={data.person} links={homeLinks(workspaceId)} peopleOpen={peopleOpen} reset={reset}
       onPeople={() => setPeopleOpen((open) => !open)} onAsk={() => setReset('ask')} onCancel={() => setReset('idle')} onConfirm={() => void confirm()} onRetry={data.reload}
     />

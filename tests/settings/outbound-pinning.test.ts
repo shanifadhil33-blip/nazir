@@ -63,3 +63,21 @@ it.each(['mcp', 'own'] as const)('refuses mixed public and private DNS answers f
   else expect(await callOwnModelFull(own, request, undefined, resolve)).toBeNull();
   expect(mock.request).not.toHaveBeenCalled();
 });
+
+it('pins A2A card discovery and message sockets without global fetch or DNS rebinding', async () => {
+  const { discoverA2A, sendA2A } = await import('../../src/server/connect/a2a');
+  const checked: string[] = [];
+  const resolve = vi.fn(async () => [{ address: '93.184.215.14' }]);
+  mock.request.mockImplementation((url: string, options: RequestOptions, receive: (res: IncomingMessage) => void) => {
+    expect(options).toMatchObject({ servername: 'agent.example.com', rejectUnauthorized: true, agent: false });
+    for (let i = 0; i < 2; i++) options.lookup!('agent.example.com', {}, (_error, address) => checked.push(String(address)));
+    const stream = new PassThrough();
+    const res = Object.assign(stream, { statusCode: 200, headers: { 'content-type': 'application/json' } }) as unknown as IncomingMessage;
+    return Object.assign(new EventEmitter(), { end: (data?: string) => { receive(res); stream.end(JSON.stringify(data ? { result: { message: { parts: [{ text: 'Hello Omar' }] } } } : { name: 'City Help Desk', skills: [], supportedInterfaces: [{ url: 'https://agent.example.com/a2a', protocolBinding: 'JSONRPC', protocolVersion: '1.0' }] })); } }) as ClientRequest;
+  });
+  const cardUrl = 'https://agent.example.com/card';
+  const found = await discoverA2A(cardUrl, {}, { resolve });
+  expect(await sendA2A(found.iface, cardUrl, 'Hello', 's', {}, { resolve })).toBe('Hello Omar');
+  expect(mock.request).toHaveBeenCalledTimes(2); expect(checked).toEqual(Array(4).fill('93.184.215.14'));
+  expect(globalThis.fetch).not.toHaveBeenCalled();
+});

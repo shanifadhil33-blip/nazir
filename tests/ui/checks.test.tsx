@@ -184,3 +184,9 @@ it('points the Checks nav item at the checks screen', () => {
   expect(homeLinks('w1').start).toBe('/w/w1?screen=checks&start=1');
   expect(render('en', 'owner')).toContain('data-nav="checks" aria-current="page"');
 });
+
+it('keeps Start hidden when the current connection is not ready', () => {
+  const html = render('en', 'owner', { access: { start: false, stop: true, suggest: true } });
+  expect(html).not.toContain('data-nav="start"'); expect(html).not.toContain('nz-checks-start');
+  expect(html).toContain('data-nav="checks" aria-current="page"');
+});

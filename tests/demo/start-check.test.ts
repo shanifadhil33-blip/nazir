@@ -30,3 +30,21 @@ it('still refuses a viewer, and still keeps other plans proposed by a member', a
   const id = (custom.data as { id?: string } | null)?.id;
   if (id) expect((await db.owner.query<{ proposed_by_type: string }>('SELECT proposed_by_type FROM nazir.plans WHERE id=$1', [id])).rows[0]!.proposed_by_type).toBe('member');
 });
+
+it('refuses a solo real account direct Start until its current connection has answered', async () => {
+  const user = (await db.owner.query<{ id: string }>("INSERT INTO nazir.users(email,name) VALUES('solo-connect@example.test','Omar') RETURNING id")).rows[0]!.id;
+  const { ensureHomeWorkspace } = await import('../../src/server/auth/workspaces');
+  const workspace_id = await ensureHomeWorkspace(db.driver, user);
+  const member_id = (await db.owner.query<{ id: string }>('SELECT id FROM nazir.members WHERE workspace_id=$1', [workspace_id])).rows[0]!.id;
+  const a = { workspace_id, member_id };
+  const propose = await agentChat(db.driver, a.member_id, { message: 'run a quick check' }, null);
+  const plan = (propose.data as { id: string }).id;
+  await expect(agentChat(db.driver, a.member_id, { message: approvalMessage(plan, 'en') }, null)).resolves.toMatchObject({ done: false, data: { error: { code: 'external_not_ready' } } });
+  const { saveExternalAgent, testExternalAgent } = await import('../../src/server/settings/external-agent');
+  const resolve = async () => [{ address: '93.184.215.14' }];
+  await saveExternalAgent(db.driver, a.member_id, { endpoint: 'https://agent.example.com/chat', format: 'simple_json' }, undefined, resolve);
+  await expect(agentChat(db.driver, a.member_id, { message: approvalMessage(plan, 'en') }, null)).resolves.toMatchObject({ done: false, data: { error: { code: 'external_not_ready' } } });
+  await testExternalAgent(db.driver, a.member_id, { message: 'Hello', language: 'en' }, { resolve, fetcher: async () => Response.json({ reply: 'Hello Omar' }) });
+  const started = await agentChat(db.driver, a.member_id, { message: approvalMessage(plan, 'en') }, null);
+  expect(started.done).toBe(true); expect(started.data).toHaveProperty('run_id');
+});

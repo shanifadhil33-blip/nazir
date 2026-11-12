@@ -1,4 +1,4 @@
-import type { Messages } from '@/components/ocean/copy';
+import { fill, type Messages } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 
 /** Male names from the brief: Khalid the owner, Omar the fixer, Yusuf the reviewer, Ahmed the viewer. */
@@ -24,5 +24,11 @@ export function whoFor(person: { initials: string; name: string } | undefined | 
 
 /** The line under the name. Empty while loading, so no made up workspace name flashes first. */
 export function helpLine(assistant: string | undefined, copy: Messages, loading: boolean): string {
-  return assistant || (loading ? '' : copy.shell.helpDesk);
+  return assistant && !/^nazir demo$/i.test(assistant.trim()) ? assistant : (loading ? '' : copy.agentStatus.none);
+}
+
+/** The account kind and successful current test are trusted server facts. Never use an account name. */
+export function agentHeader(kind: 'demo' | 'real' | undefined, connection: { ready: boolean; name: string } | null | undefined, copy: Messages) {
+  if (kind === 'demo') return fill(copy.agentStatus.header, { agent: copy.shell.helpDesk });
+  return connection?.ready === true ? fill(copy.agentStatus.header, { agent: connection.name }) : copy.agentStatus.none;
 }

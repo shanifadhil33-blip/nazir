@@ -1,3 +1,5 @@
+import en from '../../../messages/en.json';
+import ar from '../../../messages/ar.json';
 import 'server-only';
 import type { RecordCheck } from '../checks/record-checks';
 import { callExternalAgent, type ExternalMessage, type ExternalRow, type ExternalTransport } from '../settings/external-agent';
@@ -5,16 +7,17 @@ import { callExternalAgent, type ExternalMessage, type ExternalRow, type Externa
 export function externalRecordChecks(ids: readonly string[], severity: RecordCheck['severity']): RecordCheck[] {
   return ids.map((id) => ({ id: id as RecordCheck['id'], status: 'inconclusive', severity,
     evidence: { expected: 'records link', observed: 'external_agent_no_records_link', records: [] },
-    summary: { en: 'Not checked: external agent has no records link', ar: 'لم يفحص: لا يوجد رابط سجلات للوكيل الخارجي' } }));
+    summary: { en: en.connect.replyScope, ar: ar.connect.replyScope } }));
 }
 /** Only resident and agent messages cross the boundary. No sandbox prompt, tools, judge or owner knowledge. */
 export async function externalConversation(row: ExternalRow, turns: string[], sessionId: string, language: 'en' | 'ar', reserve: () => Promise<void>, options?: ExternalTransport) {
   const transcript: ExternalMessage[] = [];
+  const transport = { ...options, a2aContexts: new Map<string, string>() };
   let reply = '';
   for (const content of turns) {
     await reserve();
     transcript.push({ role: 'user', content });
-    reply = await callExternalAgent(row, transcript, sessionId, language, options);
+    reply = await callExternalAgent(row, transcript, sessionId, language, transport);
     transcript.push({ role: 'assistant', content: reply });
   }
   return { transcript, reply };
@@ -31,8 +34,8 @@ export function externalReplyFinding(input: {
     workspace_id: input.workspaceId, run_id: input.runId, conversation_id: input.conversationId, scenario_id: input.scenarioId,
     check_id: 'semantic', attempt: input.attempt, language: input.language, check_layer: 'semantic',
     title: s.labels.en, title_ar: s.labels.ar, agent_said: s.span || input.reply,
-    really_happened: 'External agent reply assessed against the service rubric. Records were not checked because the external agent has no records link.',
-    really_happened_ar: 'قيم رد الوكيل الخارجي وفق معايير الخدمة. لم تفحص السجلات لعدم وجود رابط سجلات للوكيل الخارجي.',
+    really_happened: en.connect.replyScope,
+    really_happened_ar: ar.connect.replyScope,
     rule_pack_version_id: input.rulePackVersionId, rule_clause: input.sourceClause, agent_version_id: input.agentVersionId,
     severity: input.severity, root_cause_class: 'unknown', owner_role: 'quality_reviewer',
     evidence: { source: 'external_agent', records_available: false, expected: 'chosen service rubric and owner knowledge', observed: { status: s.status, issue: s.issue, reason: s.reason },

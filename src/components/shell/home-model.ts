@@ -2,7 +2,7 @@ import { fill, type Messages } from '@/components/ocean/copy';
 import { rolesForSeat, type Seat } from '@/components/ocean/model';
 import { can, type Role } from '@/server/auth/roles';
 
-export type HomeVariant = 'main' | 'first' | 'viewer' | 'quiet';
+export type HomeVariant = 'main' | 'first' | 'viewer' | 'quiet' | 'connect';
 
 /** What the person may use, read straight from the server role matrix. */
 export type HomeAccess = { start: boolean; fixes: boolean; report: boolean; settings: boolean };
@@ -10,6 +10,8 @@ export type HomeAccess = { start: boolean; fixes: boolean; report: boolean; sett
 export type HomeFacts = {
   /** Checks run so far. 0 means a first time home. */
   checks: number;
+  total?: number;
+  latestCheckId?: string;
   score: number;
   right: number;
   toFix: number;
@@ -50,8 +52,9 @@ export function homeVariant(access: HomeAccess, roles: readonly string[], checks
   return 'main';
 }
 
-export function buildHomeView(roles: readonly string[], facts: HomeFacts, assistant: string): HomeView {
+export function buildHomeView(roles: readonly string[], facts: HomeFacts, assistant: string, connected = true): HomeView {
   const access = homeAccess(roles);
+  if (!connected) return { variant: 'connect', access: { ...access, start: false }, facts, assistant };
   return { variant: homeVariant(access, roles, facts.checks), access, facts, assistant };
 }
 
@@ -63,10 +66,9 @@ export function scoreWord(score: number, copy: Messages): string {
 }
 
 export function headingFor(view: HomeView, copy: Messages): { light: string; bold: string } {
-  const hasChecks = view.facts.checks > 0;
-  if (hasChecks && view.variant !== 'first') return { light: copy.shell.assistantIs, bold: scoreWord(view.facts.score, copy) };
-  if (view.variant === 'first') return { light: copy.shell.letsCheck, bold: copy.shell.yourAssistantBold };
-  return { light: copy.shell.assistantLine, bold: copy.shell.noChecksBold };
+  if (view.variant === 'connect') return { light: '', bold: copy.connect.title };
+  if (view.facts.checks > 0) return { light: '', bold: fill(copy.shell.scoreHeading, { right: String(view.facts.right), total: String(view.facts.total ?? view.facts.right + view.facts.toFix) }) };
+  return { light: '', bold: copy.shell.agentReady };
 }
 
 /** Whole days between two moments, by calendar day in Dubai, never negative. */
