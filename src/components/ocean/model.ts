@@ -201,7 +201,7 @@ function arTab(copy: Messages, which: 'refund' | 'visa') {
 
 export function modelFromReports(latest: ReportBody, previous: ReportBody | null, copy: Messages, lang: Lang, agentName: string, sample: boolean): ScreenModel {
   const metrics = metricsFromReport(latest);
-  const before = previous ? metricsFromReport(previous) : null;
+  const before = previous && !latest.sample && !previous.sample ? metricsFromReport(previous) : null;
   const lines = lang === 'ar' ? latest.sentences.ar : latest.sentences.en;
   const findings = [...latest.findings].sort((a, b) => Number(b.severity === 'critical') - Number(a.severity === 'critical'));
   const events: LogEvent[] = [
@@ -230,7 +230,7 @@ export function modelFromReports(latest: ReportBody, previous: ReportBody | null
     status: findings.some((finding) => finding.severity === 'critical') ? 'waiting' : 'idle',
     metrics,
     before,
-    sample,
+    sample: sample || latest.sample === true,
     coverage,
     suiteLabel: suiteLabel(latest, lang),
     outcomes: caseResults(latest.conversations).map((c, index) => ({ id: c.id, label: `${copy.ui.caseWord} ${index + 1}: ` + fill(copy.ui.attemptOutcome, { passed: String(c.passed), total: String(c.total) }), flaky: c.flaky })),

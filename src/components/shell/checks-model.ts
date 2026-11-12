@@ -6,7 +6,7 @@ import { daysBetween } from './home-model';
 
 export type Mark = 'right' | 'wrong' | 'unsure';
 export type QuestionRow = { id: string; question: string; mark: Mark; said: string; record: string; findingId: string | null };
-export type CheckRow = { id: string; kind: 'quick' | 'full'; at: Date; toFix: number; questions: QuestionRow[] };
+export type CheckRow = { sample?: boolean; id: string; kind: 'quick' | 'full'; at: Date; toFix: number; questions: QuestionRow[] };
 export type ChecksAccess = { start: boolean; stop: boolean; suggest: boolean };
 
 /** Buttons follow the server role matrix: start and stop follow plan.propose and plan.approve, suggest follows proposal.create. */
@@ -44,6 +44,7 @@ export function checkFromReport(id: string, createdAt: string, body: ReportBody,
   });
   return {
     id,
+    sample: body.sample === true,
     kind: body.run.size === 'full' ? 'full' : 'quick',
     at: new Date(createdAt),
     toFix: questions.filter((item) => item.mark === 'wrong').length,

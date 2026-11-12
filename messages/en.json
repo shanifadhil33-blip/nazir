@@ -348,6 +348,7 @@
     "limit": "You have reached the limit for now."
   },
   "shell": {
+    "sample": "Sample",
     "assistantLine": "Your assistant",
     "assistantIs": "Your assistant is",
     "mostlySafe": "mostly safe",

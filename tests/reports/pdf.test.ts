@@ -108,3 +108,18 @@ it('includes the frozen quick or full selection in the PDF header', async () => 
     expect(text).toContain(size === 'quick' ? 'Quick check, 16 tests' : 'Full suite, 48 tests');
   }
 });
+
+it('labels sample exports in both languages and never presents them as measured repair results', async () => {
+  const sample = { ...body, sample: true };
+  for (const lang of ['en', 'ar'] as const) {
+    const options = await extras(lang);
+    options.before = { runId: 'earlier', counts: { ...body.counts, passed: 0 } };
+    options.appliedFixes = ['Unmeasured fix'];
+    options.fixedFindingIds = ['f'];
+    const text = (await textOf(await buildReportPdf(sample, options))).normalize('NFKC');
+    expect(text).toContain(lang === 'en' ? 'Sample' : 'تجريبي');
+    expect(text).not.toContain('Unmeasured fix');
+    expect(clientReportSections(sample, options)[4]?.lines).toHaveLength(1);
+    expect(clientReportSections(sample, options)[3]?.lines).toHaveLength(1);
+  }
+});

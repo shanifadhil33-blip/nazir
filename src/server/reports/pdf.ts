@@ -1,5 +1,7 @@
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
+import en from '../../../messages/en.json';
+import ar from '../../../messages/ar.json';
 import { caseResults, suiteLabel, attemptOutcome, type ReportBody, type ReportCounts } from './build';
 import { shapePdfLine, wrapPdfText } from './pdf-text';
 
@@ -50,14 +52,14 @@ export function clientReportSections(body: ReportBody, extras: PdfExtras) {
     const rows = cases.filter((row) => row.language === language);
     return `${c[language]}: ${reportScore({ conversations: rows.length, passed: rows.filter((r) => r.status === 'passed').length })} / 100 (${rows.length ? `${rows.length}` : c.untested})`;
   });
-  const fixes = extras.appliedFixes ?? [];
+  const fixes = body.sample ? [] : extras.appliedFixes ?? [];
   const changes = [...fixes];
-  if (extras.before) {
+  if (extras.before && !body.sample) {
     changes.push(`${c.before}: ${reportScore(extras.before.counts)} / 100 (${c.run} ${extras.before.runId.slice(0, 8)})`);
     changes.push(`${c.after}: ${reportScore(body.counts)} / 100 (${c.run} ${body.run.id.slice(0, 8)})`, c.comparison);
   }
   if (!changes.length) changes.push(c.noChanges);
-  const fixed = new Set(extras.fixedFindingIds ?? []);
+  const fixed = new Set(body.sample ? [] : extras.fixedFindingIds ?? []);
   const issues = body.findings.filter((f) => !fixed.has(f.id)).map((f) => {
     const severity = f.severity === 'critical' || f.severity === 'high' || f.severity === 'medium' || f.severity === 'low' ? c[f.severity] : c.unknown;
     return `${severity}: ${extras.lang === 'ar' ? f.title_ar || f.title : f.title}`;
@@ -117,6 +119,7 @@ export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promi
   };
   addPage();
   line(c.title, 22, true);
+  if (body.sample) line((extras.lang === 'ar' ? ar : en).shell.sample);
   line(suiteLabel(body, extras.lang));
   line(`${c.agent}: ${extras.agentName}`);
   line(`${c.pack}: ${extras.focusPack}`);

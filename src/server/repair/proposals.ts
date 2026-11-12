@@ -13,7 +13,7 @@ import { hash } from '../../sandbox/demo-rule-pack';
 type FindingRow = { id: string; check_id: string | null; root_cause_class: string; agent_said: string; scenario_id: string; agent_version_id: string; run_id: string; evidence: { receipts?: { tool?: string; outcome?: string }[]; observed?: unknown } };
 export const repairTitles: Record<string, { en: string; ar: string; benefit: string; regression: string }> = {
   workflow_failure: { en: 'Restore the approved complaint routing', ar: 'إعادة توجيه الشكاوى المعتمد', benefit: 'Complaints and their review requests reach the complaint review queue again.', regression: 'Suggestions and information requests must keep their own queues.' },
-  adapter_failure: { en: 'Stop the false submission claim and the planted case failure', ar: 'إيقاف ادعاء التقديم الكاذب وخلل إنشاء الحالة المزروع', benefit: 'A case is stored when the agent says submitted, and a failure is reported honestly.', regression: 'A real tool failure must still be reported as a failure, never as success.' },
+  adapter_failure: { en: 'Stop the false submission claim and the case save failure', ar: 'إيقاف ادعاء التقديم الكاذب وفشل حفظ الحالة', benefit: 'A case is stored when the agent says submitted, and a failure is reported honestly.', regression: 'A real tool failure must still be reported as a failure, never as success.' },
   other: { en: 'Investigate this failure', ar: 'التحقق من هذا الإخفاق', benefit: 'The cause is found before any change is made.', regression: 'No change is proposed yet.' },
 };
 export const serverSideNote = { en: 'This cause needs a server side change, not a prompt change.', ar: 'يحتاج هذا السبب إلى تغيير في الخادم، وليس تغييرا في التعليمات.' };

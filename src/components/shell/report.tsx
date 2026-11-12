@@ -53,6 +53,7 @@ export function ReportView(props: ReportViewProps) {
             {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
       {!facts ? <StateCard kind="empty" title={text.emptyTitle} action={props.canStart ? { label: copy.shell.startCheck, href: links.start } : { label: text.goHome, href: links.home }} /> : <>
         <section className="nz-rep-hero" data-tone="mint">
+          {facts.sample ? <p className="nz-rep-caption">{copy.shell.sample}</p> : null}
           <p className="nz-rep-headline">{headlineText(facts, copy)}</p>
           <p className="nz-rep-caption">{captionText(facts, props.assistant || copy.shell.helpDesk, now, copy)}</p>
         </section>

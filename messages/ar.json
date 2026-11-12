@@ -348,6 +348,7 @@
     "limit": "بلغت الحد المسموح حاليا."
   },
   "shell": {
+    "sample": "تجريبي",
     "assistantLine": "مساعدك",
     "assistantIs": "مساعدك",
     "mostlySafe": "آمن في الغالب",
