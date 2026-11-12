@@ -79,3 +79,17 @@ it('keeps a failed server active-runs read unknown and recovers on the next load
   } finally { fake.runtimeDriver.mockReturnValue(db.driver); }
   expect((await loadMemberSnapshot(workspace, 'en', true, true, false, true)).activeRuns).toEqual([]);
 });
+
+it('carries trusted kind and a safe connection projection on first paint and fails closed on a connection read error', async () => {
+  const memberId = members.service_owner;
+  fake.auth.mockResolvedValue({ user: { id: 'user', name: 'Omar' }, memberships: [{ workspaceId: workspace, memberId, roles: ['service_owner'], kind: 'real', workspaceName: 'Nazir demo' }] });
+  const loaded = await loadMemberSnapshot(workspace, 'en', true, false);
+  expect(loaded).toMatchObject({ kind: 'real', connection: null, assistant: 'No agent connected' });
+  const broken: typeof db.driver = { transaction: (work) => db.driver.transaction((sql) => work({ query: (query, params) => {
+    if (query.includes('read_external_agent')) throw new Error('Unavailable');
+    return sql.query(query, params);
+  } })) };
+  fake.runtimeDriver.mockReturnValue(broken);
+  try { expect(await loadMemberSnapshot(workspace, 'en', true, false)).toMatchObject({ connection: null, assistant: 'No agent connected' }); }
+  finally { fake.runtimeDriver.mockReturnValue(db.driver); }
+});

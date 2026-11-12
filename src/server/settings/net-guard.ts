@@ -38,14 +38,20 @@ export function privateUrlHost(value: string): boolean {
 }
 
 /** Resolve exactly once and validate every answer before selecting a socket address. */
-export async function checkedHttpsAddress(value: string, resolve: Resolver = defaultResolver): Promise<string> {
+export async function checkedHttpsAddress(value: string, resolve: Resolver = defaultResolver, signal?: AbortSignal): Promise<string> {
   const fail = (code: 'external_safety' | 'external_private_address'): never => { throw new Coded(400, code, errorLines[code].en); };
   if (privateUrlHost(value)) return fail('external_private_address');
   if (!safeHttpsUrl(value)) return fail('external_safety');
   const host = new URL(value).hostname;
   let addresses: { address: string }[];
-  try { addresses = isIP(host) ? [{ address: host }] : await resolve(host); }
-  catch { return fail('external_safety'); }
+  let abort: (() => void) | undefined;
+  try {
+    addresses = isIP(host) ? [{ address: host }] : await Promise.race([resolve(host), ...(signal ? [new Promise<never>((_, reject) => {
+      abort = () => reject(new Coded(504, 'external_timeout', errorLines.external_timeout.en));
+      if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+    })] : [])]);
+  } catch (error) { if (error instanceof Coded) throw error; return fail('external_safety'); }
+  finally { if (signal && abort) signal.removeEventListener('abort', abort); }
   if (!addresses.length) return fail('external_safety');
   if (addresses.some((a) => privateAddress(a.address, false))) return fail('external_private_address');
   return addresses[0]!.address;

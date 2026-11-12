@@ -31,7 +31,7 @@ export type ReportCounts = { conversations: number; passed: number; failed: numb
 export type ReportBody = {
   sample?: boolean;
   scope: { en: string; ar: string };
-  run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number; finished_at?: string | null; started_at?: string | null };
+  run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number; finished_at?: string | null; started_at?: string | null; connection_scope?: 'replies_only' | null; agent_name?: string | null };
   counts: ReportCounts;
   completion?: { complete: boolean; tries_done: number; tries_total: number };
   cases?: CaseResult[];
@@ -77,11 +77,12 @@ export function countsOf(conversations: ReportConversation[], findings: number):
   };
 }
 
-export function sentences(counts: ReportCounts, conversations: ReportConversation[] = []) {
+export function sentences(counts: ReportCounts, conversations: ReportConversation[] = [], repliesOnly = false) {
   const privateRefusal = conversations.some((c) => c.inconclusive_reason === 'external_private_address');
   return {
     en: [
       scopeLine.en,
+      ...(repliesOnly ? [en.connect.replyScope] : []),
       `${counts.passed} of ${counts.conversations} tests passed.`,
       `${counts.failed} of ${counts.conversations} tests failed.`,
       `${counts.inconclusive} of ${counts.conversations} tests were inconclusive.`,
@@ -90,6 +91,7 @@ export function sentences(counts: ReportCounts, conversations: ReportConversatio
     ],
     ar: [
       scopeLine.ar,
+      ...(repliesOnly ? [ar.connect.replyScope] : []),
       `نجحت ${counts.passed} من ${counts.conversations} اختبارات.`,
       `فشلت ${counts.failed} من ${counts.conversations} اختبارات.`,
       `كانت ${counts.inconclusive} من ${counts.conversations} اختبارات غير حاسمة.`,
@@ -111,13 +113,13 @@ export function assembleReport(input: { run: ReportBody['run']; conversations: R
     findings: input.findings,
     messages: input.messages,
     hidden_findings: input.findings.filter((finding) => finding.split === 'hidden').length,
-    sentences: sentences(counts, input.conversations),
+    sentences: sentences(counts, input.conversations, input.run.connection_scope === 'replies_only'),
   };
 }
 
 /** Development copy for a supplier: hidden cases drop out, quotes stay. There is no redacted viewer copy. */
 export function projectReport(full: ReportBody, mode: 'full' | 'development'): ReportBody {
-  if (mode === 'full') return { ...full, scope: scopeLine };
+  if (mode === 'full') return { ...full };
   const conversations = full.conversations.filter((row) => row.split !== 'hidden');
   const findings = full.findings.filter((finding) => finding.split !== 'hidden');
   const messages = full.messages.filter((message) => message.split !== 'hidden');
@@ -131,8 +133,8 @@ export function projectReport(full: ReportBody, mode: 'full' | 'development'): R
     counts,
     completion: { ...completionOf({ run: full.run, conversations }), complete: completionOf(full).complete && completionOf({ run: full.run, conversations }).complete },
     hidden_findings: full.findings.filter((finding) => finding.split === 'hidden').length,
-    sentences: sentences(counts, conversations),
-    scope: scopeLine,
+    sentences: sentences(counts, conversations, full.run.connection_scope === 'replies_only'),
+    scope: full.scope,
   };
 }
 

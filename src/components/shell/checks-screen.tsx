@@ -80,7 +80,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     return () => { alive.current = false; clearInterval(timer); };
   }, [phase, refresh]);
 
-  const access = checksAccess(roles);
+  const access = { ...checksAccess(roles), start: data.canStart };
   const copy = messagesFor(lang);
   const checks: CheckRow[] = useMemo(() => checksFromReports(reports, lang, copy), [reports, lang, copy]);
 

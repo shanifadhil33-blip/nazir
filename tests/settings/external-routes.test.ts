@@ -5,7 +5,8 @@ vi.mock('../../src/auth', () => ({ auth: fake.auth }));
 vi.mock('../../src/server/db/runtime', () => ({ runtimeDriver: fake.driver }));
 import { GET, PUT, POST, DELETE } from '../../src/app/api/workspaces/[workspaceId]/settings/connection/route';
 let db: TestDatabase, workspace: string, owner: string;
-beforeAll(async () => { db = await testDatabase(); const a = await db.bootstrap('Connection routes'); workspace = a.workspace_id; owner = a.member_id; fake.driver.mockReturnValue(db.driver); });
+beforeAll(async () => { db = await testDatabase();
+  const bootstrap = db.bootstrap; db.bootstrap = async (label) => { const a = await bootstrap(label); await db.owner.query("UPDATE nazir.workspaces SET kind='real' WHERE id=$1", [a.workspace_id]); return a; }; const a = await db.bootstrap('Connection routes'); workspace = a.workspace_id; owner = a.member_id; fake.driver.mockReturnValue(db.driver); });
 afterAll(async () => { await db?.close(); });
 const context = () => ({ params: Promise.resolve({ workspaceId: workspace }) });
 const request = () => new Request('https://nazir.example/api', { method: 'POST', body: '{}', headers: { 'accept-language': 'ar' } });
@@ -38,4 +39,11 @@ it.each(['en', 'ar'] as const)('shows a private literal refusal when saving in %
   expect(response.status).toBe(400);
   const { errorLines } = await import('../../src/server/http/errors');
   expect(await response.json()).toEqual({ error: { code: 'external_private_address', message: errorLines.external_private_address[language] } });
+});
+
+it('refuses demo PUT, POST and DELETE before reading submitted addresses or invoking the driver', async () => {
+  const driverCalls = fake.driver.mock.calls.length;
+  fake.auth.mockResolvedValue({ user: { id: 'demo', name: 'Omar' }, memberships: [{ memberId: owner, workspaceId: workspace, kind: 'demo', roles: ['service_owner'] }] });
+  for (const route of [PUT, POST, DELETE]) expect((await route(request(), context())).status).toBe(403);
+  expect(fake.driver.mock.calls.length).toBe(driverCalls);
 });

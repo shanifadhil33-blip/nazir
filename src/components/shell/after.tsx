@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
@@ -11,7 +12,6 @@ import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
 import { PastelCard } from './pastel-card';
 import { helpLine, whoFor } from './people';
-import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
 
@@ -44,7 +44,7 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
       <div className="nz-shell-desk">
         <header className="nz-shell-head">
           <div className="nz-shell-who">
-            <Avatar initials={who.initials} label={who.full} />
+            <Link href={links.settings} aria-label={copy.shell.settings}><Avatar initials={who.initials} label={who.full} /></Link>
             <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(assistant, copy, phase === 'loading')}</small></p>
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />

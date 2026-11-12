@@ -77,7 +77,7 @@ it('refuses a base URL outside the allowed hosts', async () => {
   expect(mapError(error).status).toBe(400);
 });
 it('returns plain HTTP errors without details', async () => {
-  expect(await errorResponse(new Forbidden()).json()).toEqual({ error: { code: 'forbidden', message: 'Your role cannot do this.' } });
+  expect(await errorResponse(new Forbidden()).json()).toEqual({ error: { code: 'forbidden', message: 'You cannot do this.' } });
   expect(mapError(new NotFound()).status).toBe(404);
   expect(mapError(new Error('secret detail'))).toEqual({ status: 500, body: { error: { code: 'internal_error', message: 'Something went wrong.' } } });
 });

@@ -39,7 +39,7 @@ it('AR renders dir=rtl and the nav order mirrors', () => {
   const floating = navIds(html, 'nz-float-nav');
   const side = navIds(html, 'nz-side-nav');
   expect(floating).toEqual(['home', 'checks', 'start', 'fixes', 'more']);
-  expect(side).toEqual(floating);
+  expect(side).toEqual([...floating, 'settings']);
   expect(visualNavOrder(floating, 'rtl')).toEqual(['more', 'fixes', 'start', 'checks', 'home']);
   expect(html.indexOf('data-nav="home"')).toBeLessThan(html.indexOf('data-nav="start"'));
   expect(html.indexOf('data-nav="start"')).toBeLessThan(html.indexOf('data-nav="more"'));
@@ -52,11 +52,11 @@ it('keeps English nav in logical order and sets dir=ltr', () => {
   const floating = navIds(html, 'nz-float-nav');
   expect(floating).toEqual(navItems('owner'));
   expect(visualNavOrder(floating, 'ltr')).toEqual(['home', 'checks', 'start', 'fixes', 'more']);
-  expect(html).toContain('Your assistant');
-  expect(html).toContain('Your assistant is');
-  expect(html).toContain('mostly safe');
-  expect(html).toContain('City Help Desk');
-  expect(html).toContain('>82<');
+  expect(html).toContain('Your agent');
+  expect(html).toContain('Your agent got 82 of 100 answers right');
+  expect(html).toContain('Wrong answers');
+  expect(html).toContain('No agent connected');
+  expect(html).toContain('>82 of 100<');
   expect(html).toContain('>3<');
   expect(html).toContain('Today');
 });
@@ -64,7 +64,7 @@ it('keeps English nav in logical order and sets dir=ltr', () => {
 it('hides the centre start button for a viewer and keeps it for the other seats', () => {
   const viewer = renderToStaticMarkup(<ShellHome lang="en" seat="viewer" />);
   expect(navIds(viewer, 'nz-float-nav')).toEqual(['home', 'checks', 'fixes', 'more']);
-  expect(navIds(viewer, 'nz-side-nav')).toEqual(['home', 'checks', 'fixes', 'more']);
+  expect(navIds(viewer, 'nz-side-nav')).toEqual(['home', 'checks', 'fixes', 'more', 'settings']);
   expect(viewer).not.toContain('data-nav="start"');
   expect(viewer).toContain('Ahmed');
   expect(viewer).toContain('>AK<');
@@ -139,4 +139,14 @@ it('switches the Arabic font, mirrors directional icons, and parks the side nav 
   expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));');
   const side = css.slice(css.indexOf('.nz-side-nav {'));
   expect(side).not.toMatch(/\bleft\s*:|\bright\s*:/);
+});
+
+it.each(['en', 'ar'] as const)('shows every floating nav label as visible text with a filled current pill in %s', (lang) => {
+  const html = renderToStaticMarkup(<ShellHome lang={lang} seat="owner" />);
+  const start = html.indexOf('nz-float-nav'); const nav = html.slice(start, html.indexOf('</nav>', start));
+  const copy = messagesFor(lang).shell;
+  for (const label of [copy.home, copy.checks, copy.navStart, copy.fixes, copy.navHistory]) expect(nav).toContain(`<span>${label}</span>`);
+  expect(nav).toContain('data-nav="home" aria-current="page"');
+  expect(css).toContain('.nz-float-item[aria-current="page"] { background: var(--page); font-weight: 600; }');
+  expect(css).toContain('white-space: nowrap');
 });

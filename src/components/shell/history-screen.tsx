@@ -29,7 +29,7 @@ export function HistoryScreen({ workspaceId, initialLang }: { workspaceId: strin
     const fixes = mergeServerFixes(localFixes, data.fixes);
     return buildHistory(data.reports, fixes, data.lang, copy);
   }, [data.phase, data.reports, data.fixes, data.lang, copy, allowed, localFixes]);
-  const canStart = data.roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
+  const canStart = data.canStart;
   return <>
     <DocumentLocale lang={data.lang} />
     <HistoryView

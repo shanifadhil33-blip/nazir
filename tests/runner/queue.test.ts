@@ -75,3 +75,20 @@ it('freezes the n13 rubric and agent order with the records only setting',async(
  const r=await enqueue(db,f);const row=(await db.owner.query<{runner_version:string;frozen_manifest:{recordsOnly:boolean;rubricVersion:string;judgePromptHash:string;judgeChainOrder:unknown[];aiChainOrder:{provider:string}[]}}>('SELECT runner_version,frozen_manifest FROM nazir.runs WHERE id=$1',[r.id])).rows[0]!;
  expect(row.runner_version).toBe('n13');expect(row.frozen_manifest).toMatchObject({recordsOnly:true,rubricVersion:'n13.2',judgePromptHash:expect.stringMatching(/^[a-f0-9]{64}$/)});expect(row.frozen_manifest.aiChainOrder.slice(0,2).map(e=>e.provider)).toEqual(['kilo','requesty']);expect(row.frozen_manifest.judgeChainOrder.length).toBeGreaterThan(0);
 });
+
+it('requires a tested current real connection on direct enqueue and freezes reply scope', async () => {
+  const real = await fixture(db, 'Real direct start');
+  await db.owner.query("UPDATE nazir.workspaces SET kind='real' WHERE id=$1", [real.workspaceId]);
+  const i = { ...input(), workspaceId: real.workspaceId, planId: real.planId, agentVersionId: real.versions[0]!.id, scenarioIds: real.scenarios.map((s) => s.id) };
+  await expect(enqueueRun(db.driver, i)).rejects.toMatchObject({ code: 'external_not_ready' });
+  const member = (await db.owner.query<{ id: string }>('SELECT id FROM nazir.members WHERE workspace_id=$1 LIMIT 1', [real.workspaceId])).rows[0]!.id;
+  const { saveExternalAgent, testExternalAgent } = await import('../../src/server/settings/external-agent');
+  const resolve = async () => [{ address: '93.184.215.14' }];
+  await saveExternalAgent(db.driver, member, { endpoint: 'https://agent.example.com/chat', format: 'simple_json' }, undefined, resolve);
+  await expect(enqueueRun(db.driver, i)).rejects.toMatchObject({ code: 'external_not_ready' });
+  await testExternalAgent(db.driver, member, { message: 'Hello', language: 'en' }, { resolve, fetcher: async () => Response.json({ reply: 'Hello Omar' }) });
+  const run = await enqueueRun(db.driver, i);
+  expect((await db.owner.query<{ frozen_manifest: { externalAgent: unknown } }>('SELECT frozen_manifest FROM nazir.runs WHERE id=$1', [run.id])).rows[0]!.frozen_manifest.externalAgent).toMatchObject({ connectionKind: 'api', scope: 'replies_only' });
+  await saveExternalAgent(db.driver, member, { endpoint: 'https://agent.example.com/changed', format: 'simple_json' }, undefined, resolve);
+  await expect(enqueueRun(db.driver, { ...i, idempotencyKey: crypto.randomUUID() })).rejects.toMatchObject({ code: 'external_not_ready' });
+});

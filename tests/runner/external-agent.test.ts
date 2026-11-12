@@ -13,7 +13,7 @@ import { semantic } from '../judge/helpers';
 
 const resolve = async () => [{ address: '93.184.215.14' }];
 let db: TestDatabase, f: Fixture;
-beforeAll(async () => { db = await testDatabase(); f = await fixture(db, 'External runner'); });
+beforeAll(async () => { db = await testDatabase(); f = await fixture(db, 'External runner'); await db.owner.query("UPDATE nazir.workspaces SET kind='real' WHERE id=$1", [f.workspaceId]); });
 afterAll(async () => { await db?.close(); });
 it.each(['openai_chat', 'simple_json'] as const)('adapts multi turn %s conversations without tools or system prompts', async (format) => {
   const calls: { body: Record<string, unknown>; init?: RequestInit }[] = [];
@@ -32,7 +32,7 @@ it.each(['openai_chat', 'simple_json'] as const)('adapts multi turn %s conversat
 it('marks every requested record check not checked', () => {
   const checks = externalRecordChecks(['case_exists', 'ownership'], 'high');
   expect(checks.every((c) => c.status === 'inconclusive')).toBe(true);
-  expect(checks[0]?.summary.en).toBe('Not checked: external agent has no records link');
+  expect(checks[0]?.summary.en).toBe('Replies only, no inside view. Add the SDK for the full check.');
 });
 async function owner() { return (await db.owner.query<{ id: string }>('SELECT id FROM nazir.members WHERE workspace_id=$1 LIMIT 1', [f.workspaceId])).rows[0]!.id; }
 async function connect(format: 'simple_json' | 'openai_chat' = 'simple_json') {
@@ -78,7 +78,7 @@ it('keeps semantic failures as findings without suggesting that records were che
   const findings=(await db.owner.query<{check_id:string;really_happened:string;evidence: {records_available:boolean}}>('SELECT check_id,really_happened,evidence FROM nazir.findings WHERE run_id=$1',[run.id])).rows;
   expect(findings).toHaveLength(1);
   expect(findings[0]).toMatchObject({check_id:'semantic',evidence:{records_available:false}});
-  expect(findings[0]?.really_happened).toContain('Records were not checked');
+  expect(findings[0]?.really_happened).toContain('Replies only, no inside view');
 });
 it('uses the selected pack rubric and owner knowledge for an external OpenAI format endpoint', async () => {
   const id=await owner();
@@ -151,4 +151,31 @@ it('passes the pinned checked address through the runner conversation transport'
     return Response.json({ reply: 'Hello' });
   } });
   expect(dns).toHaveBeenCalledTimes(1);
+});
+
+it('uses the shared A2A adapter for runner conversations without sample tools', async () => {
+  const methods: string[] = [];
+  const row: ExternalRow = { revision: 'r', endpoint: 'https://agent.example.com/a2a', format: 'a2a', card_url: 'https://agent.example.com/card', a2a_interface: { url: 'https://agent.example.com/a2a', transport: 'JSONRPC', version: '1.0' }, header_name: null, key_cipher: null, tested_at: 'today' };
+  const reserve = vi.fn(async () => {});
+  const result = await externalConversation(row, ['Hello', 'Help me'], 'session', 'en', reserve, { resolve, fetcher: async (_url, init) => { const body = JSON.parse(String(init.body)); methods.push(body.method); expect(body.params.message.contextId).toBe(methods.length === 1 ? undefined : 'agent-context'); return Response.json({ result: { message: { contextId: 'agent-context', parts: [{ text: 'Hello Omar' }] } } }); } });
+  expect(reserve).toHaveBeenCalledTimes(2); expect(methods).toEqual(['SendMessage', 'SendMessage']); expect(result.transcript).toHaveLength(4);
+});
+it('keeps Replies only in saved reports, lists and PDFs after the connection is removed', async () => {
+  const id = await ready(); const run = await enqueue();
+  await runNextConversation({ driver: db.driver, inspectionDriver: db.driver, runId: run.id, workerId: 'frozen_scope', externalTransport: { resolve, fetcher }, judgeFactory: () => async ({ input }) => semantic('supported', input.reply) });
+  const { createReport, readFullReport, listReports } = await import('../../src/server/reports/read');
+  const { removeExternalAgent } = await import('../../src/server/settings/external-agent');
+  const { reportConnectionScope } = await import('../../src/server/reports/pdf-text');
+  const report = await createReport(db.driver, id, { run_id: run.id });
+  await removeExternalAgent(db.driver, id);
+  const { readPdfReport } = await import('../../src/server/reports/read-pdf');
+  expect((await readPdfReport(db.driver, id, report.id, 'en')).extras.agentName).toBe('Desk');
+  const single = await readFullReport(db.driver, id, report.id);
+  const listed = (await listReports(db.driver, id)).reports.find((r) => r.id === report.id)!.body;
+  for (const body of [single, listed]) {
+    expect(body.run.connection_scope).toBe('replies_only');
+    expect(body.run.agent_name).toBe('Desk');
+    expect(reportConnectionScope(body, 'en')).toContain('Replies only');
+    expect(reportConnectionScope(body, 'ar')).toContain('الردود فقط');
+  }
 });

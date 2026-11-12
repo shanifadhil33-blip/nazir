@@ -37,7 +37,7 @@ export function FixesScreen({ workspaceId, initialLang, mode }: { workspaceId: s
   const copy = messagesFor(lang);
   const access = fixesAccess(roles);
   const seat = seatFromRoles(roles);
-  const canStart = roles.some((role) => role === 'service_owner' || role === 'quality_reviewer');
+  const canStart = data.canStart;
   const cards = useMemo(() => cardsFrom(stored, reports.map((row) => row.body), lang, copy, person?.name ?? personFor(seat, copy).name), [stored, reports, lang, copy, person, seat]);
   const change = reports.length >= 2 ? measuredChange(reports[1]!.body, reports[0]!.body) : null;
   const links = homeLinks(workspaceId);

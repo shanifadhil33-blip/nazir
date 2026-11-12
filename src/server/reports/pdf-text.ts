@@ -1,3 +1,6 @@
+import en from '../../../messages/en.json';
+import ar from '../../../messages/ar.json';
+import type { ReportBody } from './build';
 import { ArabicShaper } from 'arabic-persian-reshaper';
 import bidiFactory from 'bidi-js';
 
@@ -31,4 +34,9 @@ export function wrapPdfText(text: string, width: number, measure: (line: string)
   }
   if (line) lines.push(line);
   return lines;
+}
+
+/** Scope belongs to the frozen check, independent of today's connection. */
+export function reportConnectionScope(body: ReportBody, lang: 'en' | 'ar'): string | null {
+  return body.run.connection_scope === 'replies_only' ? (lang === 'ar' ? ar : en).connect.replyScope : null;
 }

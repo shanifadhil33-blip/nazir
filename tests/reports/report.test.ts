@@ -104,7 +104,7 @@ it('gives a viewer the terminal report and still refuses a viewer write', async 
   }
   expect(refusal).toBeInstanceOf(Forbidden);
   expect(mapError(refusal).status).toBe(403);
-  expect(mapError(refusal, 'ar').body.error.message).toBe('دورك لا يسمح بهذا.');
+  expect(mapError(refusal, 'ar').body.error.message).toBe('لا يمكنك فعل هذا.');
   const other = await db.bootstrap('OtherReport');
   await expect(readFullReport(db.driver, other.member_id, created.id)).rejects.toBeInstanceOf(NotFound);
   expect((await db.member(viewer, (sql) => sql.query('SELECT id FROM nazir.reports'))).rows).toHaveLength(0);

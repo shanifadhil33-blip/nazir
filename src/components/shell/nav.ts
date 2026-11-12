@@ -3,7 +3,7 @@ import type { Seat } from '@/components/ocean/model';
 import type { ShellIconName } from './icons';
 
 export const navOrder = ['home', 'checks', 'start', 'fixes', 'more'] as const;
-export type NavId = (typeof navOrder)[number];
+export type NavId = (typeof navOrder)[number] | 'settings';
 
 /** Logical reading order. The centre start action is omitted for a viewer. */
 export function navItems(seat: Seat, canStart: boolean = seat !== 'viewer'): NavId[] {
@@ -21,12 +21,14 @@ export function visualNavOrder(items: readonly NavId[], dir: 'ltr' | 'rtl'): Nav
 export function navLabel(copy: Messages, id: NavId): string {
   if (id === 'home') return copy.shell.home;
   if (id === 'checks') return copy.shell.checks;
-  if (id === 'start') return copy.shell.startCheck;
+  if (id === 'start') return copy.shell.navStart;
+  if (id === 'settings') return copy.shell.settings;
   if (id === 'fixes') return copy.shell.fixes;
-  return copy.shell.more;
+  return copy.shell.navHistory;
 }
 
 export function navIcon(id: NavId): ShellIconName {
+  if (id === 'settings') return 'settings';
   if (id === 'home') return 'home';
   if (id === 'checks') return 'checks';
   if (id === 'start') return 'play';

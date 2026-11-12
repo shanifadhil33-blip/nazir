@@ -13,8 +13,8 @@ it('names no one while loading and the person is not known', () => {
 it('keeps the person and the workspace once they are known, and the defaults when not loading', () => {
   expect(whoFor({ initials: 'YH', name: 'Yusuf' }, 'editor', copy, true)).toEqual({ initials: 'YH', name: 'Yusuf', full: 'Yusuf' });
   expect(whoFor(undefined, 'viewer', copy, false).name).toBe(copy.shell.ahmed);
-  expect(helpLine('Nazir demo', copy, true)).toBe('Nazir demo');
-  expect(helpLine('', copy, false)).toBe(copy.shell.helpDesk);
+  expect(helpLine('Nazir demo', copy, true)).toBe('');
+  expect(helpLine('', copy, false)).toBe(copy.agentStatus.none);
 });
 it('a loading Checks page shows no other person or made up desk', () => {
   const html = renderToStaticMarkup(<ChecksView lang="en" seat="editor" phase="loading" checks={[]} access={{ start: true, stop: false, suggest: false }} assistant="" links={homeLinks('w1')} now={new Date()} openId={null} openQuestion={null} running={null} busy={null} note={null} />);

@@ -18,7 +18,7 @@ it('gives every error code its own line in English and Arabic', () => {
 });
 it('maps the shared refusals in the caller language', () => {
   expect(mapError(new Unauthorized(), 'ar').body.error).toEqual({ code: 'unauthorized', message: errorLines.unauthorized.ar });
-  expect(mapError(new Forbidden(), 'en').body.error).toEqual({ code: 'forbidden', message: 'Your role cannot do this.' });
+  expect(mapError(new Forbidden(), 'en').body.error).toEqual({ code: 'forbidden', message: 'You cannot do this.' });
   expect(mapError(new NotFound(), 'ar').body.error.code).toBe('not_found');
   expect(mapError(new TooMany('You can belong to at most 10 workspaces. Remove one to add another.'), 'ar').body.error).toEqual({ code: 'workspace_limit', message: errorLines.workspace_limit.ar });
   expect(mapError(new TooMany(), 'en').body.error.code).toBe('too_many');

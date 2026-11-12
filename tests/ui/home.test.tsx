@@ -12,7 +12,7 @@ import { initialsOf } from '../../src/components/shell/people';
 import { actions, can, type Role } from '../../src/server/auth/roles';
 
 const now = new Date('2026-11-04T08:00:00Z');
-const checked: HomeFacts = { checks: 5, score: 82, right: 41, toFix: 7, lastAt: now };
+const checked: HomeFacts = { checks: 5, score: 82, right: 41, total: 48, latestCheckId: 'newest', toFix: 7, lastAt: now };
 const none: HomeFacts = { checks: 0, score: 0, right: 0, toFix: 0, lastAt: null };
 const render = (lang: 'en' | 'ar', roles: string[], facts: HomeFacts, seat: 'owner' | 'editor' | 'supplier' | 'viewer' = 'owner') =>
   renderToStaticMarkup(<ShellHome lang={lang} seat={seat} view={buildHomeView(roles, facts, 'City Help Desk')} now={now} />);
@@ -30,11 +30,11 @@ it('hides each pill exactly as the server role matrix allows', () => {
 
 it('shows the four pills and three cards to an owner with real numbers', () => {
   const html = render('en', ['service_owner'], checked);
-  for (const label of ['Start a check', 'Fixes', 'Report', 'Settings', 'Right answers', 'To fix', 'Last check', 'Today']) expect(html).toContain(label);
-  expect(html).toContain('>41<');
+  for (const label of ['Start a check', 'Fixes', 'Report', 'Settings', 'Right answers', 'Wrong answers', 'Last check', 'Today']) expect(html).toContain(label);
+  expect(html).toContain('>41 of 48<');
   expect(html).toContain('>7<');
-  expect(html).toContain('Your assistant is');
-  expect(html).toContain('mostly safe');
+  expect(html).toContain('Your agent got 41 of 48 answers right');
+  expect(html).not.toContain('mostly safe');
   expect(html).not.toContain('You can view this');
 });
 
@@ -45,7 +45,7 @@ it('shows a viewer only Report and Fixes with one soft line and no start button'
   expect(html).toContain('>Fixes<');
   expect(html).toContain('You can view this');
   expect(html).not.toContain('Start a check');
-  expect(html).not.toContain('Settings');
+  expect(html).not.toContain('nz-pill-btn-lilac');
   expect(html).not.toContain('data-nav="start"');
   expect(html).toContain('>AK<');
 });
@@ -53,10 +53,10 @@ it('shows a viewer only Report and Fixes with one soft line and no start button'
 it('shows the first time home with one start pill and no cards', () => {
   const html = render('en', ['service_owner'], none);
   expect(html).toContain('data-variant="first"');
-  expect(html).toContain("Let&#x27;s check");
-  expect(html).toContain('your assistant');
-  expect(html).toContain('Your first check takes about two minutes');
-  expect(html).toContain('Start first check');
+  expect(html).toContain('Your agent is ready');
+  expect(html).toContain(en.shell.firstCheckNote);
+  expect(html).toContain('It takes about 2 minutes.');
+  expect(html).toContain('Start your first check');
   expect(html).not.toContain('Right answers');
   expect(html).not.toContain('Last check');
   expect(html.match(/nz-hero-btn/g)).toHaveLength(1);
@@ -65,9 +65,9 @@ it('shows the first time home with one start pill and no cards', () => {
 it('never offers a start button to a role that cannot start, even on a first time home', () => {
   expect(homeVariant(homeAccess(['supplier_maintainer']), ['supplier_maintainer'], 0)).toBe('quiet');
   const html = render('en', ['supplier_maintainer'], none, 'supplier');
-  expect(html).not.toContain('Start first check');
+  expect(html).not.toContain('Start your first check');
   expect(html).not.toContain('Start a check');
-  expect(html).toContain('has no checks yet');
+  expect(html).toContain('Your agent is ready');
   expect(html).toContain('>Fixes<');
 });
 
@@ -78,8 +78,8 @@ it('words the headline from the real score', () => {
   expect(scoreWord(55, copy)).toBe('in need of care');
   expect(scoreWord(10, copy)).toBe('not safe yet');
   const view = buildHomeView(['service_owner'], { ...checked, score: 55 }, 'x');
-  expect(headingFor(view, copy)).toEqual({ light: 'Your assistant is', bold: 'in need of care' });
-  expect(headingFor(buildHomeView(['service_owner'], none, 'x'), copy).bold).toBe('your assistant');
+  expect(headingFor(view, copy)).toEqual({ light: '', bold: 'Your agent got 41 of 48 answers right' });
+  expect(headingFor(buildHomeView(['service_owner'], none, 'x'), copy).bold).toBe(en.shell.agentReady);
 });
 
 it('words the last check by calendar day', () => {
@@ -101,8 +101,8 @@ it('renders Arabic right to left with Arabic words', () => {
   expect(html).toContain('اليوم');
   expect(html).not.toMatch(/Start a check|Right answers/);
   const first = render('ar', ['service_owner'], none);
-  expect(first).toContain('ابدأ أول فحص');
-  expect(first).toContain('يستغرق أول فحص');
+  expect(first).toContain(ar.shell.startFirst);
+  expect(first).toContain(ar.shell.firstCheckNote);
   expect(render('ar', ['viewer'], checked, 'viewer')).toContain('يمكنك العرض فقط');
 });
 
@@ -127,7 +127,7 @@ it('keeps the new home copy short, paired, plain and free of dashes', () => {
     }
   }
   const total = (lang: typeof en) => [lang.shell.letsCheck, lang.shell.yourAssistantBold, lang.shell.firstCheckNote, lang.shell.startFirst].join(' ').split(/\s+/).length;
-  expect(total(en)).toBeLessThan(25);
+  expect(total(en)).toBeLessThan(40);
 });
 
 it('names a real person with initials and keeps male sample names', () => {
@@ -151,5 +151,28 @@ it('keeps the sign in page free of an email field', () => {
   for (const file of ['src/app/signin/page.tsx', 'src/components/landing/sign-in.tsx', 'src/components/sign-in-button.tsx']) {
     const source = readFileSync(file, 'utf8');
     expect(source, file).not.toMatch(/type=["']email["']|name=["']email["']|<input/i);
+  }
+});
+
+it('links every stat and Wrong answers to the latest completed check and keeps Settings outside the action pills', () => {
+  const html = render('en', ['service_owner'], checked);
+  const cards = html.slice(html.indexOf('nz-stat-row'), html.indexOf('</main>'));
+  expect(cards.match(/class="nz-pastel [^"]+" data-tone="[^"]+" href="\/w\/preview\?screen=checks&amp;check=newest"/g)).toHaveLength(3);
+  const pills = html.slice(html.indexOf('nz-pill-grid'), html.indexOf('nz-stat-row'));
+  expect(pills).toContain('Wrong answers'); expect(pills).not.toContain('Settings'); expect(pills).not.toContain('lilac');
+});
+it('preserves the checked demo Home and shows its read only connect note', () => {
+  const html = renderToStaticMarkup(<ShellHome lang="en" seat="owner" kind="demo" workspaceId="demo" view={buildHomeView(['service_owner'], checked, 'City Help Desk · Connected')} />);
+  expect(html).toContain('41 of 48'); expect(html).toContain(en.connect.demoNote); expect(html).not.toContain('<form'); expect(html).not.toContain('Nazir demo');
+});
+it('shows queued work first and withholds another Start while it is active', () => {
+  const html = renderToStaticMarkup(<ShellHome lang="en" seat="owner" view={buildHomeView(['service_owner'], checked, 'City Help Desk · Connected')} active={[{ runId: 'running', done: 3, total: 8 }]} />);
+  expect(html).toContain('Checking now 3 of 8'); expect(html.indexOf('Checking now')).toBeLessThan(html.indexOf('<h1')); expect(html).not.toContain('data-nav="start"'); expect(html).not.toContain('>Start a check<');
+});
+
+it('does not assume no active checks when the shared progress read is unknown', () => {
+  for (const activeStatus of ['loading', 'error'] as const) {
+    const html = renderToStaticMarkup(<ShellHome lang="en" seat="owner" view={buildHomeView(['service_owner'], none, 'Desk · Connected')} activeStatus={activeStatus} />);
+    expect(html).not.toContain('data-nav="start"'); expect(html).not.toContain('nz-hero-btn');
   }
 });

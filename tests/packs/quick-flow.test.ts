@@ -35,6 +35,12 @@ it('uses the same chat, planning, approval, provider manifest and enqueue path f
     const manifests: Record<string, unknown>[] = [];
     for (const kind of ['demo', 'real']) {
       await db.owner.query('UPDATE nazir.workspaces SET kind=$2 WHERE id=$1', [workspaceId, kind]);
+      if (kind === 'real') {
+        const { saveExternalAgent, testExternalAgent } = await import('../../src/server/settings/external-agent');
+        const resolve = async () => [{ address: '93.184.215.14' }];
+        await saveExternalAgent(db.driver, members.author, { endpoint: 'https://agent.example.com/chat', format: 'simple_json' }, undefined, resolve);
+        await testExternalAgent(db.driver, members.author, { message: 'Hello', language: 'en' }, { resolve, fetcher: async () => Response.json({ reply: 'Hello Omar' }) });
+      }
       const proposed = await agentChat(db.driver, members.author, { message: kind === 'demo' ? 'run a quick check' : 'فحص سريع' }, null);
       expect(proposed.done).toBe(true);
       const plan = proposed.data as { id: string; scenarioIds: string[]; plannedCalls: number; size: string };
@@ -61,7 +67,10 @@ it('uses the same chat, planning, approval, provider manifest and enqueue path f
       const report = await createReport(db.driver, members.reviewer, { run_id: run.id });
       expect((await readFullReport(db.driver, members.reviewer, report.id)).run).toMatchObject({ size: 'quick', test_count: 8 });
     }
-    expect(manifests[0]).toEqual(manifests[1]);
+    expect(manifests[0]).not.toHaveProperty('externalAgent');
+    expect(manifests[1]!.externalAgent).toMatchObject({ scope: 'replies_only', name: 'agent.example.com' });
+    const { externalAgent: connection, ...realManifest } = manifests[1]!;
+    expect(connection).toBeDefined(); expect(manifests[0]).toEqual(realManifest);
   }
 }, 120000);
 

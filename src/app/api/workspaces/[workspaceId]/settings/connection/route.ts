@@ -12,7 +12,7 @@ async function route(request: Request, context: Context, action: 'read' | 'save'
     const session = await requireUser();
     const member = session.memberships.find((m) => m.workspaceId === workspaceId);
     if (!member) throw new NotFound();
-    if (action !== 'read' && !member.roles.includes('service_owner')) throw new Forbidden();
+    if (action !== 'read' && (member.kind === 'demo' || !member.roles.includes('service_owner'))) throw new Forbidden();
     const driver = runtimeDriver();
     let body: unknown;
     if (action === 'save' || action === 'test') {

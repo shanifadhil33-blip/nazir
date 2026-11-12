@@ -46,7 +46,7 @@ it('refuses viewers and suppliers with 403 even though they can read a limited r
     const response = await download(member, 'ar');
     expect(response.status).toBe(403);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect((await response.json()).error.message).toBe('دورك لا يسمح بهذا.');
+    expect((await response.json()).error.message).toBe('لا يمكنك فعل هذا.');
   }
 });
 

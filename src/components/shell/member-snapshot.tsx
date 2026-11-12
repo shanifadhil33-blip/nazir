@@ -4,6 +4,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { Lang } from '@/components/ocean/copy';
 import type { ReportBody } from '@/server/reports/build';
 import type { ServerFix } from './fixes-model';
+import type { ExternalView } from '@/server/settings/external-agent';
 import type { RunProgress } from './checks-run';
 
 export type SavedReport = { id: string; created_at: string; body: ReportBody };
@@ -12,6 +13,8 @@ export type MemberSnapshot = {
   workspaceId: string;
   lang: Lang;
   roles: string[];
+  kind?: 'real' | 'demo';
+  connection?: ExternalView | null;
   assistant: string;
   person: { initials: string; name: string } | undefined;
   fullName: string;
@@ -27,5 +30,5 @@ export function MemberSnapshotProvider({ value, children }: { value?: MemberSnap
 }
 export function useMemberSnapshot(workspaceId: string) {
   const value = useContext(Snapshot);
-  return value?.workspaceId === workspaceId ? value : undefined;
+  return value && (!workspaceId || value.workspaceId === workspaceId) ? value : undefined;
 }

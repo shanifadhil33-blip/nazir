@@ -3,23 +3,26 @@ import { z } from 'zod';
 import type { TransactionDriver } from '../db/driver';
 import { withMember, withWorker } from '../db/context';
 import { Coded, Forbidden, NotFound, errorLines } from '../http/errors';
-import { openKey, sealKey, safeHttpsUrl } from './agent-settings';
-import { checkedHttpsAddress, privateUrlHost, pinnedHttpsFetch, pinnedLookup, type PinnedRequestInit, type Resolver } from './net-guard';
+import { openKey, sealKey } from './agent-settings';
+import { checkedHttpsAddress, privateUrlHost, safeHttpsUrl, type Resolver } from './net-guard';
+import { discoverA2A, sendA2A, safeAuthHeader, type A2AInterface, type A2ATransport, type SafeCard } from '../connect/a2a';
+import { guardedJson, plainReply, type Transport } from '../connect/http';
 
-export type ExternalView = { name: string; host: string; ready: boolean; endpoint?: string; format?: 'openai_chat' | 'simple_json'; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
-export type ExternalRow = { revision: string; endpoint: string; format: 'openai_chat' | 'simple_json'; header_name: string | null; key_cipher: string | null; tested_at: string | null };
+export type ConnectionFormat = 'openai_chat' | 'simple_json' | 'a2a';
+export type ExternalView = { name: string; host: string; ready: boolean; revision?: string; endpoint?: string; format?: ConnectionFormat; connection_kind?: 'api' | 'sdk'; tested_at?: string | null; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
+export type ExternalRow = { name?: string; revision: string; endpoint: string; format: ConnectionFormat; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; connection_kind?: 'api' | 'sdk'; header_name: string | null; key_cipher: string | null; tested_at: string | null };
 export const externalInput = z.object({
-  name: z.string().trim().min(1).max(60),
+  name: z.string().trim().min(1).max(60).optional(),
   endpoint: z.string().trim().max(2000).refine(safeHttpsUrl, { error: (issue) => privateUrlHost(String(issue.input)) ? 'external_private_address' : 'external_safety' }),
-  format: z.enum(['openai_chat', 'simple_json']),
-  header_name: z.string().trim().max(100).regex(/^[A-Za-z][A-Za-z0-9_-]*$/).refine((v) => !/^(host|content-type|content-length|connection|transfer-encoding|cookie|proxy-.*|sec-.*|accept-encoding)$/i.test(v)).optional(),
+  format: z.enum(['openai_chat', 'simple_json', 'a2a']),
+  header_name: z.string().trim().max(100).regex(/^[A-Za-z][A-Za-z0-9_-]*$/).refine(safeAuthHeader).optional(),
   secret: z.string().min(8).max(400).regex(/^[\x20-\x7e]+$/).optional(),
 }).strict().refine((v) => !v.secret || !!v.header_name);
 const failure = (code: keyof typeof errorLines, status = 400) => new Coded(status, code, errorLines[code].en);
 async function member<T>(driver: TransactionDriver, id: string, fn: Parameters<typeof withMember<T>>[2]) {
   try { return await withMember(driver, id, fn); }
   catch (e) {
-    if (/cannot do this/.test(String((e as Error)?.message))) throw new Forbidden();
+    if (/cannot do this|demo_connection/.test(String((e as Error)?.message))) throw new Forbidden();
     if (/external_rate_limit/.test(String((e as Error)?.message))) throw failure('external_rate_limit', 429);
     throw e;
   }
@@ -27,17 +30,32 @@ async function member<T>(driver: TransactionDriver, id: string, fn: Parameters<t
 export function readExternalAgent(driver: TransactionDriver, id: string): Promise<ExternalView | null> {
   return member(driver, id, async (db) => (await db.query<{ s: ExternalView | null }>('SELECT nazir.read_external_agent() AS s')).rows[0]!.s);
 }
-export async function saveExternalAgent(driver: TransactionDriver, id: string, value: unknown, secret?: string, resolve?: Resolver) {
-  // Authorize before DNS or parsing a submitted secret.
-  const settings = await member(driver, id, async (db) => (await db.query<{ ok: boolean }>("SELECT nazir.member_has_role('service_owner') AS ok")).rows[0]!.ok);
-  if (!settings) throw new Forbidden();
+export async function saveExternalAgent(driver: TransactionDriver, id: string, value: unknown, secret?: string, resolve?: Resolver, transport: Transport = {}) {
+  await assertConnectionWrite(driver, id);
   const input = externalInput.parse(value);
-  await checkedHttpsAddress(input.endpoint, resolve);
-  const { secret: key, ...payload } = input;
+  if (input.format !== 'a2a') await checkedHttpsAddress(input.endpoint, resolve, AbortSignal.timeout(10000));
+  const { secret: key, ...fields } = input;
+  const existing = await readExternalAgent(driver, id);
+  // A saved credential may be kept only on the same address and header. Never move it to a new host.
+  const keepKey = (existing?.card_url ?? existing?.endpoint) === input.endpoint && existing?.header_name === input.header_name;
+  let discoveryKey = key;
+  if (input.format === 'a2a' && !key && keepKey && existing?.key_saved) {
+    const saved = await member(driver, id, async (db) => (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_test_secret()')).rows[0]);
+    if (!saved || saved.revision !== existing.revision || (saved.card_url ?? saved.endpoint) !== input.endpoint || saved.header_name !== input.header_name) throw failure('external_changed', 409);
+    if (saved.key_cipher) { try { discoveryKey = openKey(saved.key_cipher, secret); } catch { throw failure('external_unreachable', 502); } }
+  }
+  const discovery = input.format === 'a2a' ? await discoverA2A(input.endpoint, { header: input.header_name, key: discoveryKey }, { ...transport, resolve }) : null;
+  if (discovery && existing?.key_saved && !key && keepKey && new URL(discovery.iface.url).origin !== new URL(input.endpoint).origin) throw failure('external_safety');
+  const header = discovery?.iface.headerName ?? input.header_name;
+  if (key && discovery?.iface.authType === 'bearer' && !/^Bearer /i.test(key)) throw failure('validation');
+  const payload = { ...fields, name: discovery?.card.name ?? input.name ?? new URL(input.endpoint).hostname.slice(0, 60), connection_kind: 'api',
+    header_name: header, keep_key: keepKey && header === input.header_name,
+    ...(discovery ? { endpoint: discovery.iface.url, card_url: input.endpoint, card: discovery.card, card_fetched_at: new Date().toISOString(), a2a_interface: discovery.iface } : {}) };
   await member(driver, id, (db) => db.query('SELECT nazir.save_external_agent($1::jsonb,$2,$3)', [JSON.stringify(payload), key ? sealKey(key, secret) : null, key?.slice(-4) ?? null]));
   return readExternalAgent(driver, id);
 }
 export async function removeExternalAgent(driver: TransactionDriver, id: string) {
+  await assertConnectionWrite(driver, id);
   await member(driver, id, (db) => db.query('SELECT nazir.remove_external_agent()'));
   return { removed: true };
 }
@@ -45,58 +63,31 @@ export function externalAgentForWorker(driver: TransactionDriver, workspaceId: s
   return withWorker(driver, workspaceId, async (db) => (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_worker()')).rows[0] ?? null);
 }
 export type ExternalMessage = { role: 'user' | 'assistant'; content: string };
-export type ExternalTransport = { fetcher?: (url: string, init: PinnedRequestInit) => Promise<Response>; resolve?: Resolver; secret?: string; timeoutMs?: number };
-/** The only outbound path. Never include transport errors, response bodies, or credentials in errors. */
+export type ExternalTransport = A2ATransport & { secret?: string };
+/** The shared adapter keeps secrets and raw transport errors out of saved replies. */
 export async function callExternalAgent(row: ExternalRow, messages: ExternalMessage[], sessionId: string, language: 'en' | 'ar', options: ExternalTransport = {}): Promise<string> {
-  const controller = new AbortController();
-  const timeout = new Promise<never>((_, reject) => {
-    controller.signal.addEventListener('abort', () => reject(failure('external_timeout', 504)), { once: true });
-  });
-  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 10000);
-  const request = async () => {
-    const address = await checkedHttpsAddress(row.endpoint, options.resolve);
-    controller.signal.throwIfAborted();
-    const headers: Record<string, string> = { 'content-type': 'application/json' };
-    let key: string | undefined;
-    if (row.header_name && row.key_cipher) {
-      try { key = openKey(row.key_cipher, options.secret); headers[row.header_name] = key; }
-      catch { throw failure('external_unreachable', 502); }
-    }
-    const body = row.format === 'openai_chat' ? { messages } : { message: messages.at(-1)?.content ?? '', session_id: sessionId, language };
-    const response = await (options.fetcher ?? pinnedHttpsFetch)(row.endpoint, { method: 'POST', headers, body: JSON.stringify(body), redirect: 'manual', signal: controller.signal, lookup: pinnedLookup(address), servername: new URL(row.endpoint).hostname, rejectUnauthorized: true });
-    if (response.status >= 300 && response.status < 400) { await response.body?.cancel(); throw failure('external_safety'); }
-    if (!response.ok) { await response.body?.cancel(); throw failure('external_unreachable', 502); }
-    if (Number(response.headers.get('content-length')) > 65536) { await response.body?.cancel(); throw failure('external_format', 502); }
-    const reader = response.body?.getReader();
-    if (!reader) throw failure('external_format', 502);
-    const chunks: Uint8Array[] = []; let size = 0;
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        size += value.byteLength;
-        if (size > 65536) throw failure('external_format', 502);
-        chunks.push(value);
-      }
-    } finally { await reader.cancel().catch(() => {}); }
-    let parsed;
-    try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw failure('external_format', 502); }
-    const reply = row.format === 'openai_chat' ? parsed?.choices?.[0]?.message?.content : parsed?.reply;
-    if (typeof reply !== 'string' || !reply.trim()) throw failure('external_format', 502);
-    // Prevent an endpoint that echoes its auth header from sending the secret into saved evidence or a judge.
-    const redacted = key ? reply.split(key).join('[redacted]') : reply;
-    const plain = redacted.replace(/<[^>]*>/g, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim().slice(0, 8000);
-    if (!plain) throw failure('external_format', 502);
-    return plain;
-  };
-  try { return await Promise.race([request(), timeout]); }
-  catch (e) { if (e instanceof Coded) throw e; throw failure(controller.signal.aborted ? 'external_timeout' : 'external_unreachable', 502); }
-  finally { clearTimeout(timer); controller.abort(); }
+  let key: string | undefined;
+  if (row.header_name && !safeAuthHeader(row.header_name)) throw failure('external_safety');
+  try { if (row.header_name && row.key_cipher) key = openKey(row.key_cipher, options.secret); }
+  catch { throw failure('external_unreachable', 502); }
+  if (row.format === 'a2a') return sendA2A(row.a2a_interface, row.card_url ?? row.endpoint, messages.at(-1)?.content ?? '', sessionId, { header: row.header_name, key }, options);
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (row.header_name && key) headers[row.header_name] = key;
+  const body = row.format === 'openai_chat' ? { messages } : { message: messages.at(-1)?.content ?? '', session_id: sessionId, language };
+  const parsed = await guardedJson(row.endpoint, { method: 'POST', headers, body: JSON.stringify(body) }, options) as { choices?: { message?: { content?: unknown } }[]; reply?: unknown } | null;
+  return plainReply(row.format === 'openai_chat' ? parsed?.choices?.[0]?.message?.content : parsed?.reply, key);
+}
+/** Trusted database context, including legacy callers. Runs before DNS, key parsing or outbound calls. */
+async function assertConnectionWrite(driver: TransactionDriver, id: string) {
+  const allowed = await member(driver, id, async (db) => (await db.query<{ ok: boolean }>("SELECT nazir.member_has_role('service_owner') AND EXISTS(SELECT 1 FROM nazir.workspaces WHERE id=nazir.current_workspace_id() AND kind='real') AS ok")).rows[0]?.ok);
+  if (!allowed) throw new Forbidden();
 }
 export async function testExternalAgent(driver: TransactionDriver, id: string, value: unknown, options: ExternalTransport = {}) {
+  await assertConnectionWrite(driver, id);
   const row = await member(driver, id, async (db) => (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_test_secret()')).rows[0]);
   if (!row) throw new NotFound();
-  const input = z.object({ message: z.string().trim().min(1).max(1000), language: z.enum(['en', 'ar']) }).strict().parse(value);
+  const input = z.object({ message: z.string().trim().min(1).max(1000), language: z.enum(['en', 'ar']), revision: z.uuid().optional() }).strict().parse(value);
+  if (input.revision && input.revision !== row.revision) throw failure('external_changed', 409);
   const reply = await callExternalAgent(row, [{ role: 'user', content: input.message }], crypto.randomUUID(), input.language, options);
   const ready = await member(driver, id, async (db) => (await db.query<{ ok: boolean }>('SELECT nazir.external_agent_tested($1) AS ok', [row.revision])).rows[0]!.ok);
   if (!ready) throw failure('external_changed', 409);
