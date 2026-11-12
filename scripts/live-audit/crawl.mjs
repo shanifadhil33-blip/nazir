@@ -8,7 +8,7 @@ const writes = /start|stop|approve|reject|turn down|suggest|test again|check aga
 export function classifyClick(before, after, { actionable = true, disabled = false, externalEffect = false } = {}) {
   if (!actionable) return 'NOT-CLICKABLE';
   if (disabled) return 'DISABLED';
-  if (externalEffect || before.url !== after.url || before.stateHash !== after.stateHash) return 'CHANGED';
+  if (externalEffect || before.url !== after.url || before.heading !== after.heading || before.stateHash !== after.stateHash) return 'CHANGED';
   return 'DEAD-CONTROL';
 }
 export function duplicateDestinations(rows) {
@@ -24,9 +24,15 @@ export function duplicateDestinations(rows) {
   }
   return duplicates;
 }
-export async function inventory(page) {
-  return page.locator(selector).evaluateAll((elements) => {
-    const visible = (el) => !!el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+export function inventoryElements(elements) {
+    const visible = (el) => {
+      if (!el.getClientRects().length) return false;
+      for (let node = el; node; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      }
+      return true;
+    };
     const path = (el) => {
       const parts = [];
       while (el && el !== document.body) {
@@ -44,7 +50,21 @@ export async function inventory(page) {
         href: el.getAttribute('href'), actionable: action, wrapper, disabled: el.matches(':disabled,[aria-disabled=true]'),
         current: el.matches('[aria-current=page],[aria-selected=true]'), siblingGroup: row ? path(row.parentElement) : null };
     });
-  });
+}
+export async function inventory(page) {
+  return page.locator(selector).evaluateAll(inventoryElements);
+}
+
+/** Query navigation can leave the pathname unchanged while the next screen renders. */
+export async function waitForClick(page, before, navigation = false, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  let after;
+  do {
+    after = await snapshot(page);
+    if (before.url !== after.url || before.heading !== after.heading || (!navigation && before.stateHash !== after.stateHash)) return after;
+    await page.waitForTimeout(100);
+  } while (Date.now() < deadline);
+  return after;
 }
 export async function crawl() {
   const browser = await launch();
@@ -74,12 +94,15 @@ export async function crawl() {
           else {
             try {
               await s.page.goto(url); await settle(s.page);
+              const control = s.page.locator(el.id);
+              if (!await control.isVisible()) { rows.push({ ...record, verdict: 'HIDDEN' }); continue; }
               const before = await snapshot(s.page);
               const downloads = []; const popups = [];
               const download = (item) => downloads.push(item); const popup = (item) => popups.push(item);
               s.page.on('download', download); s.page.on('popup', popup);
               try {
-                await s.page.locator(el.id).click({ timeout: 5000 });
+                await control.click({ timeout: 5000 });
+                await waitForClick(s.page, before, Boolean(el.href));
                 await settle(s.page);
                 record.destination = await snapshot(s.page);
                 record.verdict = classifyClick(before, record.destination, { externalEffect: downloads.length > 0 || popups.length > 0 });
