@@ -10,7 +10,7 @@ export const a2aInterface = z.object({
   url: z.string().max(2000).refine(safeHttpsUrl), transport: z.enum(['JSONRPC', 'HTTP+JSON']), version: z.enum(['1.0', '0.3']),
   headerName: z.string().max(100).refine(safeAuthHeader).optional(), authType: z.enum(['apiKey', 'bearer']).optional(),
 }).strict();
-export type A2ATransport = Transport & { a2aContexts?: Map<string, string> };
+export type A2ATransport = Transport & { a2aContexts?: Map<string, string>; testHeaders?: Record<string, string> };
 export type A2AInterface = z.infer<typeof a2aInterface>;
 export type SafeCard = { name: string; skills: { id: string; name: string }[] };
 const record = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
@@ -68,6 +68,8 @@ export async function sendA2A(ifaceValue: unknown, cardUrl: string, message: str
   const signal = AbortSignal.any([AbortSignal.timeout(totalMs), ...(options.signal ? [options.signal] : [])]);
   const workSignal = AbortSignal.any([signal, AbortSignal.timeout(Math.max(1, totalMs - Math.min(1000, Math.ceil(totalMs / 5))))]);
   const headers: Record<string, string> = { 'content-type': iface.transport === 'HTTP+JSON' && iface.version === '1.0' ? 'application/a2a+json' : 'application/json', 'A2A-Version': iface.version };
+  // Signed Nazir test headers first, so a customer key header can never be replaced by them.
+  for (const [name, value] of Object.entries(options.testHeaders ?? {})) headers[name] = value;
   if (auth.header && auth.key) headers[auth.header] = auth.key;
   const legacy = iface.version === '0.3';
   const invoke = async (operation: 'send' | 'get' | 'cancel', params: Record<string, unknown>) => {

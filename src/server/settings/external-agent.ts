@@ -7,9 +7,10 @@ import { openKey, sealKey } from './agent-settings';
 import { checkedHttpsAddress, privateUrlHost, safeHttpsUrl, type Resolver } from './net-guard';
 import { discoverA2A, sendA2A, safeAuthHeader, type A2AInterface, type A2ATransport, type SafeCard } from '../connect/a2a';
 import { guardedJson, plainReply, type Transport } from '../connect/http';
+import { testHeaders, type TestMode } from '../sdk/signing';
 
 export type ConnectionFormat = 'openai_chat' | 'simple_json' | 'a2a';
-export type ExternalView = { name: string; host: string; ready: boolean; revision?: string; endpoint?: string; format?: ConnectionFormat; connection_kind?: 'api' | 'sdk'; tested_at?: string | null; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
+export type ExternalView = { name: string; host: string; ready: boolean; revision?: string; endpoint?: string; format?: ConnectionFormat; connection_kind?: 'api' | 'sdk'; sdk_seen_at?: string | null; sdk_version?: string | null; tested_at?: string | null; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
 export type ExternalRow = { name?: string; revision: string; endpoint: string; format: ConnectionFormat; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; connection_kind?: 'api' | 'sdk'; header_name: string | null; key_cipher: string | null; tested_at: string | null };
 export const externalInput = z.object({
   name: z.string().trim().min(1).max(60).optional(),
@@ -63,17 +64,19 @@ export function externalAgentForWorker(driver: TransactionDriver, workspaceId: s
   return withWorker(driver, workspaceId, async (db) => (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_worker()')).rows[0] ?? null);
 }
 export type ExternalMessage = { role: 'user' | 'assistant'; content: string };
-export type ExternalTransport = A2ATransport & { secret?: string };
+export type ExternalTransport = A2ATransport & { secret?: string; sdkWaitMs?: number; test?: { workspaceId: string; session: string; turn: number; mode: TestMode; inject?: string } };
 /** The shared adapter keeps secrets and raw transport errors out of saved replies. */
 export async function callExternalAgent(row: ExternalRow, messages: ExternalMessage[], sessionId: string, language: 'en' | 'ar', options: ExternalTransport = {}): Promise<string> {
   let key: string | undefined;
   if (row.header_name && !safeAuthHeader(row.header_name)) throw failure('external_safety');
   try { if (row.header_name && row.key_cipher) key = openKey(row.key_cipher, options.secret); }
   catch { throw failure('external_unreachable', 502); }
-  if (row.format === 'a2a') return sendA2A(row.a2a_interface, row.card_url ?? row.endpoint, messages.at(-1)?.content ?? '', sessionId, { header: row.header_name, key }, options);
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  // Every adapter carries the signed test headers. Without the SDK the agent simply ignores them.
+  const signed = options.test ? testHeaders(options.test) : {};
+  if (row.format === 'a2a') return sendA2A(row.a2a_interface, row.card_url ?? row.endpoint, messages.at(-1)?.content ?? '', options.test?.session ?? sessionId, { header: row.header_name, key }, { ...options, testHeaders: signed });
+  const headers: Record<string, string> = { ...signed, 'content-type': 'application/json' };
   if (row.header_name && key) headers[row.header_name] = key;
-  const body = row.format === 'openai_chat' ? { messages } : { message: messages.at(-1)?.content ?? '', session_id: sessionId, language };
+  const body = row.format === 'openai_chat' ? { messages } : { message: messages.at(-1)?.content ?? '', session_id: options.test?.session ?? sessionId, language };
   const parsed = await guardedJson(row.endpoint, { method: 'POST', headers, body: JSON.stringify(body) }, options) as { choices?: { message?: { content?: unknown } }[]; reply?: unknown } | null;
   return plainReply(row.format === 'openai_chat' ? parsed?.choices?.[0]?.message?.content : parsed?.reply, key);
 }
@@ -88,8 +91,23 @@ export async function testExternalAgent(driver: TransactionDriver, id: string, v
   if (!row) throw new NotFound();
   const input = z.object({ message: z.string().trim().min(1).max(1000), language: z.enum(['en', 'ar']), revision: z.uuid().optional() }).strict().parse(value);
   if (input.revision && input.revision !== row.revision) throw failure('external_changed', 409);
-  const reply = await callExternalAgent(row, [{ role: 'user', content: input.message }], crypto.randomUUID(), input.language, options);
+  const opened = await member(driver, id, async (db) => (await db.query<{ session: string; workspace: string; key: string | null }>("SELECT nazir.open_test_session('connect') AS session, nazir.current_workspace_id() AS workspace, nazir.read_sdk_status()->>'key_last4' AS key")).rows[0]!);
+  const reply = await callExternalAgent(row, [{ role: 'user', content: input.message }], opened.session, input.language, { ...options, test: { workspaceId: opened.workspace, session: opened.session, turn: 1, mode: 'connect' } });
   const ready = await member(driver, id, async (db) => (await db.query<{ ok: boolean }>('SELECT nazir.external_agent_tested($1) AS ok', [row.revision])).rows[0]!.ok);
   if (!ready) throw failure('external_changed', 409);
-  return { reply, ready };
+  // With a key made, wait briefly for the SDK to report this turn. Without one, the test is replies only.
+  const sdk = opened.key ? await waitForTurn(driver, id, opened.session, 1, options.sdkWaitMs ?? 4000) : null;
+  return { reply, ready, sdk };
+}
+
+export type TurnTrace = { seen: boolean; hello: boolean; toolCalls: number; spans: { kind: string; name: string; status: string; attributes: Record<string, unknown> }[] };
+/** Reads what the SDK reported for one test turn. Waits until its turn end arrives or the time is up. */
+export async function waitForTurn(driver: TransactionDriver, memberId: string, session: string, turn: number, waitMs = 4000, sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))): Promise<TurnTrace> {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    const spans = await member(driver, memberId, async (db) => (await db.query<{ kind: string; name: string; status: string; attributes: Record<string, unknown> }>('SELECT kind,name,status,attributes FROM nazir.trace_spans WHERE session_id=$1 AND turn=$2 ORDER BY id', [session, turn])).rows);
+    const ended = spans.some((s) => s.kind === 'nazir.turn.end');
+    if (ended || Date.now() >= deadline) return { seen: spans.length > 0, hello: spans.some((s) => s.kind === 'nazir.hello'), toolCalls: spans.filter((s) => s.kind === 'execute_tool' || s.kind === 'nazir.blocked').length, spans };
+    await sleep(250);
+  }
 }

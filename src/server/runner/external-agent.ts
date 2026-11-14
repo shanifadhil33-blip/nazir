@@ -10,14 +10,14 @@ export function externalRecordChecks(ids: readonly string[], severity: RecordChe
     summary: { en: en.connect.replyScope, ar: ar.connect.replyScope } }));
 }
 /** Only resident and agent messages cross the boundary. No sandbox prompt, tools, judge or owner knowledge. */
-export async function externalConversation(row: ExternalRow, turns: string[], sessionId: string, language: 'en' | 'ar', reserve: () => Promise<void>, options?: ExternalTransport) {
+export async function externalConversation(row: ExternalRow, turns: string[], sessionId: string, language: 'en' | 'ar', reserve: () => Promise<void>, options?: ExternalTransport, test?: { workspaceId: string; session: string; mode: 'quality' | 'security' }) {
   const transcript: ExternalMessage[] = [];
   const transport = { ...options, a2aContexts: new Map<string, string>() };
   let reply = '';
-  for (const content of turns) {
+  for (const [index, content] of turns.entries()) {
     await reserve();
     transcript.push({ role: 'user', content });
-    reply = await callExternalAgent(row, transcript, sessionId, language, transport);
+    reply = await callExternalAgent(row, transcript, sessionId, language, test ? { ...transport, test: { ...test, turn: index + 1 } } : transport);
     transcript.push({ role: 'assistant', content: reply });
   }
   return { transcript, reply };

@@ -24,7 +24,7 @@ function stateOf(value?: string): ShellState {
   return 'ready';
 }
 
-export default async function ShellPage({ searchParams }: { searchParams: Promise<{ lang?: string; role?: string; state?: string; variant?: string; kind?: string }> }) {
+export default async function ShellPage({ searchParams }: { searchParams: Promise<{ lang?: string; role?: string; state?: string; variant?: string; kind?: string; connect?: string }> }) {
   // Design preview with made up numbers. It is for building and screenshots, so it is not served in production.
   if (process.env.NODE_ENV === 'production') notFound();
   const query = await searchParams;
@@ -43,7 +43,7 @@ export default async function ShellPage({ searchParams }: { searchParams: Promis
     <>
       <script>{localeScript}</script>
       <DocumentLocale lang={lang} />
-      <ShellHome lang={lang} seat={seat} state={stateOf(query.state)} view={view} kind={kind} workspaceId="preview" connection={connection} active={active} />
+      <ShellHome lang={lang} seat={seat} state={stateOf(query.state)} view={view} kind={kind} workspaceId="preview" connection={connection} active={active} panel={query.connect === 'full' || query.connect === 'quick' ? query.connect : undefined} />
     </>
   );
 }

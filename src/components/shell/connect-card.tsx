@@ -6,6 +6,8 @@ import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { ExternalView, ConnectionFormat } from '@/server/settings/external-agent';
 import { connectHref, connectHomeHref, saveAndTestConnection } from './connect-request';
 import { PillButton } from './pill-button';
+import { SdkSteps } from './sdk-steps';
+import type { SdkStatus } from './connect-request';
 
 export function ConnectChoices({ lang, home }: { lang: Lang; home: string }) {
   const c = messagesFor(lang).connect;
@@ -37,7 +39,8 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
   const [address, setAddress] = useState(connection?.card_url ?? connection?.endpoint ?? '');
   const [key, setKey] = useState(''); const [keyType, setKeyType] = useState<'api' | 'bearer'>(connection?.header_name === 'Authorization' ? 'bearer' : 'api');
   const [message, setMessage] = useState(c.defaultMessage); const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ reply?: string; error?: string; card?: { name: string; skills: unknown[] } } | null>(null);
+  const [result, setResult] = useState<{ reply?: string; error?: string; card?: { name: string; skills: unknown[] }; sdk?: { seen: boolean; toolCalls: number } | null } | null>(null);
+  const [sdkStatus, setSdkStatus] = useState<SdkStatus | null>(null);
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (busy || demo) return;
     setBusy(true); setResult(null);
@@ -46,7 +49,7 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
         ...(key || connection?.key_saved ? { header_name: keyType === 'bearer' ? 'Authorization' : connection?.header_name && connection.header_name !== 'Authorization' ? connection.header_name : 'X-API-Key' } : {}),
         ...(key ? { secret: keyType === 'bearer' ? `Bearer ${key.replace(/^Bearer /i, '')}` : key } : {}) }, message);
       if (!result.ok) { setResult({ error: connectionError(result.error, copy), card: result.card }); return; }
-      setKey(''); setResult({ reply: result.reply, card: result.card });
+      setKey(''); setResult({ reply: result.reply, card: result.card, sdk: result.sdk });
     } catch { setResult({ error: c.failure }); }
     finally { setBusy(false); onSaved?.(); }
   }
@@ -54,7 +57,7 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
     <Link className="nz-connect-back" href={connectHomeHref(home, lang)}>{c.back}</Link>
     <h2>{mode === 'full' ? c.fullTitle : c.quickTitle}</h2>
     {demo ? <p>{c.demoNote}</p> : <>
-      {mode === 'full' ? <p>{c.sdkLater}</p> : null}
+      {mode === 'full' ? <><p>{c.fullIntro}</p><SdkSteps workspaceId={workspaceId} lang={lang} onStatus={setSdkStatus} /></> : null}
       <form onSubmit={(e) => void save(e)} className="nz-connect-form">
         <label>{format === 'a2a' ? c.cardAddress : c.address}<input type="url" required maxLength={2000} dir="ltr" autoComplete="url" placeholder="https://example.com/api/chat" value={address} onChange={(e) => setAddress(e.target.value)} disabled={busy} /></label>
         {format === 'a2a' ? <p className="nz-connect-hint" dir="auto">{c.cardHint}</p> : null}
@@ -70,7 +73,9 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
       </form>
       <div className="nz-connect-result" aria-live="polite" aria-busy={busy}>
         {result?.card ? <p dir="auto"><ConnectionLine template={c.cardFound} values={{ name: { text: result.card.name, dir: 'auto' }, n: { text: String(result.card.skills.length), dir: 'ltr' } }} /></p> : null}
-        {result?.reply ? <><p dir="auto"><ConnectionLine template={c.success} values={{ reply: { text: result.reply, dir: 'auto' } }} /></p><span className="nz-connect-chip">{copy.agentStatus.repliesOnly}</span></> : null}
+        {result?.reply ? <><p dir="auto"><ConnectionLine template={c.success} values={{ reply: { text: result.reply, dir: 'auto' } }} /></p>
+          {result.sdk?.seen ? <><p><ConnectionLine template={c.sdkSeen} values={{ n: { text: String(result.sdk.toolCalls), dir: 'ltr' } }} /></p><span className="nz-connect-chip">{copy.agentStatus.fullCheck}</span></>
+            : <>{mode === 'full' ? <p>{sdkStatus?.key_last4 ? c.sdkSilent : c.sdkNeedsKey}</p> : null}<span className="nz-connect-chip">{copy.agentStatus.repliesOnly}</span></>}</> : null}
         {result?.error ? <p role="alert">{result.error}</p> : null}
       </div>
       <p className="nz-connect-hint">{c.testCopyHint}</p>
@@ -88,13 +93,17 @@ function connectionError(body: unknown, copy: ReturnType<typeof messagesFor>): s
   return copy.connect.failure;
 }
 
-export function AgentStatus({ lang, connection, home }: { lang: Lang; connection?: ExternalView | null; home: string }) {
+export function AgentStatus({ lang, connection, home, now = new Date() }: { lang: Lang; connection?: ExternalView | null; home: string; now?: Date }) {
   const copy = messagesFor(lang); const c = copy.agentStatus;
+  const stamp = (value: string) => new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  const sdk = connection?.connection_kind === 'sdk' && connection.sdk_seen_at ? connection.sdk_seen_at : null;
+  const fresh = sdk ? now.getTime() - new Date(sdk).getTime() < 24 * 3600_000 : false;
   return <section className="nz-agent-status" aria-label={copy.settingsScreen.assistant}>
     {connection?.name ? <p className="nz-agent-name" dir="auto">{connection.name}</p> : null}
-    <p>{connection?.ready ? <>{c.connected} · {c.repliesOnly}</> : c.none}</p>
-    {connection?.ready ? <p className="nz-agent-test">{c.answers}{connection.tested_at ? <>. <ConnectionLine template={c.lastTest} values={{ time: { text: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(connection.tested_at)), dir: 'ltr' } }} /></> : null}</p> : null}
-    <div className="nz-agent-actions"><span>{c.noSdk}</span><Link href={connectHref(home, 'full', lang)}>{c.addSdk}</Link><Link href={connectHref(home, 'quick', lang)}>{c.change}</Link></div>
+    <p>{connection?.ready ? <>{c.connected} · {sdk ? c.fullCheck : c.repliesOnly}</> : c.none}</p>
+    {connection?.ready ? <p className="nz-agent-test">{c.answers}{connection.tested_at ? <>. <ConnectionLine template={c.lastTest} values={{ time: { text: stamp(connection.tested_at), dir: 'ltr' } }} /></> : null}</p> : null}
+    {sdk ? <p className="nz-agent-test"><ConnectionLine template={fresh ? c.sdkOn : c.sdkOld} values={{ version: { text: connection?.sdk_version ?? '1.0.0', dir: 'ltr' }, time: { text: stamp(sdk), dir: 'ltr' } }} /></p> : null}
+    <div className="nz-agent-actions">{sdk ? null : <><span>{c.noSdk}</span><Link href={connectHref(home, 'full', lang)}>{c.addSdk}</Link></>}<Link href={connectHref(home, 'quick', lang)}>{c.change}</Link></div>
   </section>;
 }
 

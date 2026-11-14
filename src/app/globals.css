@@ -1356,3 +1356,21 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
   .nz-home-main { max-inline-size: 880px; }
   .nz-home-main .nz-hero-btn, .nz-home-main .nz-running { max-inline-size: 420px; }
 }
+
+/* Full check steps: numbered, compact, the code scrolls inside its own box. */
+.nz-sdk-steps { margin: 0; padding: 0; display: grid; gap: 24px; list-style: none; }
+.nz-sdk-steps > li { display: grid; gap: 12px; min-inline-size: 0; }
+.nz-sdk-steps h3, .nz-sdk-step-title { margin: 0; font-size: 18px; font-weight: 600; }
+.nz-sdk-key { display: grid; gap: 8px; }
+.nz-sdk-key code, .nz-sdk-sha code { overflow-wrap: anywhere; font-size: 14px; }
+.nz-sdk-key code { padding: 12px; border-radius: 12px; background: var(--surface, #fff); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06); }
+.nz-sdk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.nz-text-btn { min-block-size: 44px; padding: 0 4px; border: 0; background: none; color: var(--ink); font: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.nz-sdk-tabs { display: flex; gap: 8px; }
+.nz-sdk-tabs button { min-block-size: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; font: inherit; color: var(--ink); cursor: pointer; transition: background-color 140ms ease; }
+.nz-sdk-tabs button[aria-selected="true"] { background: var(--ink); color: #fff; font-weight: 600; }
+.nz-sdk-download { justify-self: start; display: inline-flex; align-items: center; min-block-size: 44px; padding: 0 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08); color: var(--ink); font-weight: 600; text-decoration: none; }
+.nz-sdk-sha { margin: 0; font-size: 14px; color: var(--ink-muted); }
+.nz-sdk-code { margin: 0; padding: 16px; border-radius: 16px; background: #15171c; color: #f2f3f5; font-size: 13px; line-height: 1.5; overflow-x: auto; max-inline-size: 100%; }
+.nz-copy { display: inline-grid; gap: 4px; justify-items: start; }
+@media (hover: hover) and (pointer: fine) { .nz-sdk-tabs button:hover { background: rgba(0, 0, 0, 0.06); } .nz-sdk-tabs button[aria-selected="true"]:hover { background: var(--ink); } }
