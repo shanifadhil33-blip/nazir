@@ -209,7 +209,8 @@ export function createNazir(initial = {}) {
 
   /** The agent map. Tools wrapped with tool() are added for you. Instructions text never leaves. */
   function describe(info = {}) {
-    const { instructions: _ignored, ...rest } = info;
+    const rest = { ...info };
+    delete rest.instructions;
     state.described = { ...state.described, ...rest };
     for (const server of rest.mcpServers ?? []) {
       if (server.client?.listTools) Promise.resolve(server.client.listTools()).then((list) => { server.tools = (list?.tools ?? []).map((t) => ({ name: t.name, annotations: t.annotations ?? null })); }).catch(() => {});

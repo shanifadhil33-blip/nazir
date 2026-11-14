@@ -10,7 +10,7 @@ import { guardedJson, plainReply, type Transport } from '../connect/http';
 import { testHeaders, type TestMode } from '../sdk/signing';
 
 export type ConnectionFormat = 'openai_chat' | 'simple_json' | 'a2a';
-export type ExternalView = { name: string; host: string; ready: boolean; revision?: string; endpoint?: string; format?: ConnectionFormat; connection_kind?: 'api' | 'sdk'; tested_at?: string | null; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
+export type ExternalView = { name: string; host: string; ready: boolean; revision?: string; endpoint?: string; format?: ConnectionFormat; connection_kind?: 'api' | 'sdk'; sdk_seen_at?: string | null; sdk_version?: string | null; tested_at?: string | null; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; header_name?: string | null; key_saved?: boolean; key_last4?: string | null };
 export type ExternalRow = { name?: string; revision: string; endpoint: string; format: ConnectionFormat; card_url?: string | null; card?: SafeCard | null; a2a_interface?: A2AInterface | null; connection_kind?: 'api' | 'sdk'; header_name: string | null; key_cipher: string | null; tested_at: string | null };
 export const externalInput = z.object({
   name: z.string().trim().min(1).max(60).optional(),

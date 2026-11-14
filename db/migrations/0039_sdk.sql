@@ -114,6 +114,13 @@ END $$;
 REVOKE ALL ON FUNCTION nazir.issue_sdk_key(text,text), nazir.revoke_sdk_key(), nazir.read_sdk_status() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION nazir.issue_sdk_key(text,text), nazir.revoke_sdk_key(), nazir.read_sdk_status() TO nazir_app;
 
+-- A narrow role for SDK ingest. It can run only the two ingest functions below.
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='nazir_ingest') THEN CREATE ROLE nazir_ingest NOLOGIN; END IF;
+ IF EXISTS(SELECT FROM pg_roles WHERE rolname='nazir_login') THEN GRANT nazir_ingest TO nazir_login; END IF;
+END $$;
+GRANT USAGE ON SCHEMA nazir TO nazir_ingest;
+
 -- Ingest runs with no member: the key proves the workspace, and only sessions Nazir issued to that workspace accept spans.
 CREATE FUNCTION nazir.ingest_spans(p_hash text, p_session text, p_spans jsonb, p_sdk_version text) RETURNS int
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,nazir AS $$
@@ -155,7 +162,7 @@ BEGIN
  RETURN true;
 END $$;
 REVOKE ALL ON FUNCTION nazir.ingest_spans(text,text,jsonb,text), nazir.ingest_inventory(text,text,jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION nazir.ingest_spans(text,text,jsonb,text), nazir.ingest_inventory(text,text,jsonb) TO nazir_auth;
+GRANT EXECUTE ON FUNCTION nazir.ingest_spans(text,text,jsonb,text), nazir.ingest_inventory(text,text,jsonb) TO nazir_ingest;
 
 -- Settings, Your agent: "Delete all traces".
 CREATE FUNCTION nazir.delete_traces() RETURNS int
@@ -183,3 +190,15 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION nazir.prune_traces() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION nazir.prune_traces() TO nazir_worker;
+
+-- The connection read now says when the SDK was last seen and its version.
+CREATE OR REPLACE FUNCTION nazir.read_external_agent() RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,nazir AS $$
+DECLARE s nazir.external_agents; owner boolean;
+BEGIN
+ IF nazir.current_workspace_id() IS NULL OR NOT (nazir.member_can_work() OR nazir.member_has_role('viewer')) THEN RAISE EXCEPTION 'Your role cannot do this.'; END IF;
+ owner := nazir.member_has_role('service_owner');
+ SELECT * INTO s FROM nazir.external_agents WHERE workspace_id=nazir.current_workspace_id();
+ IF NOT FOUND THEN RETURN NULL; END IF;
+ RETURN jsonb_build_object('name',s.name,'host',substring(s.endpoint from '^https://([^/:?#]+)'),'ready',s.tested_at IS NOT NULL,'tested_at',s.tested_at,'connection_kind',s.connection_kind,'sdk_seen_at',s.sdk_seen_at,'sdk_version',s.sdk_version)
+  || CASE WHEN owner THEN jsonb_build_object('revision',s.revision,'endpoint',s.endpoint,'format',s.format,'header_name',s.header_name,'key_saved',s.key_cipher IS NOT NULL,'key_last4',s.key_last4,'card_url',s.card_url,'card',s.card,'card_fetched_at',s.card_fetched_at,'a2a_interface',s.a2a_interface) ELSE '{}'::jsonb END;
+END $$;

@@ -7,9 +7,9 @@ let a: { member_id: string; workspace_id: string };
 let b: { member_id: string; workspace_id: string };
 const keyA = `nzk_${'a'.repeat(32)}_${'A'.repeat(40)}`;
 const keyB = `nzk_${'b'.repeat(32)}_${'B'.repeat(40)}`;
-const asAuth = <T extends Record<string, unknown>>(sql: string, params: unknown[]) => db.driver.transaction(async (c) => { await c.query('SET LOCAL ROLE nazir_auth'); return (await c.query<T>(sql, params)).rows; });
+const asIngest = <T extends Record<string, unknown>>(sql: string, params: unknown[]) => db.driver.transaction(async (c) => { await c.query('SET LOCAL ROLE nazir_ingest'); return (await c.query<T>(sql, params)).rows; });
 const span = (kind: string, turn = 1) => ({ kind, name: kind, turn, status: 'OK', attributes: { 'gen_ai.tool.name': 'create_case' } });
-const ingest = (key: string, session: string, spans: unknown[]) => asAuth<{ n: number }>('SELECT nazir.ingest_spans($1,$2,$3::jsonb,$4) AS n', [keyHash(key), session, JSON.stringify(spans), '1.0.0']);
+const ingest = (key: string, session: string, spans: unknown[]) => asIngest<{ n: number }>('SELECT nazir.ingest_spans($1,$2,$3::jsonb,$4) AS n', [keyHash(key), session, JSON.stringify(spans), '1.0.0']);
 
 beforeAll(async () => {
   db = await testDatabase();
@@ -60,8 +60,8 @@ it('lets the background runner open sessions only in its own workspace, and memb
 
 it('keeps the newest inventory and skips an unchanged one', async () => {
   const hash = 'f'.repeat(64);
-  expect((await asAuth<{ c: boolean }>('SELECT nazir.ingest_inventory($1,$2,$3::jsonb) AS c', [keyHash(keyA), hash, JSON.stringify({ tools: [{ name: 'create_case' }], mcp_servers: [] })]))[0]!.c).toBe(true);
-  expect((await asAuth<{ c: boolean }>('SELECT nazir.ingest_inventory($1,$2,$3::jsonb) AS c', [keyHash(keyA), hash, '{}']))[0]!.c).toBe(false);
+  expect((await asIngest<{ c: boolean }>('SELECT nazir.ingest_inventory($1,$2,$3::jsonb) AS c', [keyHash(keyA), hash, JSON.stringify({ tools: [{ name: 'create_case' }], mcp_servers: [] })]))[0]!.c).toBe(true);
+  expect((await asIngest<{ c: boolean }>('SELECT nazir.ingest_inventory($1,$2,$3::jsonb) AS c', [keyHash(keyA), hash, '{}']))[0]!.c).toBe(false);
   expect((await db.member(a.member_id, (sql) => sql.query<{ s: { tools: number } }>('SELECT nazir.read_sdk_status() AS s'))).rows[0]!.s.tools).toBe(1);
 });
 

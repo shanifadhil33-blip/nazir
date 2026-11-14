@@ -18,13 +18,16 @@ it.each(['en', 'ar'] as const)('keeps exactly two connect choices and no Start o
   expect(page).not.toContain('data-nav="start"'); expect(page).not.toContain('data-nav="checks"'); expect(page).not.toContain('nz-stat-row');
   expect(page).toContain('href="/w/test?screen=settings"');
 });
-it('uses one honest replies setup for both choices with attached format and key choices', () => {
+it('uses the same chat address form for both choices, and only the full check adds the key, file and lines', () => {
   for (const mode of ['full', 'quick'] as const) {
     const page = renderToStaticMarkup(<ConnectCard lang="en" workspaceId="test" mode={mode} home={home} />);
     expect(page).toContain('Save and send a test message'); expect(page).toContain('aria-haspopup="listbox"');
     expect(page).not.toContain('<select'); expect(page).not.toContain('Agent name');
-    expect(page).not.toMatch(/NAZIR_KEY|download|tool calls|SHA256/);
-    if (mode === 'full') expect(page).toContain(en.connect.sdkLater.replaceAll("'", '&#x27;'));
+    if (mode === 'quick') expect(page).not.toMatch(/NAZIR_KEY|nazir\.mjs|SHA256/);
+    else {
+      for (const step of [en.connect.stepKey, en.connect.stepFile, en.connect.stepLines, 'Make a key', 'Download nazir.mjs', 'SHA256', 'nazir.turn(req']) expect(page, step).toContain(step);
+      expect(page).toContain('href="/sdk/1.0.0/nazir.mjs"');
+    }
   }
 });
 it('shows demo connections read only without fields or writes', () => {
@@ -34,7 +37,7 @@ it('shows demo connections read only without fields or writes', () => {
 it('saves then tests, quotes the plain reply and refetches status only after server truth', async () => {
   const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ ready: false })).mockResolvedValueOnce(Response.json({ ready: true, reply: 'Hello Omar' }));
   const result = await saveAndTestConnection('test', 'en', { endpoint: 'https://agent.example.com', format: 'simple_json' }, 'Hello', fetcher);
-  expect(result).toEqual({ ok: true, reply: 'Hello Omar', card: undefined });
+  expect(result).toEqual({ ok: true, reply: 'Hello Omar', card: undefined, sdk: null });
   expect(fetcher.mock.calls.map((c) => c[1].method)).toEqual(['PUT', 'POST']);
   expect(JSON.parse(fetcher.mock.calls[1]![1].body)).toEqual({ message: 'Hello', language: 'en' });
   expect(en.connect.success.replace('{reply}', result.ok ? result.reply : '')).toBe('Connected. Your agent replied: “Hello Omar”');

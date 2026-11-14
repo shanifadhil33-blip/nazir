@@ -7,7 +7,7 @@ let db;
 try {
   db = await pool.connect();
   await db.query('BEGIN');
-  for (const [login, password, grants] of [['nazir_login', process.env.NAZIR_APP_LOGIN_PASSWORD, 'nazir_app,nazir_worker,nazir_sandbox,nazir_auth'], ['nazir_inspect_login', process.env.NAZIR_INSPECT_LOGIN_PASSWORD, 'nazir_inspector']]) {
+  for (const [login, password, grants] of [['nazir_login', process.env.NAZIR_APP_LOGIN_PASSWORD, 'nazir_app,nazir_worker,nazir_sandbox,nazir_auth,nazir_ingest'], ['nazir_inspect_login', process.env.NAZIR_INSPECT_LOGIN_PASSWORD, 'nazir_inspector']]) {
     await db.query(`DO $$ BEGIN IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='${login}') THEN CREATE ROLE ${login} LOGIN NOINHERIT; END IF; END $$`);
     // PostgreSQL role DDL does not accept bind parameters. quote_literal handles the password.
     const { rows } = await db.query('SELECT quote_literal($1) AS password', [password]);

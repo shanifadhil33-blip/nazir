@@ -84,7 +84,7 @@ export function allowKey(hash: string, now = Date.now()) {
 }
 async function call<T extends Record<string, unknown>>(driver: TransactionDriver, sql: string, params: unknown[]) {
   try {
-    return await driver.transaction(async (db) => { await db.query('SET LOCAL ROLE nazir_auth'); return (await db.query<T>(sql, params)).rows; });
+    return await driver.transaction(async (db) => { await db.query('SET LOCAL ROLE nazir_ingest'); return (await db.query<T>(sql, params)).rows; });
   } catch (error) {
     const message = String((error as Error)?.message);
     for (const code of ['sdk_key', 'sdk_session', 'sdk_limit'] as const) if (message.includes(code)) throw new Coded(code === 'sdk_key' ? 401 : code === 'sdk_session' ? 403 : 429, code, code);

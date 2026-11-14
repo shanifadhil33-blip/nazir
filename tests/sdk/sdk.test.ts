@@ -3,7 +3,6 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { publicKeySet, signingKeys, testHeaders } from '../../src/server/sdk/signing';
-// @ts-expect-error plain JavaScript file served to customers
 import { createNazir, redact } from '../../public/sdk/1.0.0/nazir.mjs';
 import { SDK_FILES } from '../../src/server/sdk/files';
 
