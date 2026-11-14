@@ -186,7 +186,9 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       });
       if (!reserved) { reason='budget_reached'; throw new Error('Budget reached'); }
     };
-    const result = await bounded(externalConversation(row, turns, cid, data.scenario.language === 'ar' ? 'ar' : 'en', reserveCall, externalTransport));
+    // One signed test session per question, so the SDK can link what the agent did to each turn.
+    const session = await work(async (db) => (await db.query<{ s: string }>("SELECT nazir.open_test_session('quality',$1,$2) AS s",[rid,cid])).rows[0]?.s ?? null).catch(() => null);
+    const result = await bounded(externalConversation(row, turns, cid, data.scenario.language === 'ar' ? 'ar' : 'en', reserveCall, externalTransport, session ? { workspaceId:wid,session,mode:'quality' } : undefined));
     transcript=result.transcript; reply=result.reply;
     if (!data.manifest.recordsOnly) {
       const context: ModelContext = { workspaceId:wid,conversationId:cid,onCall:(meta) => { metas.push(meta); },reserveCall,remainingMs:() => Math.max(1,end-now()) };

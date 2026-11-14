@@ -47,7 +47,7 @@ it('seals the key, projects only safe fields and audits no submitted details', a
   }
   expect(await readExternalAgent(db.driver, other)).toBeNull();
   const tested = await testExternalAgent(db.driver, owner, { message: 'Hi', language: 'en' }, { fetcher: (async () => Response.json({ reply: `<b>Hello</b> ${key}` })) as typeof fetch, resolve, secret });
-  expect(tested).toEqual({ reply: 'Hello [redacted]', ready: true });
+  expect(tested).toEqual({ reply: 'Hello [redacted]', ready: true, sdk: null });
   const audits = (await db.owner.query("SELECT payload FROM nazir.audit_events WHERE action LIKE 'agent.connection%'")).rows;
   expect(audits.length).toBeGreaterThan(0);
   for (const value of [key, raw.key_cipher, input.endpoint, 'Hello', 'Hi']) expect(JSON.stringify(audits)).not.toContain(value);
