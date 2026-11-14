@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-export const OUT = '/workspace/nazir-mobile-fix/live-0';
+export const OUT = process.env.OUT_DIR || '/workspace/nazir-mobile-fix/live-0';
 export const profiles = [
   { name: 'phone', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' },
   { name: 'desktop', viewport: { width: 1440, height: 900 } },

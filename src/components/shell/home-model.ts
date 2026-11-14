@@ -15,6 +15,7 @@ export type HomeFacts = {
   score: number;
   right: number;
   toFix: number;
+  inconclusive: number;
   /** When the latest completed check ended, or began if no end time was saved. */
   lastAt: Date | null;
 };
@@ -65,9 +66,9 @@ export function scoreWord(score: number, copy: Messages): string {
   return copy.shell.notSafeYet;
 }
 
-export function headingFor(view: HomeView, copy: Messages): { light: string; bold: string } {
+export function headingFor(view: HomeView, copy: Messages, running = false): { light: string; bold: string } {
   if (view.variant === 'connect') return { light: '', bold: copy.connect.title };
-  if (view.facts.checks > 0) return { light: '', bold: fill(copy.shell.scoreHeading, { right: String(view.facts.right), total: String(view.facts.total ?? view.facts.right + view.facts.toFix) }) };
+  if (running || view.facts.checks > 0) return { light: '', bold: copy.settingsScreen.assistant };
   return { light: '', bold: copy.shell.agentReady };
 }
 

@@ -9,7 +9,7 @@ const report = (status: string, second: string) => ({ id: status, created_at: ne
 it('selects the newest completed score even when a stopped check is newer', () => {
   data.reports = [report('cancelled', 'cancelled'), report('failed', 'failed')];
   const html = renderToStaticMarkup(<HomeScreen workspaceId="w" initialLang="en" />);
-  expect(html).toContain('Your agent got 1 of 2 answers right');
+  expect(html).toContain('Last check: <bdi dir="ltr">1</bdi> of <bdi dir="ltr">2</bdi> answers right, <bdi dir="ltr">1</bdi> wrong.');
   expect(html).toContain('check=failed');
   expect(html).not.toContain(messagesFor('en').shell.notSafeYet);
 });
@@ -18,4 +18,11 @@ it('uses the existing first check state when every saved check is partial', () =
   const html = renderToStaticMarkup(<HomeScreen workspaceId="w" initialLang="en" />);
   expect(html).toContain('data-variant="first"');
   expect(html).not.toContain(messagesFor('en').shell.notSafeYet);
+});
+it('shows 4 right, 0 wrong and 4 could not tell from a real eight answer report', () => {
+  const statuses = ['passed', 'passed', 'passed', 'passed', 'inconclusive', 'inconclusive', 'inconclusive', 'inconclusive'];
+  data.reports = [{ id: 'eight', created_at: new Date().toISOString(), body: assembleReport({ run: { id: 'eight', status: 'inconclusive', calls_used: 0, calls_budget: 8 }, conversations: statuses.map((status, i) => ({ id: `c${i}`, status, language: i % 2 ? 'ar' : 'en', split: 'development' })), findings: [], messages: [] }) }];
+  const html = renderToStaticMarkup(<HomeScreen workspaceId="w" initialLang="en" />);
+  expect(html).toContain('Last check: <bdi dir="ltr">4</bdi> of <bdi dir="ltr">8</bdi> answers right, <bdi dir="ltr">0</bdi> wrong. Nazir could not tell for <bdi dir="ltr">4</bdi>.');
+  expect(html).toContain('check=eight');
 });

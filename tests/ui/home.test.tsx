@@ -12,8 +12,8 @@ import { initialsOf } from '../../src/components/shell/people';
 import { actions, can, type Role } from '../../src/server/auth/roles';
 
 const now = new Date('2026-11-04T08:00:00Z');
-const checked: HomeFacts = { checks: 5, score: 82, right: 41, total: 48, latestCheckId: 'newest', toFix: 7, lastAt: now };
-const none: HomeFacts = { checks: 0, score: 0, right: 0, toFix: 0, lastAt: null };
+const checked: HomeFacts = { checks: 5, score: 82, right: 41, total: 48, latestCheckId: 'newest', toFix: 7, inconclusive: 0, lastAt: now };
+const none: HomeFacts = { checks: 0, score: 0, right: 0, toFix: 0, inconclusive: 0, lastAt: null };
 const render = (lang: 'en' | 'ar', roles: string[], facts: HomeFacts, seat: 'owner' | 'editor' | 'supplier' | 'viewer' = 'owner') =>
   renderToStaticMarkup(<ShellHome lang={lang} seat={seat} view={buildHomeView(roles, facts, 'City Help Desk')} now={now} />);
 
@@ -28,14 +28,30 @@ it('hides each pill exactly as the server role matrix allows', () => {
   expect(actions).toContain('plan.propose');
 });
 
-it('shows the four pills and three cards to an owner with real numbers', () => {
+it('puts the agent and one Start first, then a plain last check line, with no stat cards or pill grid', () => {
   const html = render('en', ['service_owner'], checked);
-  for (const label of ['Start a check', 'Fixes', 'Report', 'Settings', 'Right answers', 'Wrong answers', 'Last check', 'Today']) expect(html).toContain(label);
-  expect(html).toContain('>41 of 48<');
-  expect(html).toContain('>7<');
-  expect(html).toContain('Your agent got 41 of 48 answers right');
-  expect(html).not.toContain('mostly safe');
+  const main = html.slice(html.indexOf('nz-home-main'), html.indexOf('nz-home-secondary'));
+  expect(main).toContain('>Your agent<');
+  expect(main.match(/nz-home-primary/g)).toHaveLength(1);
+  expect(main).toContain('Start a check');
+  const rest = html.slice(html.indexOf('nz-home-secondary'));
+  expect(rest).toContain('Last check: <bdi dir="ltr">41</bdi> of <bdi dir="ltr">48</bdi> answers right, <bdi dir="ltr">7</bdi> wrong.');
+  expect(rest).toContain('Open last check');
+  for (const label of ['>Fixes<', '>Report<', 'Today']) expect(rest).toContain(label);
+  expect(html).not.toMatch(/nz-stat-row|nz-pill-grid|nz-pastel/);
+  expect(html).not.toContain('Your agent got');
   expect(html).not.toContain('You can view this');
+});
+
+it('says honestly when Nazir could not tell, so 4 right never sits next to 0 wrong alone', () => {
+  const html = render('en', ['service_owner'], { ...checked, right: 4, toFix: 0, inconclusive: 4, total: 8 });
+  expect(html).toContain('Last check: <bdi dir="ltr">4</bdi> of <bdi dir="ltr">8</bdi> answers right, <bdi dir="ltr">0</bdi> wrong. Nazir could not tell for <bdi dir="ltr">4</bdi>.');
+  const all = render('en', ['service_owner'], { ...checked, right: 0, toFix: 0, inconclusive: 8, total: 8 });
+  expect(all).toContain('Nazir could not tell for <bdi dir="ltr">8</bdi>.');
+  const right = render('en', ['service_owner'], { ...checked, right: 8, toFix: 0, inconclusive: 0, total: 8 });
+  expect(right).not.toContain('could not tell');
+  const arabic = render('ar', ['service_owner'], { ...checked, right: 4, toFix: 0, inconclusive: 4, total: 8 });
+  expect(arabic).toContain('ولم يتأكد ناظر من <bdi dir="ltr">4</bdi>');
 });
 
 it('shows a viewer only Report and Fixes with one soft line and no start button', () => {
@@ -78,7 +94,8 @@ it('words the headline from the real score', () => {
   expect(scoreWord(55, copy)).toBe('in need of care');
   expect(scoreWord(10, copy)).toBe('not safe yet');
   const view = buildHomeView(['service_owner'], { ...checked, score: 55 }, 'x');
-  expect(headingFor(view, copy)).toEqual({ light: '', bold: 'Your agent got 41 of 48 answers right' });
+  expect(headingFor(view, copy)).toEqual({ light: '', bold: 'Your agent' });
+  expect(headingFor(buildHomeView(['service_owner'], none, 'x'), copy, true).bold).toBe('Your agent');
   expect(headingFor(buildHomeView(['service_owner'], none, 'x'), copy).bold).toBe(en.shell.agentReady);
 });
 
@@ -95,7 +112,7 @@ it('words the last check by calendar day', () => {
 it('renders Arabic right to left with Arabic words', () => {
   const html = render('ar', ['service_owner'], checked);
   expect(html).toContain('dir="rtl"');
-  expect(html).not.toContain('dir="ltr"');
+  expect(html.replace(/<bdi dir="ltr">[^<]*<\/bdi>/g, '')).not.toContain('dir="ltr"');
   expect(html).toContain('ابدأ فحصا');
   expect(html).toContain('إجابات صحيحة');
   expect(html).toContain('اليوم');
@@ -154,20 +171,24 @@ it('keeps the sign in page free of an email field', () => {
   }
 });
 
-it('links every stat and Wrong answers to the latest completed check and keeps Settings outside the action pills', () => {
+it('links Open last check to the latest completed check and keeps Settings out of Home content', () => {
   const html = render('en', ['service_owner'], checked);
-  const cards = html.slice(html.indexOf('nz-stat-row'), html.indexOf('</main>'));
-  expect(cards.match(/class="nz-pastel [^"]+" data-tone="[^"]+" href="\/w\/preview\?screen=checks&amp;check=newest"/g)).toHaveLength(3);
-  const pills = html.slice(html.indexOf('nz-pill-grid'), html.indexOf('nz-stat-row'));
-  expect(pills).toContain('Wrong answers'); expect(pills).not.toContain('Settings'); expect(pills).not.toContain('lilac');
+  const rest = html.slice(html.indexOf('nz-home-secondary'), html.indexOf('nz-float-nav'));
+  expect(rest).toContain('href="/w/preview?screen=checks&amp;check=newest">Open last check<');
+  expect(rest).not.toContain('Settings');
 });
 it('preserves the checked demo Home and shows its read only connect note', () => {
   const html = renderToStaticMarkup(<ShellHome lang="en" seat="owner" kind="demo" workspaceId="demo" view={buildHomeView(['service_owner'], checked, 'City Help Desk · Connected')} />);
-  expect(html).toContain('41 of 48'); expect(html).toContain(en.connect.demoNote); expect(html).not.toContain('<form'); expect(html).not.toContain('Nazir demo');
+  expect(html).toContain('<bdi dir="ltr">41</bdi> of <bdi dir="ltr">48</bdi>'); expect(html).toContain(en.connect.demoNote);
+  const main = html.slice(html.indexOf('nz-home-main'), html.indexOf('nz-home-secondary'));
+  expect(main).toContain(en.connect.demoNote); expect(main).toContain('Start a check'); expect(html).not.toContain('<form'); expect(html).not.toContain('Nazir demo');
 });
 it('shows queued work first and withholds another Start while it is active', () => {
   const html = renderToStaticMarkup(<ShellHome lang="en" seat="owner" view={buildHomeView(['service_owner'], checked, 'City Help Desk · Connected')} active={[{ runId: 'running', done: 3, total: 8 }]} />);
-  expect(html).toContain('Checking now 3 of 8'); expect(html.indexOf('Checking now')).toBeLessThan(html.indexOf('<h1')); expect(html).not.toContain('data-nav="start"'); expect(html).not.toContain('>Start a check<');
+  const main = html.slice(html.indexOf('nz-home-main'), html.indexOf('nz-home-secondary'));
+  expect(main).toContain('Checking now 3 of 8'); expect(main.match(/nz-home-primary/g)).toHaveLength(1); expect(html).not.toContain('data-nav="start"'); expect(html).not.toContain('>Start a check<');
+  const first = renderToStaticMarkup(<ShellHome lang="en" seat="owner" view={buildHomeView(['service_owner'], none, 'Desk · Connected')} active={[{ runId: 'r', done: 1, total: 8 }]} />);
+  expect(first).toContain('Checking now 1 of 8'); expect(first).not.toContain('Start your first check');
 });
 
 it('does not assume no active checks when the shared progress read is unknown', () => {

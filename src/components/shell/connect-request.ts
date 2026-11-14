@@ -14,6 +14,6 @@ export async function saveAndTestConnection(workspaceId: string, lang: Lang, con
 }
 
 export function connectHref(home: string, mode: 'full' | 'quick', lang: Lang) {
-  return `${home}?connect=${mode}${lang === 'ar' ? '&lang=ar' : ''}`;
+  return `${home}?connect=${mode}&lang=${lang}`;
 }
-export function connectHomeHref(home: string, lang: Lang) { return lang === 'ar' ? `${home}?lang=ar` : home; }
+export function connectHomeHref(home: string, lang: Lang) { return `${home}?lang=${lang}`; }

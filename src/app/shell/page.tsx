@@ -24,7 +24,7 @@ function stateOf(value?: string): ShellState {
   return 'ready';
 }
 
-export default async function ShellPage({ searchParams }: { searchParams: Promise<{ lang?: string; role?: string; state?: string; variant?: string }> }) {
+export default async function ShellPage({ searchParams }: { searchParams: Promise<{ lang?: string; role?: string; state?: string; variant?: string; kind?: string }> }) {
   // Design preview with made up numbers. It is for building and screenshots, so it is not served in production.
   if (process.env.NODE_ENV === 'production') notFound();
   const query = await searchParams;
@@ -33,14 +33,17 @@ export default async function ShellPage({ searchParams }: { searchParams: Promis
   const localeScript = `document.documentElement.lang=${JSON.stringify(lang)};document.documentElement.dir=${JSON.stringify(dir)};`;
   const seat = seatOf(query.role);
   const facts: HomeFacts = query.variant === 'first'
-    ? { checks: 0, score: 0, right: 0, toFix: 0, lastAt: null }
-    : { checks: 12, score: 82, right: 82, toFix: 3, lastAt: new Date() };
-  const view = buildHomeView(rolesForSeat(seat), facts, '');
+    ? { checks: 0, score: 0, right: 0, toFix: 0, inconclusive: 0, total: 0, lastAt: null }
+    : { checks: 12, score: 75, right: 6, toFix: 1, inconclusive: 1, total: 8, lastAt: new Date() };
+  const view = buildHomeView(rolesForSeat(seat), facts, '', query.variant !== 'connect');
+  const kind = query.kind === 'demo' ? 'demo' : 'real';
+  const connection = query.variant === 'connect' ? null : { name: 'City Help Desk', ready: true, tested_at: new Date().toISOString() } as never;
+  const active = query.variant === 'running' ? [{ runId: 'preview', done: 3, total: 8 }] : [];
   return (
     <>
       <script>{localeScript}</script>
       <DocumentLocale lang={lang} />
-      <ShellHome lang={lang} seat={seat} state={stateOf(query.state)} view={view} />
+      <ShellHome lang={lang} seat={seat} state={stateOf(query.state)} view={view} kind={kind} workspaceId="preview" connection={connection} active={active} />
     </>
   );
 }
