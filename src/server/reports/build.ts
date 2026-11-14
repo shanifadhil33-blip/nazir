@@ -31,7 +31,7 @@ export type ReportCounts = { conversations: number; passed: number; failed: numb
 export type ReportBody = {
   sample?: boolean;
   scope: { en: string; ar: string };
-  run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number; finished_at?: string | null; started_at?: string | null; connection_scope?: 'replies_only' | null; agent_name?: string | null };
+  run: { id: string; status: string; calls_used: number; calls_budget: number; size?: 'quick' | 'full'; test_count?: number; finished_at?: string | null; started_at?: string | null; connection_scope?: 'replies_only' | 'full' | null; agent_name?: string | null };
   counts: ReportCounts;
   completion?: { complete: boolean; tries_done: number; tries_total: number };
   cases?: CaseResult[];

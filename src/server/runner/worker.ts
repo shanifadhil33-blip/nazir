@@ -2,7 +2,9 @@ import type { AgentToolEvent } from '../../sandbox/review-guard';
 import 'server-only';
 import { Coded } from '../http/errors';
 import { externalAgentForWorker, type ExternalTransport } from '../settings/external-agent';
-import { externalConversation, externalRecordChecks, externalReplyFinding } from './external-agent';
+import { externalConversation, externalRecordChecks, externalReplyFinding, externalTraceFinding } from './external-agent';
+import { traceChecks, type TraceCheck, type TraceSpan } from '../checks/trace-checks';
+import { personaFacts } from '../driver/driver';
 import governmentPack from '../packs/government/pack.json';
 import { clauseText } from '../judge/rubric';
 import { checkIds } from '../checks/record-checks';
@@ -168,6 +170,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     } catch { reason ??= 'bad_evaluator'; }
   };
   const external = data.manifest.externalAgent;
+  let traceSpans: TraceSpan[] | null = null; let traceRecords: TraceCheck[] = [];
   const externalAttempt = async () => {
     records=externalRecordChecks(runtime ? runtime.pack.record_checks.map((k) => k.id) : data.scenario.checks?.length ? checkIds.filter((id) => data.scenario.checks!.includes(id)) : checkIds, data.scenario.severity ?? 'high');
     const row = await externalAgentForWorker(driver, wid);
@@ -188,8 +191,19 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     };
     // One signed test session per question, so the SDK can link what the agent did to each turn.
     const session = await work(async (db) => (await db.query<{ s: string }>("SELECT nazir.open_test_session('quality',$1,$2) AS s",[rid,cid])).rows[0]?.s ?? null).catch(() => null);
-    const result = await bounded(externalConversation(row, turns, cid, data.scenario.language === 'ar' ? 'ar' : 'en', reserveCall, externalTransport, session ? { workspaceId:wid,session,mode:'quality' } : undefined));
+    const facts = personaFacts(data.scenario.persona, data.scenario.starting_state);
+    const result = await bounded(externalConversation(row, turns, cid, data.scenario.language === 'ar' ? 'ar' : 'en', reserveCall, externalTransport, session ? { workspaceId:wid,session,mode:'quality' } : undefined, facts));
     transcript=result.transcript; reply=result.reply;
+    // Full check: read what the SDK reported for this question. It flushes before replying, so a short wait is enough.
+    if (session && row.connection_kind === 'sdk') {
+      const lastTurn = result.replies.length;
+      for (let tries = 0; tries < 8; tries++) {
+        const spans = await work(async (db) => (await db.query<TraceSpan>('SELECT turn,kind,name,status,attributes FROM nazir.trace_spans WHERE session_id=$1 ORDER BY id',[session])).rows).catch(() => [] as TraceSpan[]);
+        if (spans.some((s) => s.kind === 'nazir.turn.end' && s.turn === lastTurn) || tries === 7) { traceSpans = spans.some((s) => s.kind === 'nazir.hello') ? spans : null; break; }
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      if (traceSpans) { traceRecords = traceChecks({ spans: traceSpans, replies: result.replies }); records = traceRecords as unknown as RecordCheck[]; }
+    }
     if (!data.manifest.recordsOnly) {
       const context: ModelContext = { workspaceId:wid,conversationId:cid,onCall:(meta) => { metas.push(meta); },reserveCall,remainingMs:() => Math.max(1,end-now()) };
       const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
@@ -203,7 +217,8 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       catch { semantic=unavailable(input,seed); }
       if(reason==='budget_reached') reason=undefined;
     }
-    verdict=semantic?.status==='contradicted' ? { status:'failed',results:{ records,semantic } } : { status:'inconclusive',reason:'external_agent_no_records_link',results:{ records,semantic } };
+    verdict=traceSpans ? { ...combineVerdicts(records,semantic),results:{ records,semantic } }
+      : semantic?.status==='contradicted' ? { status:'failed',results:{ records,semantic } } : { status:'inconclusive',reason:'external_agent_no_records_link',results:{ records,semantic } };
   };
   const attemptWork = async () => {
     if (external) await externalAttempt();
@@ -308,7 +323,10 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     const summary={ ...(judgeAttempts ? { judge_attempts:judgeAttempts } : {}), ...(reason==='timeout' ? { timeout: { en:'Conversation exceeded its time limit.',ar:'تجاوزت المحادثة المهلة المحددة.' },timeoutMs:conversationTimeoutMs } : {}),results:data.manifest.recordsOnly?verdict.results ?? {}:{ records,semantic },records,semantic,calls:metas.map((m) => ({ provider:m.provider,model:m.model,failover:m.failover })) };
     await db.query(`UPDATE nazir.conversations SET status=$4,inconclusive_reason=CASE WHEN $4 IN ('inconclusive','queued') THEN $5 ELSE NULL END,last_error=$5,available_at=$6,finished_at=CASE WHEN $7 THEN NULL ELSE clock_timestamp() END,result_summary=$8,model_provider=$9,model_id=$10,failover=$11,model_calls=model_calls || $12::jsonb,lease_owner=NULL,lease_expires_at=NULL WHERE id=$1 AND lease_owner=$2 AND attempt=$3 AND status='running'`,[cid,workerId,attempt,retry?'queued':status,resultReason,new Date(now()+30000*attempt),retry,retry?null:JSON.stringify(summary),meta?.provider ?? null,meta?.model ?? null,metas.some((m) => m.failover),JSON.stringify(metas.map((m) => ({ attempt,provider:m.provider,model:m.model,family:m.family,failover:m.failover })))]);
     if(!retry && (external || packReading || (evaluationInput && reading)) && status!=='inconclusive') {
-      const findings=external ? semantic?.status === 'contradicted' ? [externalReplyFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',severity:data.scenario.severity ?? 'high',reply,semantic })] : [] : runtime?packFindings:buildFindings({ ...evaluationInput!,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
+      const findings=external ? [
+        ...traceRecords.filter((r) => r.status==='fail').map((check) => externalTraceFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',reply,check,spans:traceSpans ?? [] })),
+        ...(semantic?.status === 'contradicted' ? [externalReplyFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',severity:data.scenario.severity ?? 'high',reply,semantic })] : []),
+      ] : runtime?packFindings:buildFindings({ ...evaluationInput!,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
       for(const finding of findings) {
         const previous = (await db.query<{ id: string }>('SELECT id FROM nazir.findings WHERE run_id=$1 AND scenario_id=$2 AND check_id=$3', [rid, data.scenario.id, finding.check_id])).rows[0];
         if (previous) {

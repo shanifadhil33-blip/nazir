@@ -52,8 +52,8 @@ it('shows Suggest a fix only on a wrong question for the role the server allows'
   const open = { openId: 'quick', openQuestion: 'q1' };
   const supplier = render('en', 'supplier', open);
   expect(supplier).toContain('Suggest a fix');
-  expect(supplier).toContain('Your assistant said');
-  expect(supplier).toContain('The record says');
+  expect(supplier).toContain('Your agent said');
+  expect(supplier).toContain('What your agent did');
   for (const seat of ['owner', 'editor', 'viewer'] as Seat[]) expect(render('en', seat, open), seat).not.toContain('Suggest a fix');
   expect(render('en', 'supplier', { openId: 'quick', openQuestion: 'q4' })).not.toContain('Suggest a fix');
 });
@@ -79,7 +79,7 @@ it('renders Arabic right to left with Arabic words', () => {
   expect(render('ar', 'editor', { running: { runId: 'r', done: 9, total: 16 } })).toContain('إيقاف');
   expect(html).toContain('dir="rtl"');
   expect(html).toContain('lang="ar"');
-  for (const word of ['نفحص الآن', 'نفحص الآن 9 من 16', 'قال مساعدك', 'السجل يقول', 'اقترح إصلاحاً', 'خطأ']) expect(html, word).toContain(word);
+  for (const word of ['نفحص الآن', 'نفحص الآن 9 من 16', 'قال وكيلك', 'ما فعله وكيلك', 'اقترح إصلاحاً', 'خطأ']) expect(html, word).toContain(word);
   expect(html).not.toContain('Checking now');
 });
 

@@ -16,7 +16,7 @@ async function rolesOf(sql: SqlConnection) {
 }
 
 async function evidence(sql: SqlConnection, runId: string) {
-  const run = (await sql.query<ReportBody['run']>(`SELECT id,status,calls_used,calls_budget,finished_at::text,started_at::text,CASE WHEN frozen_manifest ? 'externalAgent' THEN 'replies_only' END AS connection_scope,frozen_manifest->'externalAgent'->>'name' AS agent_name,frozen_manifest->>'size' AS size,(frozen_manifest->>'testCount')::int AS test_count FROM nazir.runs WHERE id=$1`, [runId])).rows[0];
+  const run = (await sql.query<ReportBody['run']>(`SELECT id,status,calls_used,calls_budget,finished_at::text,started_at::text,CASE WHEN frozen_manifest ? 'externalAgent' THEN coalesce(frozen_manifest->'externalAgent'->>'scope','replies_only') END AS connection_scope,frozen_manifest->'externalAgent'->>'name' AS agent_name,frozen_manifest->>'size' AS size,(frozen_manifest->>'testCount')::int AS test_count FROM nazir.runs WHERE id=$1`, [runId])).rows[0];
   if (!run) throw new NotFound();
   const conversations = (await sql.query<ReportConversation>(`SELECT c.id,c.status,s.split,c.language,c.scenario_id,c.attempt_number,c.inconclusive_reason FROM nazir.conversations c JOIN nazir.scenarios s ON s.id=c.scenario_id WHERE c.run_id=$1 ORDER BY c.created_at,c.id`, [runId])).rows;
   const findings = (await sql.query<ReportFinding>(`SELECT f.id,f.check_id,f.scenario_id,f.conversation_id,greatest(1,(SELECT count(*)::int FROM nazir.finding_attempts a WHERE a.finding_id=f.id)) AS failed_attempts,f.severity,f.title,f.title_ar,f.really_happened,f.really_happened_ar,f.agent_said,f.evidence,s.split,s.family,f.language
@@ -29,7 +29,7 @@ async function evidence(sql: SqlConnection, runId: string) {
 async function stored(sql: SqlConnection, id: string, fn: 'read_report' | 'read_report_viewer') {
   const row = (await sql.query<{ body: ReportBody | null }>(`SELECT nazir.${fn}($1) AS body`, [id])).rows[0];
   if (!row?.body) throw new NotFound();
-  const connection = (await sql.query<{ connection_scope: 'replies_only' | null; agent_name: string | null }>("SELECT CASE WHEN frozen_manifest ? 'externalAgent' THEN 'replies_only' END AS connection_scope,frozen_manifest->'externalAgent'->>'name' AS agent_name FROM nazir.runs WHERE id=$1", [row.body.run.id])).rows[0];
+  const connection = (await sql.query<{ connection_scope: 'replies_only' | 'full' | null; agent_name: string | null }>("SELECT CASE WHEN frozen_manifest ? 'externalAgent' THEN coalesce(frozen_manifest->'externalAgent'->>'scope','replies_only') END AS connection_scope,frozen_manifest->'externalAgent'->>'name' AS agent_name FROM nazir.runs WHERE id=$1", [row.body.run.id])).rows[0];
   return connection?.connection_scope ? { ...row.body, run: { ...row.body.run, ...connection } } : row.body;
 }
 
@@ -77,8 +77,8 @@ export async function listReports(driver: TransactionDriver, memberId: string) {
     if (reports.some((row) => !row.body)) throw new NotFound();
     // Enrich only the projected response. These run reads stay under member RLS;
     // stored evidence and its hash are never rewritten, including legacy reports.
-    const dates = (await sql.query<{ id: string; finished_at: string | null; started_at: string | null; connection_scope: 'replies_only' | null; agent_name: string | null }>(
-      "SELECT id,finished_at::text,started_at::text,CASE WHEN frozen_manifest ? 'externalAgent' THEN 'replies_only' END AS connection_scope,frozen_manifest->'externalAgent'->>'name' AS agent_name FROM nazir.runs WHERE id=ANY($1::uuid[])",
+    const dates = (await sql.query<{ id: string; finished_at: string | null; started_at: string | null; connection_scope: 'replies_only' | 'full' | null; agent_name: string | null }>(
+      "SELECT id,finished_at::text,started_at::text,CASE WHEN frozen_manifest ? 'externalAgent' THEN coalesce(frozen_manifest->'externalAgent'->>'scope','replies_only') END AS connection_scope,frozen_manifest->'externalAgent'->>'name' AS agent_name FROM nazir.runs WHERE id=ANY($1::uuid[])",
       [reports.map((row) => row.run_id)],
     )).rows;
     const byRun = new Map(dates.map((row) => [row.id, row]));
