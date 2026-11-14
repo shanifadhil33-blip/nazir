@@ -160,19 +160,17 @@ it('builds question rows from a saved report', () => {
   expect(row.questions[1]!.record).toBe('');
 });
 
-it('starts a check with the two existing chat messages and returns the run id', async () => {
-  const plan = '11111111-1111-4111-8111-111111111111';
+it('starts a check with one server call and returns the run id', async () => {
   const run = '22222222-2222-4222-8222-222222222222';
-  const sent: string[] = [];
-  const fetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
-    const message = JSON.parse(String(init?.body)).message as string;
-    sent.push(message);
-    const body = sent.length === 1 ? { done: true, tool: 'propose_plan', data: { id: plan } } : { done: true, tool: 'start_run', data: { plan_id: plan, run_id: run } };
-    return new Response(JSON.stringify(body), { status: 200 });
+  const calls: [string, RequestInit | undefined][] = [];
+  const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    calls.push([String(url), init]);
+    return new Response(JSON.stringify({ run_id: run, existing: false }), { status: 202 });
   }) as unknown as typeof fetch;
   expect(await startQuickCheck('w1', 'en', fetcher)).toBe(run);
-  expect(sent[0]).toBe('run a quick check');
-  expect(sent[1]).toContain(`I approve plan ${plan} and start the run because`);
+  expect(calls).toHaveLength(1);
+  expect(calls[0]![0]).toBe('/api/workspaces/w1/runs');
+  expect(calls[0]![1]?.method).toBe('POST');
   expect(planIdOf({ id: 'nope' })).toBeNull();
   expect(runIdOf({ run_id: run })).toBe(run);
   const refused = vi.fn(async () => new Response(JSON.stringify({ done: false }), { status: 200 })) as unknown as typeof fetch;
