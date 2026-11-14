@@ -90,12 +90,11 @@ function connectionError(body: unknown, copy: ReturnType<typeof messagesFor>): s
 
 export function AgentStatus({ lang, connection, home }: { lang: Lang; connection?: ExternalView | null; home: string }) {
   const copy = messagesFor(lang); const c = copy.agentStatus;
-  if (!connection?.ready) return <section className="nz-agent-status"><h2>{copy.settingsScreen.assistant}</h2><p>{c.none}</p><PillButton label={c.change} href={connectHref(home, 'quick', lang)} /></section>;
-  return <section className="nz-agent-status"><h2>{copy.settingsScreen.assistant}</h2>
-    <p dir="auto">{connection?.name}</p><p><span className="nz-connect-chip">{c.connected}</span> <span className="nz-connect-chip">{c.repliesOnly}</span></p>
-    <p>{c.answers}</p>
-    {connection?.tested_at ? <p><ConnectionLine template={c.lastTest} values={{ time: { text: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(connection.tested_at)), dir: 'ltr' } }} /></p> : null}
-    <p>{c.noSdk}</p><div className="nz-agent-actions"><PillButton label={c.addSdk} href={connectHref(home, 'full', lang)} /><PillButton label={c.change} href={connectHref(home, 'quick', lang)} /></div>
+  return <section className="nz-agent-status" aria-label={copy.settingsScreen.assistant}>
+    {connection?.name ? <p className="nz-agent-name" dir="auto">{connection.name}</p> : null}
+    <p>{connection?.ready ? <>{c.connected} · {c.repliesOnly}</> : c.none}</p>
+    {connection?.ready ? <p className="nz-agent-test">{c.answers}{connection.tested_at ? <>. <ConnectionLine template={c.lastTest} values={{ time: { text: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(connection.tested_at)), dir: 'ltr' } }} /></> : null}</p> : null}
+    <div className="nz-agent-actions"><span>{c.noSdk}</span><Link href={connectHref(home, 'full', lang)}>{c.addSdk}</Link><Link href={connectHref(home, 'quick', lang)}>{c.change}</Link></div>
   </section>;
 }
 

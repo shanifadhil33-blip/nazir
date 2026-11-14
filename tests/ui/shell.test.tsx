@@ -35,7 +35,7 @@ it('AR renders dir=rtl and the nav order mirrors', () => {
   expect(localeAttrs('ar')).toEqual({ lang: 'ar', dir: 'rtl' });
   expect(html).toContain('lang="ar"');
   expect(html).toContain('dir="rtl"');
-  expect(html).not.toContain('dir="ltr"');
+  expect(html.replace(/<bdi dir="ltr">[^<]*<\/bdi>/g, '')).not.toContain('dir="ltr"');
   const floating = navIds(html, 'nz-float-nav');
   const side = navIds(html, 'nz-side-nav');
   expect(floating).toEqual(['home', 'checks', 'start', 'fixes', 'more']);
@@ -53,11 +53,8 @@ it('keeps English nav in logical order and sets dir=ltr', () => {
   expect(floating).toEqual(navItems('owner'));
   expect(visualNavOrder(floating, 'ltr')).toEqual(['home', 'checks', 'start', 'fixes', 'more']);
   expect(html).toContain('Your agent');
-  expect(html).toContain('Your agent got 82 of 100 answers right');
-  expect(html).toContain('Wrong answers');
   expect(html).toContain('No agent connected');
-  expect(html).toContain('>82 of 100<');
-  expect(html).toContain('>3<');
+  expect(html).toContain('Last check: <bdi dir="ltr">6</bdi> of <bdi dir="ltr">8</bdi> answers right, <bdi dir="ltr">1</bdi> wrong. Nazir could not tell for <bdi dir="ltr">1</bdi>.');
   expect(html).toContain('Today');
 });
 

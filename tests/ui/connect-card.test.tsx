@@ -7,7 +7,7 @@ import { saveAndTestConnection } from '../../src/components/shell/connect-reques
 import { ShellHome } from '../../src/components/shell/home';
 import { buildHomeView, homeLinks } from '../../src/components/shell/home-model';
 const home = '/w/test';
-const facts = { checks: 0, right: 0, total: 0, score: 0, toFix: 0, lastAt: null };
+const facts = { checks: 0, right: 0, total: 0, score: 0, toFix: 0, inconclusive: 0, lastAt: null };
 it.each(['en', 'ar'] as const)('keeps exactly two connect choices and no Start or stats before a successful test in %s', (lang) => {
   const choices = renderToStaticMarkup(<ConnectChoices lang={lang} home={home} />);
   if (lang === 'ar') expect(choices).toContain('connect=full&amp;lang=ar');

@@ -74,3 +74,10 @@ it('still classifies a control as dead after waiting through its observation win
     expect(classifyClick(before, await waiting)).toBe('DEAD-CONTROL');
   } finally { vi.useRealTimers(); }
 });
+
+it('treats links that differ only by the language pin as the same place', async () => {
+  const { samePlace } = await import('../../scripts/live-audit/crawl.mjs');
+  expect(samePlace('/w/a?screen=checks&lang=en', '/w/a?screen=checks')).toBe(true);
+  expect(samePlace('/w/a?lang=ar&screen=checks', '/w/a?screen=checks&lang=ar')).toBe(true);
+  expect(samePlace('/w/a?screen=checks', '/w/a?screen=failures')).toBe(false);
+});

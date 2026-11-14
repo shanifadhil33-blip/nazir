@@ -2,20 +2,17 @@ import Link from 'next/link';
 import type { ExternalView } from '@/server/settings/external-agent';
 import type { RunProgress } from './checks-run';
 import { progressLine, dayLabel } from './checks-model';
-import { ConnectCard, ConnectChoices, AgentStatus } from './connect-card';
+import { ConnectCard, ConnectChoices, AgentStatus, ConnectionLine } from './connect-card';
 import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
 import { Bell } from './bell';
 import { FloatingBottomNav } from './floating-nav';
-import { ShellIcon } from './icons';
 import { headingFor, homeLinks, lastCheckText, seatAccess, type HomeLinks, type HomeView } from './home-model';
 import { localeAttrs } from './locale';
-import { PastelCard } from './pastel-card';
 import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
-import { PillGrid } from './pill-grid';
 import { SideNav } from './side-nav';
 import { StateCard, type ShellState } from './state-card';
 
@@ -25,7 +22,7 @@ export function previewView(seat: Seat): HomeView {
   return {
     variant: seat === 'viewer' ? 'viewer' : 'main',
     access,
-    facts: { checks: 12, score: 82, right: 82, total: 100, toFix: 3, lastAt: new Date() },
+    facts: { checks: 12, score: 75, right: 6, total: 8, toFix: 1, inconclusive: 1, lastAt: new Date() },
     assistant: '',
   };
 }
@@ -65,26 +62,13 @@ export function ShellHome({
   const { access, facts, variant } = view;
   const assistant = helpLine(view.assistant, copy, state === 'loading');
   const checkTime = facts.lastAt ? `${dayLabel(facts.lastAt, now, lang, copy)} ${new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(facts.lastAt)}` : lastCheckText(null, now, copy);
-  const heading = headingFor(view, copy);
+  const heading = headingFor(view, copy, active.length > 0);
   const connected = variant !== 'connect';
   const canStart = access.start && activeStatus === 'ready' && active.length === 0;
-  const showCards = connected && facts.checks > 0 && variant !== 'first';
-  const pills = [
-    canStart && variant !== 'first' ? <PillButton key="start" tone="mint" icon="play" directional label={copy.shell.startCheck} href={go.start} /> : null,
-    <PillButton key="wrong" tone="peach" icon="alert" label={copy.shell.wrongAnswers} href={facts.latestCheckId ? `${go.checks}&check=${facts.latestCheckId}` : go.checks} />,
-    access.fixes ? <PillButton key="fixes" tone="peach" icon="pencil" label={copy.shell.fixes} href={go.fixes} /> : null,
-    access.report ? <PillButton key="report" tone="sky" icon="report" label={copy.shell.report} href={go.report} /> : null,
-  ].filter(Boolean);
   const checkHref = facts.latestCheckId ? `${go.checks}&check=${facts.latestCheckId}` : go.checks;
-  const cards = showCards ? (
-    <div className="nz-stat-row nz-stat-row-3">
-      <PastelCard tone="mint" layout="stat" icon="check" href={checkHref} title={copy.shell.rightAnswers} value={copy.shell.answerCount.replace('{right}', String(facts.right)).replace('{total}', String(facts.total ?? facts.right + facts.toFix))} />
-      <PastelCard tone="peach" layout="stat" icon="alert" href={checkHref} title={copy.shell.wrongAnswers} value={facts.toFix} />
-      <PastelCard tone="sky" layout="stat" icon="clock" href={checkHref} title={copy.shell.lastCheck} value={checkTime} />
-    </div>
-  ) : null;
+  const [running, ...otherRuns] = active;
   return (
-    <main className="nz-shell" {...attrs} data-seat={seat} data-state={state} data-variant={variant}>
+    <main className="nz-shell nz-home" {...attrs} data-seat={seat} data-state={state} data-variant={variant}>
       <div className="nz-shell-desk">
         <header className="nz-shell-head">
           <div className="nz-shell-who">
@@ -93,28 +77,33 @@ export function ShellHome({
           </div>
           <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
         </header>
-        <div className="nz-shell-stack">
+        <section className="nz-home-main" aria-label={heading.bold}>
           {state === 'loading' ? <div className="nz-home-loading" aria-busy="true" aria-label={copy.shell.loadingTitle}><div className="nz-home-loading-title" /><div className="nz-connect-choices"><div /><div /></div></div> : state !== 'ready' ? <StatePanel copy={copy} state={state} onRetry={onRetry} fallback={go.home} /> : <>
-            {connected && activeStatus !== 'ready' ? <StatePanel copy={copy} state={activeStatus} onRetry={onRetry} fallback={go.home} /> : null}
-            {active.map((run) => <Link key={run.runId} className="nz-running" href={`${go.checks}&run=${run.runId}`}><strong>{progressLine(run.done, run.total, copy)}</strong><progress max={run.total} value={run.done} /></Link>)}
             <Heading light={heading.light} bold={heading.bold} lang={lang} />
-            {variant === 'connect' ? <p className="nz-home-intro">{copy.connect.intro}</p> : facts.lastAt && showCards ? <p>{copy.shell.checkTime.replace('{time}', checkTime)}</p> : null}
-            {panel ? <ConnectCard key={panel} workspaceId={workspaceId ?? 'preview'} lang={lang} mode={panel} home={go.home} connection={connection} demo={kind === 'demo'} onSaved={onConnected} /> : variant === 'connect' ? <><ConnectChoices lang={lang} home={go.home} /><Link className="nz-connect-back" href="/demo">{copy.connect.demoLink}</Link></> : null}
-            {connected && !panel ? <>{variant === 'first' ? <>
-              <section className="nz-first-card">
-                <span className="nz-first-mark"><ShellIcon name="clock" /></span>
-                <p>{copy.shell.firstCheckNote}</p>
-              </section>
-              {canStart ? <PillButton variant="ink" icon="play" directional className="nz-hero-btn" label={copy.shell.startFirst} href={go.start} /> : null}
-            </> : <div className={showCards ? 'nz-shell-desk-body' : 'nz-shell-desk-body nz-shell-desk-solo'}>
-              <PillGrid>{pills}</PillGrid>
-              {cards}
-            </div>}
-            {variant === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
-            {kind === 'demo' ? <p className="nz-agent-status">{copy.connect.demoNote}</p> : workspaceId ? <AgentStatus lang={lang} connection={connection} home={go.home} /> : null}
-            </> : null}
+            {panel ? <ConnectCard key={panel} workspaceId={workspaceId ?? 'preview'} lang={lang} mode={panel} home={go.home} connection={connection} demo={kind === 'demo'} onSaved={onConnected} /> : !connected ? <>
+              <p className="nz-home-intro" dir="auto">{copy.connect.intro}</p>
+              <ConnectChoices lang={lang} home={go.home} />
+            </> : <>
+              {kind === 'demo' ? <p className="nz-home-demo" dir="auto">{copy.connect.demoNote}</p> : <AgentStatus lang={lang} connection={connection} home={go.home} />}
+              {running ? <Link className="nz-running nz-home-primary" href={`${go.checks}&run=${running.runId}`}><strong>{progressLine(running.done, running.total, copy)}</strong><progress aria-label={progressLine(running.done, running.total, copy)} max={running.total} value={running.done} /></Link> : <>
+                {facts.checks === 0 ? <p className="nz-home-intro" dir="auto">{copy.shell.firstCheckNote}</p> : null}
+                {canStart ? <PillButton variant="ink" icon="play" directional className="nz-hero-btn nz-home-primary" label={facts.checks === 0 ? copy.shell.startFirst : copy.shell.startCheck} href={go.start} /> : null}
+              </>}
+              {connected && activeStatus !== 'ready' ? <StatePanel copy={copy} state={activeStatus} onRetry={onRetry} fallback={go.home} /> : null}
+              {otherRuns.map((run) => <Link className="nz-home-link" key={run.runId} href={`${go.checks}&run=${run.runId}`}>{progressLine(run.done, run.total, copy)}</Link>)}
+            </>}
           </>}
-        </div>
+        </section>
+        {state === 'ready' && !panel ? <div className="nz-home-secondary">
+          {!connected ? <Link className="nz-home-link" href="/demo">{copy.connect.demoLink}</Link> : <>
+            {facts.checks > 0 ? <section className="nz-home-last" aria-label={copy.shell.lastCheck}>
+              <p dir="auto"><ConnectionLine template={facts.inconclusive > 0 ? copy.shell.lastCheckSummaryUnsure : copy.shell.lastCheckSummary} values={{ right: { text: String(facts.right), dir: 'ltr' }, wrong: { text: String(facts.toFix), dir: 'ltr' }, inconclusive: { text: String(facts.inconclusive), dir: 'ltr' }, total: { text: String(facts.total ?? facts.right + facts.toFix + facts.inconclusive), dir: 'ltr' } }} /></p>
+              <div className="nz-home-links"><Link className="nz-home-link" href={checkHref}>{copy.shell.openLastCheck}</Link><span className="nz-home-time"><bdi dir="ltr">{checkTime}</bdi></span></div>
+            </section> : null}
+            <div className="nz-home-links">{access.fixes ? <Link className="nz-home-link" href={go.fixes}>{copy.shell.fixes}</Link> : null}{access.report ? <Link className="nz-home-link" href={go.report}>{copy.shell.report}</Link> : null}</div>
+            {variant === 'viewer' ? <p>{copy.shell.viewOnly}</p> : null}
+          </>}
+        </div> : null}
       </div>
       <FloatingBottomNav lang={lang} seat={seat} copy={copy} canStart={canStart} homeOnly={!connected} links={navLinks(go, seat)} />
       <SideNav lang={lang} seat={seat} copy={copy} canStart={canStart} homeOnly={!connected} links={navLinks(go, seat)} />

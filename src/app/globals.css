@@ -1324,3 +1324,35 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-set-card-summary { display: flex; align-items: center; gap: 16px; min-inline-size: 0; }
 .nz-set-card-content { display: grid; gap: 16px; min-inline-size: 0; }
 .nz-set-card-content p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+
+/* Home keeps the agent and one next action above the labelled navigation. */
+.nz-home .nz-shell-head { margin-block-end: 16px; }
+.nz-home-main { display: grid; gap: 12px; min-inline-size: 0; }
+.nz-home-main .nz-heading { margin: 0; }
+.nz-home-main .nz-connect-choices { gap: 12px; }
+.nz-home-main .nz-connect-choice { padding: 16px; gap: 8px; border-radius: 20px; }
+.nz-home-main .nz-connect-choice h2 { font-size: 20px; line-height: 1.4; }
+.nz-home-main .nz-connect-choice p { line-height: 1.5; overflow-wrap: anywhere; }
+.nz-home[dir="rtl"] .nz-connect-choice p { line-height: 1.6; }
+.nz-home-main .nz-connect-chip { padding-block: 0; }
+.nz-home .nz-home-main .nz-pill-btn { min-block-size: 44px; border-radius: var(--radius-pill); padding-block: 8px; }
+.nz-home-main .nz-connect-choice .nz-pill-btn { inline-size: 100%; }
+.nz-home-main .nz-agent-status { padding: 0; background: transparent; display: grid; gap: 4px; }
+.nz-home-main .nz-agent-status p, .nz-home-demo { margin: 0; overflow-wrap: anywhere; }
+.nz-home-main .nz-agent-name { font-weight: 600; }
+.nz-home-main .nz-agent-test, .nz-home-time { font-size: 14px; color: var(--ink-muted); }
+.nz-home-main .nz-agent-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; }
+.nz-home-main .nz-agent-actions a, .nz-home-link { display: inline-flex; align-items: center; min-block-size: 44px; color: var(--ink); text-underline-offset: 4px; }
+.nz-home-main .nz-running { padding: 16px; gap: 8px; }
+.nz-home-main .nz-hero-btn { inline-size: 100%; }
+.nz-home-secondary { margin-block-start: 24px; display: grid; gap: 8px; }
+.nz-home-last p { margin: 0; }
+.nz-home-links { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; }
+.nz-home-time { overflow-wrap: anywhere; }
+.nz-home .nz-home-loading { min-block-size: 480px; gap: 12px; }
+.nz-home .nz-home-loading-title { block-size: 36px; }
+.nz-home .nz-home-loading .nz-connect-choices > div { min-block-size: 208px; border-radius: 20px; }
+@media (min-width: 1024px) {
+  .nz-home-main { max-inline-size: 880px; }
+  .nz-home-main .nz-hero-btn, .nz-home-main .nz-running { max-inline-size: 420px; }
+}

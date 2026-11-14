@@ -55,8 +55,17 @@ export async function inventory(page) {
   return page.locator(selector).evaluateAll(inventoryElements);
 }
 
+/** Same path links (only ?screen= changes) render after the router updates. Compare URLs without the language pin. */
+export function samePlace(a, b) {
+  const clean = (value) => { const url = new URL(value, 'https://x.invalid'); url.searchParams.delete('lang'); url.searchParams.sort(); return url.pathname + url.search + url.hash; };
+  return clean(a) === clean(b);
+}
 /** Query navigation can leave the pathname unchanged while the next screen renders. */
-export async function waitForClick(page, before, navigation = false, timeoutMs = 5000) {
+export async function waitForClick(page, before, navigation = false, timeoutMs = 8000, target = null) {
+  if (target && !samePlace(target, before.url)) {
+    // Wait for the router to reach the link's own address before reading the screen.
+    await page.waitForURL((url) => samePlace(url.pathname + url.search + url.hash, target), { timeout: timeoutMs }).catch(() => {});
+  }
   const deadline = Date.now() + timeoutMs;
   let after;
   do {
@@ -97,12 +106,14 @@ export async function crawl() {
               const control = s.page.locator(el.id);
               if (!await control.isVisible()) { rows.push({ ...record, verdict: 'HIDDEN' }); continue; }
               const before = await snapshot(s.page);
+              // A link to the screen already open is reported on its own, never as a dead control.
+              if (el.href && !el.href.startsWith('#') && samePlace(el.href, before.url)) { rows.push({ ...record, verdict: 'SELF-LINK' }); continue; }
               const downloads = []; const popups = [];
               const download = (item) => downloads.push(item); const popup = (item) => popups.push(item);
               s.page.on('download', download); s.page.on('popup', popup);
               try {
                 await control.click({ timeout: 5000 });
-                await waitForClick(s.page, before, Boolean(el.href));
+                await waitForClick(s.page, before, Boolean(el.href), 8000, el.href);
                 await settle(s.page);
                 record.destination = await snapshot(s.page);
                 record.verdict = classifyClick(before, record.destination, { externalEffect: downloads.length > 0 || popups.length > 0 });
