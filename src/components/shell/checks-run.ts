@@ -1,5 +1,4 @@
 import type { Lang } from '@/components/ocean/copy';
-import { approvalMessage } from './checks-model';
 
 export type RunProgress = { runId: string; done: number; total: number };
 
@@ -31,24 +30,12 @@ export function failOf(status: number | null, code: string | null): StartFail {
   return 'failed';
 }
 
-async function chat(fetcher: Fetcher, workspaceId: string, lang: Lang, message: string) {
-  const response = await fetcher(`/api/workspaces/${workspaceId}/agent/chat`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'accept-language': lang },
-    body: JSON.stringify({ message }),
-  }).catch(() => null);
-  const payload = await response?.json().catch(() => null) as { done?: boolean; tool?: string; data?: unknown; error?: { code?: string } } | null;
-  return { ok: Boolean(response?.ok), payload, fail: failOf(response ? response.status : null, payload?.error?.code ?? null) };
-}
-
-/** Starts a quick check with the existing chat endpoint: one message proposes the plan, one approves it and starts the run. */
+/** Starts a check with one server call. The server queues it and the background runner owns it, so closing the phone is fine. */
 export async function startQuickCheckOutcome(workspaceId: string, lang: Lang, fetcher: Fetcher = fetch): Promise<StartOutcome> {
-  const proposed = await chat(fetcher, workspaceId, lang, lang === 'ar' ? 'فحص سريع' : 'run a quick check');
-  const planId = proposed.ok && proposed.payload?.done ? planIdOf(proposed.payload.data) : null;
-  if (!planId) return { fail: proposed.ok ? 'failed' : proposed.fail };
-  const started = await chat(fetcher, workspaceId, lang, approvalMessage(planId, lang));
-  const runId = started.ok && started.payload?.done ? runIdOf(started.payload.data) : null;
-  return runId ? { runId } : { fail: started.ok ? 'failed' : started.fail };
+  const response = await fetcher(`/api/workspaces/${workspaceId}/runs`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
+  const payload = await response?.json().catch(() => null) as { run_id?: unknown; error?: { code?: string } } | null;
+  const runId = response?.ok ? runIdOf(payload) : null;
+  return runId ? { runId } : { fail: failOf(response ? response.status : null, payload?.error?.code ?? null) };
 }
 
 /** Same as the outcome version, for callers that only need the run id. */
