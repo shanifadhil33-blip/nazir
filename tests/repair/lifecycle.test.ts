@@ -83,3 +83,16 @@ it('a sample wrong answer with no allowed change gets no fix card, and an old pa
   await expect(fixAction(db.driver, lib.members.reviewer, old.id, 'approve')).rejects.toMatchObject({ status: 409, code: 'no_fix' });
   expect(await fixAction(db.driver, lib.members.reviewer, old.id, 'reject')).toEqual({ id: old.id, status: 'rejected' });
 }, 120000);
+
+it('a wrong answer from your connected agent gets the change to copy, even though its check ran on a library version', async () => {
+  const run = await enqueueRun(db.driver, { workspaceId: lib.workspaceId, planId: lib.planId, agentVersionId: version('planted_false_submit'), scenarioIds: [lib.scenarios.complaint_en!], repeats: 1, idempotencyKey: randomUUID(), recordsOnly: false });
+  await drain();
+  // Live, checks against a connected agent freeze externalAgent in the manifest and keep the library version id.
+  await db.owner.query('ALTER TABLE nazir.runs DISABLE TRIGGER USER');
+  await db.owner.query(`UPDATE nazir.runs SET frozen_manifest=frozen_manifest||'{"externalAgent":{"revision":"r1","name":"Your agent","connectionKind":"sdk","scope":"full"}}'::jsonb WHERE id=$1`, [run.id]);
+  await db.owner.query('ALTER TABLE nazir.runs ENABLE TRIGGER USER');
+  const finding = (await db.owner.query<{ id: string }>("SELECT id FROM nazir.findings WHERE run_id=$1 AND check_id='case_exists' LIMIT 1", [run.id])).rows[0]!;
+  const mine = await suggestFix(db.driver, lib.members.supplier, finding.id);
+  expect(mine).toMatchObject({ patch: null, existing: false });
+  expect((await list(lib.members.reviewer)).find((r) => r.id === mine.id)).toMatchObject({ own_agent: true });
+}, 120000);
