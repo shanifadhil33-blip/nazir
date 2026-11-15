@@ -12,7 +12,7 @@ export function externalRecordChecks(ids: readonly string[], severity: RecordChe
     summary: { en: en.connect.replyScope, ar: ar.connect.replyScope } }));
 }
 /** Only resident and agent messages cross the boundary. No sandbox prompt, tools, judge or owner knowledge. */
-export async function externalConversation(row: ExternalRow, turns: string[], sessionId: string, language: 'en' | 'ar', reserve: () => Promise<void>, options?: ExternalTransport, test?: { workspaceId: string; session: string; mode: 'quality' | 'security' }, facts: PersonaFacts = {}) {
+export async function externalConversation(row: ExternalRow, turns: string[], sessionId: string, language: 'en' | 'ar', reserve: () => Promise<void>, options?: ExternalTransport, test?: { workspaceId: string; session: string; mode: 'quality' | 'security'; inject?: string }, facts: PersonaFacts = {}) {
   const transcript: ExternalMessage[] = [];
   const transport = { ...options, a2aContexts: new Map<string, string>() };
   const answered = new Set<string>();

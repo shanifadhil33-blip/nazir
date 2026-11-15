@@ -7,6 +7,7 @@ import { runNextConversation } from './worker';
 import { createReport } from '../reports/read';
 import { starterDriver, type PendingRun } from './context';
 import { stepParallel, tickBudgetMs, minConversationMs, stepLeaseSeconds } from '../livetest/budget';
+import { safetyPending, safetyStep } from '../safety/run';
 
 export async function pendingRuns(driver: TransactionDriver): Promise<PendingRun[]> {
   return driver.transaction(async (sql) => {
@@ -25,10 +26,12 @@ type TickDeps = {
   wait?: (ms: number) => Promise<void>;
   budgetMs?: number;
   idleWatchMs?: number;
+  /** Safety tests share the tick. Tests pass a stub so answer checks stay isolated. */
+  safety?: { pending: (driver: TransactionDriver) => Promise<unknown[]>; step: (driver: TransactionDriver) => Promise<{ advanced: boolean }> };
 };
 
 /** Oldest first, four independent claims per batch. Only trusted starters enter this loop. */
-export async function tick({ driver, inspectionDriver, lock, run = runNextConversation, now = Date.now, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), budgetMs = tickBudgetMs, idleWatchMs = 0 }: TickDeps) {
+export async function tick({ driver, inspectionDriver, lock, run = runNextConversation, now = Date.now, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), budgetMs = tickBudgetMs, idleWatchMs = 0, safety = { pending: safetyPending, step: (d) => safetyStep(d) } }: TickDeps) {
   const release = await lock();
   if (!release) return { busy: true, pending: false };
   const deadline = now() + budgetMs;
@@ -37,6 +40,12 @@ export async function tick({ driver, inspectionDriver, lock, run = runNextConver
   try {
     while (deadline - now() >= minConversationMs) {
       const pending = await pendingRuns(driver);
+      const safe = await safety.pending(driver).catch(() => []);
+      if (safe.length) {
+        idleSince = null;
+        const stepped = await safety.step(driver).catch(() => ({ advanced: false }));
+        if (!pending.length) { if (!stepped.advanced) await wait(1000); continue; }
+      }
       if (!pending.length) {
         // Keep watching briefly: a Start that lands while this tick finishes is picked up here, not lost.
         idleSince = (idleSince ?? 0) + 1;
@@ -77,6 +86,6 @@ export async function tick({ driver, inspectionDriver, lock, run = runNextConver
       }
       if (!advanced && deadline - now() >= minConversationMs) await wait(Math.min(1000, deadline - now()));
     }
-    return { busy: false, pending: (await pendingRuns(driver)).length > 0 };
+    return { busy: false, pending: (await pendingRuns(driver)).length > 0 || (await safety.pending(driver).catch(() => [])).length > 0 };
   } finally { await release(); }
 }

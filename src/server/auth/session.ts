@@ -11,5 +11,5 @@ export async function requireMember(workspaceId: string) {
   const session = await requireUser();
   const member = session.memberships.find((m) => m.workspaceId === workspaceId);
   if (!member) throw new Forbidden();
-  return { memberId: member.memberId, roles: member.roles };
+  return { memberId: member.memberId, roles: member.roles, kind: member.kind as 'real' | 'demo' | undefined };
 }
