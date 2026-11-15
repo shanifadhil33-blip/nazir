@@ -204,7 +204,8 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       }
       if (traceSpans) { traceRecords = traceChecks({ spans: traceSpans, replies: result.replies }); records = traceRecords as unknown as RecordCheck[]; }
     }
-    if (!data.manifest.recordsOnly) {
+    // What your agent did already proves this answer wrong, so the slower reply judge cannot change it.
+    if (!data.manifest.recordsOnly && !traceRecords.some((r) => r.status==='fail')) {
       const context: ModelContext = { workspaceId:wid,conversationId:cid,onCall:(meta) => { metas.push(meta); },reserveCall,remainingMs:() => Math.max(1,end-now()) };
       const agentId=await work(async (db) => (await db.query<{agent_id:string}>('SELECT agent_id FROM nazir.agent_versions WHERE id=$1',[data.agent_version_id])).rows[0]?.agent_id ?? null).catch(() => null);
       const knowledge=await searchKnowledgeForWorker(driver,wid,turns.join(' '),agentId,3,runtime?.id ?? 'government');
