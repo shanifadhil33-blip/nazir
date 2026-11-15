@@ -23,7 +23,7 @@ async function read(driver: TransactionDriver, memberId: string, id: string) {
 /** Suggest a fix for one wrong answer. A second tap returns the same open fix. */
 export async function suggestFix(driver: TransactionDriver, memberId: string, findingId: string) {
   const id = z.uuid().parse(findingId);
-  return submitRepair(driver, memberId, { finding_id: id, evidence: 'Suggested from the wrong answer screen.' });
+  return submitRepair(driver, memberId, { finding_id: id, evidence: 'Suggested from the wrong answer screen.' }, { requirePatch: true });
 }
 
 /**
@@ -40,6 +40,8 @@ export async function fixAction(driver: TransactionDriver, memberId: string, pro
     await decideRepair(driver, memberId, { id, decision: 'reject', reason: fixReasons.reject, evidence_opened: true });
     return { id, status: 'rejected' };
   }
+  // A sample fix without a change (older data) cannot be approved and tested.
+  if (!row.patch && !row.instruction) throw new Coded(409, 'no_fix', 'Nazir has no fix for this answer yet.');
   if (what === 'approve' && row.status === 'proposed') {
     await decideRepair(driver, memberId, { id, decision: 'approve', reason: fixReasons.approve, evidence_opened: true });
     row = (await read(driver, memberId, id))!;

@@ -41,7 +41,7 @@ async function asWorker(sql: SqlConnection) {
   return wid;
 }
 /** Supplier proposes a repair for a finding. The patch must come from the allowlist and must change the version. */
-export async function submitRepair(driver: TransactionDriver, memberId: string, value: unknown) {
+export async function submitRepair(driver: TransactionDriver, memberId: string, value: unknown, options: { requirePatch?: boolean } = {}) {
   const input = submitInput.parse(value);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'proposal.create');
@@ -65,6 +65,8 @@ export async function submitRepair(driver: TransactionDriver, memberId: string, 
     const suggestion = suggestRepair(finding, parent);
     const patch = input.patch === undefined ? suggestion.patch : repairPatch.parse(input.patch);
     if (patch) resolveRepairVersion(parent, patch);
+    // The one tap Suggest a fix only offers fixes that can be approved and tested.
+    if (!patch && options.requirePatch) throw new Coded(409, 'no_fix', 'Nazir has no fix for this answer yet.');
     if (patch && hash(patch) !== hash(suggestion.patch) && !input.cause_note) throw new RepairRefused('invalid_patch');
     const title = repairTitles[patch ? finding.root_cause_class : 'other'] ?? repairTitles.other!;
     const row = (await sql.query<{ id: string; status: string }>(`INSERT INTO nazir.proposals(workspace_id,finding_id,proposed_by_type,proposed_by,evidence,patch,expected_benefit,possible_regression,title,title_ar,root_cause_class,cause_note,suggested_by_nazir)

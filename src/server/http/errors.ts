@@ -41,6 +41,7 @@ export const errorLines = {
   proposal_state: { en: 'This fix was already decided, or it is not waiting for a decision.', ar: 'تم البت في هذا الإصلاح بالفعل، أو أنه ليس بانتظار قرار.' },
   proposal_not_approved: { en: 'Approve the fix before you rerun the tests.', ar: 'وافق على الإصلاح قبل إعادة الاختبارات.' },
   failed: { en: 'The action was not completed.', ar: 'لم يتم تنفيذ الإجراء.' },
+  no_fix: { en: 'Nazir has no fix for this answer yet.', ar: 'لا يوجد لدى نظير إصلاح لهذه الإجابة بعد.' },
   invalid_patch: { en: 'That repair is not allowed.', ar: 'هذا الإصلاح غير مسموح.' },
   repeat_budget: { en: 'The repeated tests exceed the plan call budget. Choose fewer attempts or fewer tests.', ar: 'تتجاوز الاختبارات المتكررة ميزانية مكالمات الخطة. اختر محاولات أقل أو اختبارات أقل.' },
   repeat_daily_cap: { en: 'The repeated tests exceed the remaining daily call limit. Choose fewer attempts or fewer tests.', ar: 'تتجاوز الاختبارات المتكررة حد المكالمات اليومي المتبقي. اختر محاولات أقل أو اختبارات أقل.' },
