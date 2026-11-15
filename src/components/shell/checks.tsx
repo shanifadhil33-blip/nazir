@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
@@ -46,6 +47,15 @@ export type ChecksViewProps = {
   /** Wrong answers that already have a fix, by finding. One fix per wrong answer. */
   fixFor?: Record<string, string>;
   onRetry?: () => void;
+  /** Answers (quality checks) or Safety (safety tests). */
+  tab?: 'answers' | 'safety';
+  onTab?: (tab: 'answers' | 'safety') => void;
+  /** The Safety tab body, and whether one safety test is open (phone shows it alone). */
+  safety?: ReactNode;
+  safetyOpen?: boolean;
+  /** Start asks: Check answers or Test safety. */
+  choosing?: boolean;
+  onChoose?: (what: 'answers' | 'safety' | null) => void;
 };
 
 const noteKey = { startFailed: 'startFailed', stopFailed: 'stopFailed', suggested: 'suggested', suggestFailed: 'suggestFailed' } as const;
@@ -59,7 +69,9 @@ export function ChecksView(props: ChecksViewProps) {
   const attrs = localeAttrs(lang);
   const open = checks.find((item) => item.id === openId) ?? null;
   const showCheck = open ?? (checks[0] ?? null);
-  const view = open ? 'check' : 'list';
+  const tab = props.tab ?? 'answers';
+  const view = tab === 'safety' ? (props.safetyOpen ? 'check' : 'list') : open ? 'check' : 'list';
+  const safetyText = copy.safetyScreen;
   const active = props.active ?? (running ? [running] : []);
   const canStart = access.start && (props.activeStatus ?? 'ready') === 'ready' && active.length === 0;
   return (
@@ -76,12 +88,31 @@ export function ChecksView(props: ChecksViewProps) {
           {phase !== 'ready' ? <>
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
           </> : <>
-            <div className="nz-checks-head"><Heading light={text.light} bold={text.bold} lang={lang} flow="inline" /></div>
+            <div className="nz-checks-head">
+              <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
+              {props.onTab ? <div className="nz-tabs" role="tablist" aria-label={copy.shell.checks}>
+                {(['answers', 'safety'] as const).map((id) => <button key={id} type="button" role="tab" className="nz-tab" aria-selected={tab === id} data-tab={id} onClick={() => props.onTab?.(id)}>{id === 'answers' ? safetyText.answers : safetyText.safety}</button>)}
+              </div> : null}
+            </div>
+            {props.choosing ? <section className="nz-start-choice" aria-label={safetyText.chooseTitle}>
+              <h2>{safetyText.chooseTitle}</h2>
+              <button type="button" className="nz-check-card" data-choice="answers" onClick={() => props.onChoose?.('answers')}>
+                <span className="nz-check-mark nz-check-mark-right"><ShellIcon name="checks" /></span>
+                <span className="nz-check-text"><strong>{safetyText.checkAnswers}</strong><small>{safetyText.checkAnswersNote}</small></span>
+                <span className="nz-check-go"><ShellIcon name="play" directional /></span>
+              </button>
+              <button type="button" className="nz-check-card" data-choice="safety" onClick={() => props.onChoose?.('safety')}>
+                <span className="nz-check-mark nz-check-mark-wrong"><ShellIcon name="check" /></span>
+                <span className="nz-check-text"><strong>{safetyText.testSafety}</strong><small>{safetyText.testSafetyNote}</small></span>
+                <span className="nz-check-go"><ShellIcon name="play" directional /></span>
+              </button>
+              <button type="button" className="nz-quiet-btn" onClick={() => props.onChoose?.(null)}>{copy.fixesScreen.notNow}</button>
+            </section> : null}
             {note === 'limit' ? <StateCard kind="limit" title={copy.shell.limitTitle} /> : null}
             {note === 'unreachable' ? <StateCard kind="offline" title={copy.shell.offlineTitle} action={access.start ? { label: copy.shell.retry, onClick: props.onStart } : null} /> : null}
             {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
             {note && note !== 'limit' && note !== 'unreachable' ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
-            <div className="nz-checks-body">
+            {tab === 'safety' ? props.safety : <div className="nz-checks-body">
               <div className="nz-checks-list">
                 {active.map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
                 {props.activeStatus && props.activeStatus !== 'ready' ? <PhaseCard phase={props.activeStatus} copy={copy} onRetry={props.onRetry} fallback={links.home} /> : null}
@@ -103,7 +134,7 @@ export function ChecksView(props: ChecksViewProps) {
                 {canStart && checks.length > 0 ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
               </div>
               {showCheck ? <CheckDetail lang={lang} check={showCheck} now={now} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} /> : null}
-            </div>
+            </div>}
           </>}
         </div>
       </div>

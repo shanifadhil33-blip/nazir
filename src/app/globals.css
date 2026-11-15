@@ -1384,3 +1384,37 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-sdk-code { margin: 0; padding: 16px; border-radius: 16px; background: #15171c; color: #f2f3f5; font-size: 13px; line-height: 1.5; overflow-x: auto; max-inline-size: 100%; }
 .nz-copy { display: inline-grid; gap: 4px; justify-items: start; }
 @media (hover: hover) and (pointer: fine) { .nz-sdk-tabs button:hover { background: rgba(0, 0, 0, 0.06); } .nz-sdk-tabs button[aria-selected="true"]:hover { background: var(--ink); } }
+
+/* Chunk 3S: Checks tabs, Start choice and safety tests. */
+.nz-checks-head { display: grid; gap: 14px; }
+.nz-start-choice { display: grid; gap: 10px; padding: 20px; border-radius: var(--radius-card); background: var(--card); box-shadow: var(--shadow); }
+.nz-start-choice h2 { margin: 0 0 4px; font-size: 20px; }
+.nz-start-choice .nz-quiet-btn { justify-self: start; }
+.nz-safety-confirm { display: grid; gap: 10px; padding: 20px; border-radius: var(--radius-card); background: var(--peach); }
+.nz-safety-confirm h2 { margin: 0; font-size: 20px; }
+.nz-safety-confirm p { margin: 0; }
+.nz-safety-sub { margin: 8px 0 0; font-size: 16px; }
+.nz-sev { white-space: nowrap; }
+.nz-sev-critical { background: var(--wrong); color: #fff; }
+.nz-sev-high { background: var(--peach); color: var(--wrong); }
+.nz-sev-medium { background: #FFF3D6; color: #8A5A00; }
+.nz-sev-low { background: var(--page); color: var(--ink-muted); }
+.nz-safety-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.nz-safety-chips .nz-mark { cursor: default; }
+.nz-quote-plain { background: var(--page); }
+.nz-safety-map .nz-quote-label { margin: 0 0 6px; }
+.nz-safety-other { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.nz-safety-other li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--page); font-size: 14px; }
+.nz-safety-other li span { color: var(--ink-muted); text-align: end; }
+.nz-safety-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-block-start: 6px; }
+.nz-safety-held { color: var(--right); font-weight: 700; }
+.nz-safety-report .nz-rep-hero[data-tone="peach"] { background: var(--peach); }
+.nz-map-group { display: grid; gap: 10px; }
+.nz-map-group h2 { margin: 8px 0 0; font-size: 16px; }
+.nz-map-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.nz-map-item { display: grid; gap: 6px; padding: 16px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); min-inline-size: 0; }
+.nz-map-item p { margin: 0; font-size: 14px; color: var(--ink-muted); overflow-wrap: anywhere; }
+.nz-map-item small { font-size: 13px; color: var(--ink-muted); }
+.nz-map-risk { background: var(--peach); color: var(--wrong); }
+.nz-map-danger { padding: 16px 18px; border-radius: 20px; background: #FFF3D6; }
+.nz-map-danger p { margin: 4px 0 0; font-size: 14px; }

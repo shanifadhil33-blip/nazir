@@ -54,7 +54,7 @@ export function SettingsViewScreen(props: SettingsViewProps) {
     <ScreenFrame lang={lang} seat={seat} phase={phase} name="settings" assistant={view.assistant} person={props.person} links={links} canStart={props.canStart} history={props.history} onRetry={props.onRetry}>
       <Heading light={text.light} bold={text.bold} lang={lang} />
       <Card icon="robot" tone="sky" title={text.assistant} sub={view.assistant}>
-        {view.demo ? <p>{copy.connect.demoNote}</p> : <><p>{view.connected ? copy.agentStatus.repliesOnly : copy.agentStatus.none}</p><div className="nz-agent-actions"><PillButton label={copy.agentStatus.change} href={connectHref(links.home, 'quick', lang)} /><PillButton label={copy.agentStatus.addSdk} href={connectHref(links.home, 'full', lang)} /></div></>}
+        {view.demo ? <><p>{copy.connect.demoNote}</p><div className="nz-agent-actions"><PillButton label={copy.mapScreen.open} href={`${links.home}?screen=map&lang=${lang}`} /></div></> : <><p>{view.connected ? copy.agentStatus.repliesOnly : copy.agentStatus.none}</p><div className="nz-agent-actions"><PillButton label={copy.agentStatus.change} href={connectHref(links.home, 'quick', lang)} /><PillButton label={copy.agentStatus.addSdk} href={connectHref(links.home, 'full', lang)} />{view.connected ? <PillButton label={copy.mapScreen.open} href={`${links.home}?screen=map&lang=${lang}`} /> : null}</div></>}
       </Card>
       <Card icon="chat" tone="mint" title={text.topic} sub={topicLabel(view.topic, copy)} href={to} />
       <Card icon="globe" tone="peach" title={text.language} sub={view.language === 'ar' ? text.arabic : text.english} href={to} />
