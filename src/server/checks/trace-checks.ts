@@ -62,3 +62,8 @@ export function traceChecks(input: { spans: TraceSpan[]; replies: string[] }): T
   checks.push(make('reply_mismatch', mismatched.length > 0, 'the logged reply matches the reply received', mismatched.length ? `${mismatched.length} turns differ` : 'same', 'medium'));
   return checks;
 }
+
+/** With the SDK, whether a filing really happened is read from what the agent did, not guessed from the reply. */
+export function claimJudgedByTrace(semantic: { status: string; issue?: string } | null | undefined) {
+  return semantic?.status === 'contradicted' && semantic.issue === 'false_claim';
+}

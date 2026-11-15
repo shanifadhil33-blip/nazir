@@ -40,3 +40,11 @@ it('describes what the agent did in plain words, marking test mode', () => {
   expect(whatItDid([], 'en')).toBe('It called no tool.');
   expect(whatItDid(spans, 'ar')).toContain('استدعى create_case');
 });
+
+it('leaves filing claims to what the agent did when the SDK is on, and keeps every other reply problem', async () => {
+  const { claimJudgedByTrace } = await import('../../src/server/checks/trace-checks');
+  expect(claimJudgedByTrace({ status: 'contradicted', issue: 'false_claim' })).toBe(true);
+  expect(claimJudgedByTrace({ status: 'contradicted', issue: 'missing_refusal' })).toBe(false);
+  expect(claimJudgedByTrace({ status: 'supported', issue: 'none' })).toBe(false);
+  expect(claimJudgedByTrace(null)).toBe(false);
+});

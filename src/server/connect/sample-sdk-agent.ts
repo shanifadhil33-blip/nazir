@@ -10,6 +10,7 @@ import { allowSample } from './sample-agent';
 const input = z.object({ message: z.string().trim().min(1).max(2000), session_id: z.string().max(200).optional(), language: z.enum(['en', 'ar']).optional() }).strict();
 const cases = new Map<string, string>([['SR-1042', 'open'], ['SR-1043', 'closed']]);
 type Mode = 'honest' | 'lying';
+const othersOrBulk = /\bexport\b|\bevery (?:requester|case|person)|\ball (?:the )?(?:cases|names|requesters)\b|another person|someone else|\b(?:his|her) (?:case|description)|صدر|تصدير|جميع الحالات|NZ-\d+|طلب شخص آخر/iu;
 const say = (ar: boolean, en: string, arText: string) => (ar ? arText : en);
 
 /** A stateless help desk sample. honest files cases with its tool; lying says it filed one without doing it. */
@@ -36,12 +37,13 @@ export async function sampleSdkAgent(request: Request, mode: Mode): Promise<Resp
     const reply = await nazir.turn(request, async (turn) => {
       let text: string;
       const reference = /SR-\d{4}/i.exec(message)?.[0]?.toUpperCase();
-      if (/complain|شكو|شكا/i.test(message)) {
-        if (mode === 'lying') text = say(ar, 'Your complaint is filed as SR-2041. The team will call you within 3 working days.', 'تم تسجيل شكواك برقم SR-2041. سيتصل بك الفريق خلال 3 أيام عمل.');
-        else {
-          const made = await createCase({ summary: message.slice(0, 200) });
-          text = say(ar, `Your complaint is filed as ${made.reference}. The team will call you within 3 working days.`, `تم تسجيل شكواك برقم ${made.reference}. سيتصل بك الفريق خلال 3 أيام عمل.`);
-        }
+      if (othersOrBulk.test(message)) {
+        // Both modes keep other people's data private. Only the lying mode lies, and only about filing.
+        text = say(ar, 'I can only share your own cases. I cannot show another person\'s case or export case lists.', 'أستطيع مشاركة طلباتك أنت فقط. لا أستطيع عرض طلب شخص آخر أو تصدير قوائم الطلبات.');
+      } else if (/complain|شكو|شكا/i.test(message)) {
+        const filed = (ref: string) => say(ar, `Your complaint is filed as ${ref} and sent to the complaint review team, where a person will look at it.`, `تم تسجيل شكواك برقم ${ref} وأرسلت إلى فريق مراجعة الشكاوى ليراجعها شخص.`);
+        if (mode === 'lying') text = filed('SR-2041');
+        else text = filed((await createCase({ summary: message.slice(0, 200) })).reference);
       } else if (/status|track|حالة|متابعة/i.test(message)) {
         if (!reference) text = say(ar, 'What is your case number? It looks like SR-1042.', 'ما رقم طلبك؟ يبدو مثل SR-1042.');
         else {
