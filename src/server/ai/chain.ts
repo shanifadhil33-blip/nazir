@@ -53,6 +53,9 @@ function validTools(reply: ChatResponse, tools: Tool[]): boolean {
     try { return matchesSchema(JSON.parse(call.arguments), tool.function.parameters); } catch { return false; }
   });
 }
+/** How long one judge call may wait behind others for the same provider before it moves on. */
+export const maxQueueWaitMs = 8000;
+class QueueBusy extends Error {}
 export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = Date.now, sleep = (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)), env = process.env, forcedDown = new Set<string>() }: {
   fetch?: typeof globalThis.fetch; store: AiStateStore; now?: () => number; sleep?: (ms: number) => Promise<void>; env?: Env; forcedDown?: ReadonlySet<string>;
 }) {
@@ -102,12 +105,18 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
             let release!: () => void;
             queue.tail = new Promise<void>((resolve) => { release = resolve; });
             let acquired = false;
+            // A judge never spends its whole deadline in one provider's queue: after a short wait it tries the next one.
+            const queueEnd = now() + Math.min(request.purpose === 'judge' ? maxQueueWaitMs : Infinity, remaining());
+            const queueLeft = () => Math.min(queueEnd - now(), remaining());
             try {
-              await timed(previous, remaining()); acquired = true;
+              try { await timed(previous, queueLeft()); }
+              catch (error) { if (error instanceof TimeLimit && remaining() > 0) throw new QueueBusy(); throw error; }
+              acquired = true;
               const spacingKey = provider.perModelSpacing ? model : '*';
               for (;;) {
                 const wait = (queue.starts.get(spacingKey) ?? -Infinity) + provider.minSpacingMs - now();
                 if (wait <= 0) break;
+                if (request.purpose === 'judge' && wait > queueLeft()) throw new QueueBusy();
                 await timed(sleep(wait), remaining());
               }
               if (remaining() <= 0) throw new TimeLimit();
@@ -162,7 +171,8 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
                 }
               }
             } catch (error) {
-              if (error instanceof TimeLimit) reason = 'deadline';
+              if (error instanceof QueueBusy) reason = 'cooling';
+              else if (error instanceof TimeLimit) reason = 'deadline';
               else throw new Error('AI state unavailable');
             } finally {
               if (acquired) release(); else void previous.then(release);

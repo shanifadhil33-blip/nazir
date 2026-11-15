@@ -34,8 +34,10 @@ it('stops after exactly two full passes and retains both sets of attempts',async
   const s=setup(Infinity);
   const result=await s.run();
   expect(result.status).toBe('unavailable');
-  expect(s.fetch).toHaveBeenCalledTimes(4);
+  // The second pass would wait 30 s for OVH's spacing, so it moves on instead of spending the deadline in that queue.
+  expect(s.fetch).toHaveBeenCalledTimes(3);
   expect(result.attempts.filter(a=>a.provider==='gemini')).toHaveLength(2);
+  expect(result.attempts.filter(a=>a.provider==='ovh').map(a=>a.reason).at(-1)).toBe('cooling');
 });
 it.each([29999,30000,44999,45000])('uses provider judge timeouts to gate retry with %i ms remaining',async remaining=> {
   // Gemini is excluded. Requesty needs 45 s for a judge, not its 12 s agent timeout.

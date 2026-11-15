@@ -44,7 +44,9 @@ it.each([402,401,403])('drops the whole provider for 24 hours on %s', async (sta
   await s.chain.chat(input);
   expect(await s.store.activeCooldowns()).toMatchObject([{ provider: 'kilo', model: '*', until: s.now() + 86400000 }]);
   const judge = await s.chain.chat({ ...input, purpose: 'judge', agentFamily: 'google_gemini' });
-  expect(judge.meta.attempts[0]).toMatchObject({ provider:'requesty', reason:'ok' });
+  // Kilo stays dropped. Requesty may still be spacing out after the agent call, so the judge moves on instead of waiting.
+  expect(judge.meta.attempts.some((a) => a.provider === 'kilo')).toBe(false);
+  expect(judge.meta.attempts.at(-1)).toMatchObject({ reason:'ok' });
   s.advance(86400001); expect((await s.chain.chat(input)).meta.provider).toBe('kilo');
 });
 it.each([
@@ -175,6 +177,17 @@ it('shares model cooldowns with other chain instances using the same process clo
   await s.chain.chat(input);
   const other = createAiChain({ fetch:s.fetch,store:s.store,now:s.now,sleep:s.sleep,env });
   expect((await other.chat(input)).meta.attempts[0]!.reason).toBe('cooling');
+});
+it('moves a judge to the next provider instead of waiting long behind provider spacing', async () => {
+  vi.useFakeTimers(); const now = () => Date.now(); const store = memoryAiStore(now);
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => ok());
+  const chain = createAiChain({ fetch,store,env:{...env,AI_MODELS_KILO:'',GEMINI_API_KEY:''},now }); // Requesty first: it spaces starts by 12 s.
+  const first = await chain.chat({ ...input,purpose:'judge',agentFamily:'unknown',externalAgent:true });
+  const second = chain.chat({ ...input,purpose:'judge',agentFamily:'unknown',externalAgent:true });
+  await vi.advanceTimersByTimeAsync(1000);
+  const result = await second;
+  expect(result.meta.provider).not.toBe(first.meta.provider);
+  expect(result.meta.attempts.find((a) => a.provider === first.meta.provider)).toMatchObject({ reason:'cooling',outcome:'skipped' });
 });
 it('expires the total budget while waiting for provider spacing without a network attempt', async () => {
   vi.useFakeTimers(); const now = () => Date.now(); const store = memoryAiStore(now);
