@@ -4,6 +4,8 @@ import { Coded } from '@/server/http/errors';
 import { memberRoute, requestLanguage } from '@/server/http/route';
 
 export const dynamic = 'force-dynamic';
+// The starter watches its check for almost five minutes after replying (superviseStart).
+export const maxDuration = 300;
 /** Approve and test, I changed my agent and test again, Not now, or Test again. */
 export async function POST(request: Request, context: { params: Promise<{ workspaceId: string; proposalId: string }> }) {
   const { workspaceId, proposalId } = await context.params;

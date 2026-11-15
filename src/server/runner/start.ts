@@ -33,16 +33,23 @@ export async function startCheck(driver: TransactionDriver, memberId: string): P
   return { run_id: runId, existing: false };
 }
 
-/** A Start watches its own check for a minute. If the runner has not begun it, it asks again, so a lost wake up cannot strand it. */
-export function superviseStart(driver: TransactionDriver, memberId: string, runId: string, delays = [8_000, 20_000, 40_000], sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))) {
+/**
+ * Whoever starts a check watches it for almost five minutes. If it has not begun, or nothing moved for 45 s while an
+ * answer is ready to run, it asks the runner again. A lost wake up or a stopped tick chain cannot strand the check.
+ */
+export function superviseStart(driver: TransactionDriver, memberId: string, runId: string, delays = [8_000, 20_000, 40_000, 70_000, 100_000, 130_000, 160_000, 190_000, 220_000, 250_000, 280_000], sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))) {
   try {
     after(async () => {
       let waited = 0;
       for (const at of delays) {
         await sleep(at - waited); waited = at;
-        const row = await withMember(driver, memberId, async (sql) => (await sql.query<{ status: string; started_at: string | null }>('SELECT status,started_at FROM nazir.runs WHERE id=$1', [runId])).rows[0]).catch(() => null);
-        if (!row || row.status !== 'queued' || row.started_at) return;
-        scheduleRunner();
+        const row = await withMember(driver, memberId, async (sql) => (await sql.query<{ status: string; started_at: string | null; quiet: boolean; ready: boolean }>(
+          `SELECT r.status,r.started_at,
+             coalesce((SELECT max(greatest(c.finished_at,c.heartbeat_at,c.started_at)) FROM nazir.conversations c WHERE c.run_id=r.id),r.created_at) < clock_timestamp()-interval '45 seconds' AS quiet,
+             EXISTS(SELECT FROM nazir.conversations c WHERE c.run_id=r.id AND c.status='queued' AND c.available_at<=clock_timestamp()) AS ready
+           FROM nazir.runs r WHERE r.id=$1`, [runId])).rows[0]).catch(() => null);
+        if (!row || !['queued', 'running'].includes(row.status)) return;
+        if (!row.started_at || (row.quiet && row.ready)) scheduleRunner();
       }
     });
   } catch { /* Outside a request (tests, scripts) there is nothing to supervise. */ }

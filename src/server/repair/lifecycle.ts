@@ -4,7 +4,7 @@ import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { Coded, NotFound } from '../http/errors';
 import { decideRepair, startRetest, submitRepair } from './proposals';
-import { startCheck } from '../runner/start';
+import { startCheck, superviseStart } from '../runner/start';
 
 /** The plain reasons saved with a one tap decision. The person can read them in History. */
 export const fixReasons = {
@@ -52,6 +52,7 @@ export async function fixAction(driver: TransactionDriver, memberId: string, pro
     // The approved sample fix runs its own questions again on the repaired version.
     const runs = await startRetest(driver, memberId, { proposalId: id, sets: ['retest'], repeat_count: 1 });
     runId = runs.retest!;
+    superviseStart(driver, memberId, runId);
   } else {
     // Your own agent: a new check against your agent, after you changed its instructions.
     const started = await startCheck(driver, memberId);

@@ -1,3 +1,5 @@
+// The starter watches its check for almost five minutes after replying (superviseStart).
+export const maxDuration = 300;
 import { runtimeDriver } from '@/server/db/runtime';
 import { memberRoute, requestLanguage } from '@/server/http/route';
 import { activeRuns } from '@/server/runner/runs';
