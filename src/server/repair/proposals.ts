@@ -52,7 +52,9 @@ export async function submitRepair(driver: TransactionDriver, memberId: string, 
     const open = (await sql.query<{ id: string; status: string; title: string; title_ar: string }>("SELECT id,status,title,title_ar FROM nazir.proposals WHERE finding_id=$1 AND status='proposed' LIMIT 1", [finding.id])).rows[0];
     if (open) return { id: open.id, status: open.status, patch: null, note: null, title: { en: open.title, ar: open.title_ar }, existing: true as const };
     const registry = (await sql.query<{ registry_id: string | null }>("SELECT config->>'registry_id' AS registry_id FROM nazir.agent_versions WHERE id=$1", [finding.agent_version_id])).rows[0]?.registry_id;
-    if (!registry) {
+    // A check against your connected agent runs on a library version too, so the frozen check says whose agent it was.
+    const external = (await sql.query<{ external: boolean }>("SELECT (frozen_manifest ? 'externalAgent') AS external FROM nazir.runs WHERE id=$1", [finding.run_id])).rows[0]?.external === true;
+    if (!registry || external) {
       // Your own agent: Nazir cannot change it, so the fix is a plain instruction change you copy into it.
       const instruction = ownAgentInstruction(finding);
       const row = (await sql.query<{ id: string; status: string }>(`INSERT INTO nazir.proposals(workspace_id,finding_id,proposed_by_type,proposed_by,evidence,patch,instruction,expected_benefit,possible_regression,title,title_ar,root_cause_class,suggested_by_nazir)
