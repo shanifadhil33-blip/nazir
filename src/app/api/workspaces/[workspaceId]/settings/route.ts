@@ -3,11 +3,13 @@ import { Coded } from '@/server/http/errors';
 import { memberRoute, requestLanguage } from '@/server/http/route';
 import { readAgentSettings, saveAgentSettings } from '@/server/settings/agent-settings';
 import { installPack } from '@/server/packs/install';
+import { readMyLanguage } from '@/server/settings/language';
 import { runtimeForPack } from '@/server/packs/runtime';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request, context: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await context.params;
-  return memberRoute(workspaceId, (memberId) => readAgentSettings(runtimeDriver(), memberId), 200, requestLanguage(request));
+  // my_language: the language this person chose, read before the workspace language.
+  return memberRoute(workspaceId, async (memberId) => ({ ...(await readAgentSettings(runtimeDriver(), memberId)), my_language: await readMyLanguage(runtimeDriver(), memberId).catch(() => null) }), 200, requestLanguage(request));
 }
 export async function PUT(request: Request, context: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await context.params;

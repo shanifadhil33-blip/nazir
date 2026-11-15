@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
@@ -23,56 +23,61 @@ export type SettingsViewProps = {
   canStart: boolean;
   person?: { initials: string; name: string };
   links: HomeLinks;
-  peopleOpen: boolean;
   reset: ResetState;
-  onPeople?: () => void;
+  /** The language being saved, and whether the last save failed. */
+  languageBusy?: Lang | null;
+  languageFailed?: boolean;
+  onLanguage?: (lang: Lang) => void;
   onAsk?: () => void;
   onCancel?: () => void;
   onConfirm?: () => void;
   onRetry?: () => void;
+  /** Sign out goes through a server action form; tests render the button only. */
+  signOut?: (formData: FormData) => void | Promise<void>;
 };
 
-function Card({ icon, tone, title, sub, href, children }: { icon: ShellIconName; tone: string; title: string; sub?: ReactNode; href?: string; children?: ReactNode }) {
+function Card({ icon, tone, title, sub, children }: { icon: ShellIconName; tone: string; title: string; sub?: ReactNode; children?: ReactNode }) {
   const body = <>
     <span className={`nz-set-ico nz-set-ico-${tone}`} aria-hidden="true"><ShellIcon name={icon} /></span>
     <span className="nz-set-text"><strong>{title}</strong>{sub ? <small dir="auto">{sub}</small> : null}</span>
-    {href ? <span className="nz-set-go" aria-hidden="true"><ShellIcon name="chevron" /></span> : null}
   </>;
-  return href
-    ? <Link href={href} className="nz-set-card nz-set-link" data-card={title}>{body}</Link>
-    : children ? <section className="nz-set-card nz-set-with-content" data-card={title}><div className="nz-set-card-summary">{body}</div><div className="nz-set-card-content">{children}</div></section> : <section className="nz-set-card nz-set-flat" data-card={title}>{body}</section>;
+  return children ? <section className="nz-set-card nz-set-with-content" data-card={title}><div className="nz-set-card-summary">{body}</div><div className="nz-set-card-content">{children}</div></section> : <section className="nz-set-card nz-set-flat" data-card={title}>{body}</section>;
 }
 
-/** Your settings. A viewer sees the same cards without chevrons. Plain props in, markup out. */
+/** Your settings: your agent, your language, its topic, and your account. Everything stays in this frame. */
 export function SettingsViewScreen(props: SettingsViewProps) {
   const { lang, seat, phase, view, access, links } = props;
   const copy = messagesFor(lang);
   const text = copy.settingsScreen;
-  const edit = access.edit;
-  const to = edit ? links.editor : undefined;
+  const status = copy.agentStatus;
+  const map = `${links.home}?screen=map&lang=${lang}`;
   return (
     <ScreenFrame lang={lang} seat={seat} phase={phase} name="settings" assistant={view.assistant} person={props.person} links={links} canStart={props.canStart} history={props.history} onRetry={props.onRetry}>
       <Heading light={text.light} bold={text.bold} lang={lang} />
-      <Card icon="robot" tone="sky" title={text.assistant} sub={view.assistant}>
-        {view.demo ? <><p>{copy.connect.demoNote}</p><div className="nz-agent-actions"><PillButton label={copy.mapScreen.open} href={`${links.home}?screen=map&lang=${lang}`} /></div></> : <><p>{view.connected ? copy.agentStatus.repliesOnly : copy.agentStatus.none}</p><div className="nz-agent-actions"><PillButton label={copy.agentStatus.change} href={connectHref(links.home, 'quick', lang)} /><PillButton label={copy.agentStatus.addSdk} href={connectHref(links.home, 'full', lang)} />{view.connected ? <PillButton label={copy.mapScreen.open} href={`${links.home}?screen=map&lang=${lang}`} /> : null}</div></>}
+      <p className="nz-check-sub">{text.line}</p>
+      <Card icon="robot" tone="sky" title={text.assistant} sub={view.demo ? status.sampleName : view.connected ? view.agentName ?? view.assistant : status.none}>
+        {view.demo ? <><p>{copy.connect.demoNote}</p><div className="nz-agent-actions"><PillButton label={copy.mapScreen.open} href={map} /></div></> : <>
+          {view.connected ? <p data-kind={view.kind}>{view.kind === 'sdk' ? status.fullCheck : status.repliesOnly}{view.host ? <><br /><span className="nz-set-host">{text.address}: <bdi dir="ltr">{view.host}</bdi></span></> : null}</p> : null}
+          {access.edit ? <div className="nz-agent-actions">
+            <PillButton label={status.change} href={connectHref(links.home, 'quick', lang)} />
+            {view.kind !== 'sdk' ? <PillButton label={status.addSdk} href={connectHref(links.home, 'full', lang)} /> : null}
+            {view.connected ? <PillButton label={copy.mapScreen.open} href={map} /> : null}
+          </div> : null}
+        </>}
       </Card>
-      <Card icon="chat" tone="mint" title={text.topic} sub={topicLabel(view.topic, copy)} href={to} />
-      <Card icon="globe" tone="peach" title={text.language} sub={view.language === 'ar' ? text.arabic : text.english} href={to} />
-      <section className="nz-set-card nz-set-people" data-card="people" data-open={props.peopleOpen}>
-        <button type="button" className="nz-set-head" aria-expanded={props.peopleOpen} aria-label={`${text.people}. ${props.peopleOpen ? text.hidePeople : text.showPeople}`} onClick={props.onPeople}>
-          <span className="nz-set-ico nz-set-ico-lilac" aria-hidden="true"><ShellIcon name="people" /></span>
-          <span className="nz-set-text"><strong>{text.people}</strong></span>
-          <span className="nz-set-go" aria-hidden="true" data-open={props.peopleOpen}><ShellIcon name="chevron" /></span>
-        </button>
-        {props.peopleOpen ? <ul className="nz-set-list">
-          {view.people.map((person) => (
-            <li key={`${person.initials}-${person.name}`} className="nz-set-person">
-              <span className="nz-set-ini" aria-hidden="true">{person.initials}</span>
-              <span className="nz-set-name">{person.name}</span>
-            </li>
-          ))}
-        </ul> : null}
+      <section className="nz-set-card nz-set-with-content" data-card="language">
+        <div className="nz-set-card-summary">
+          <span className="nz-set-ico nz-set-ico-peach" aria-hidden="true"><ShellIcon name="globe" /></span>
+          <span className="nz-set-text"><strong>{text.language}</strong><small>{text.languageNote}</small></span>
+        </div>
+        <div className="nz-set-card-content">
+          <div className="nz-tabs nz-set-lang" role="group" aria-label={text.language}>
+            {(['en', 'ar'] as const).map((id) => <button key={id} type="button" className="nz-tab" data-lang={id} lang={id} aria-pressed={view.language === id} disabled={Boolean(props.languageBusy)} onClick={() => { if (view.language !== id) props.onLanguage?.(id); }}>{id === 'en' ? 'English' : 'العربية'}</button>)}
+          </div>
+          {props.languageFailed ? <p className="nz-note-line" role="alert">{text.languageFailed}</p> : null}
+        </div>
       </section>
+      <Card icon="chat" tone="mint" title={text.topic} sub={topicLabel(view.topic, copy)} />
       {access.reset ? (
         <section className="nz-set-card nz-set-reset" data-card="reset" data-reset={props.reset}>
           {props.reset === 'ask' || props.reset === 'busy' ? <>
@@ -83,14 +88,27 @@ export function SettingsViewScreen(props: SettingsViewProps) {
             </div>
           </> : <button type="button" className="nz-set-head" onClick={props.onAsk}>
             <span className="nz-set-ico nz-set-ico-red" aria-hidden="true"><ShellIcon name="refresh" /></span>
-            <span className="nz-set-text"><strong className="nz-set-red">{text.startAgain}</strong></span>
+            <span className="nz-set-text"><strong className="nz-set-red">{text.resetDemo}</strong><small>{text.resetLine}</small></span>
             <span className="nz-set-go" aria-hidden="true"><ShellIcon name="chevron" /></span>
           </button>}
           {props.reset === 'done' ? <p className="nz-note-line" role="status">{text.done}</p> : null}
           {props.reset === 'failed' ? <p className="nz-note-line" role="alert">{text.failed}</p> : null}
         </section>
       ) : null}
-      {!edit ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
+      <form action={props.signOut} className="nz-set-card nz-set-signout" data-card="signout">
+        <SignOutButton label={text.signOut} busy={text.signingOut} />
+      </form>
+      {!access.edit ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
     </ScreenFrame>
+  );
+}
+
+function SignOutButton({ label, busy }: { label: string; busy: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="nz-set-head" disabled={pending}>
+      <span className="nz-set-ico nz-set-ico-lilac" aria-hidden="true"><ShellIcon name="people" /></span>
+      <span className="nz-set-text"><strong>{pending ? busy : label}</strong></span>
+    </button>
   );
 }

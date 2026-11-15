@@ -14,10 +14,14 @@ export type SettingsView = {
   assistant: string;
   demo?: boolean;
   connected?: boolean;
+  /** Your connection: its name, how Nazir sees it, and its host. */
+  agentName?: string;
+  kind?: 'api' | 'sdk';
+  host?: string;
   /** Focus pack id. */
   topic: string;
   language: Lang;
-  people: PersonRow[];
+  people?: PersonRow[];
 };
 
 export function topicLabel(topic: string, copy: Messages): string {
