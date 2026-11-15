@@ -2,7 +2,10 @@ import 'server-only';
 import type { TransactionDriver } from '../db/driver';
 import { Coded } from '../http/errors';
 import { runAgentTool } from '../agent/loop';
+import { after } from 'next/server';
+import { withMember } from '../db/context';
 import { activeRuns } from './runs';
+import { scheduleRunner } from './schedule';
 
 const uuid = /^[0-9a-f-]{36}$/i;
 function idOf(data: unknown, key: 'id' | 'run_id') {
@@ -26,5 +29,21 @@ export async function startCheck(driver: TransactionDriver, memberId: string): P
   const started = await runAgentTool(driver, memberId, 'start_run', {}, { message: approval });
   const runId = started.done ? idOf(started.data, 'run_id') : null;
   if (!runId) refusal(started.data);
+  superviseStart(driver, memberId, runId);
   return { run_id: runId, existing: false };
+}
+
+/** A Start watches its own check for a minute. If the runner has not begun it, it asks again, so a lost wake up cannot strand it. */
+export function superviseStart(driver: TransactionDriver, memberId: string, runId: string, delays = [8_000, 20_000, 40_000], sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))) {
+  try {
+    after(async () => {
+      let waited = 0;
+      for (const at of delays) {
+        await sleep(at - waited); waited = at;
+        const row = await withMember(driver, memberId, async (sql) => (await sql.query<{ status: string; started_at: string | null }>('SELECT status,started_at FROM nazir.runs WHERE id=$1', [runId])).rows[0]).catch(() => null);
+        if (!row || row.status !== 'queued' || row.started_at) return;
+        scheduleRunner();
+      }
+    });
+  } catch { /* Outside a request (tests, scripts) there is nothing to supervise. */ }
 }

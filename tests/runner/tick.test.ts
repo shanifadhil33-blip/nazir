@@ -5,8 +5,9 @@ vi.mock('next/server', () => ({ after: (fn: () => Promise<void>) => { hooks.afte
 vi.mock('../../src/server/db/runtime', () => ({ runtimeDriver: () => hooks.driver, inspectionRuntimeDriver: () => hooks.driver, runnerLock: () => hooks.lock!() }));
 vi.mock('../../src/server/runner/tick', async (original) => {
   const real = await original<typeof import('../../src/server/runner/tick')>();
-  return { ...real, tick: (input: Parameters<typeof real.tick>[0]) => real.tick({ ...input, ...(input.run ? {} : { run: hooks.run! }) }) };
+  return { ...real, tick: (input: Parameters<typeof real.tick>[0]) => real.tick({ ...input, ...(input.run ? {} : { run: hooks.run!, wait: async () => {} }) }) };
 });
+import { scheduleRunner } from '../../src/server/runner/schedule';
 import { POST } from '../../src/app/api/runner/tick/route';
 import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { createLibraryFixture } from '../../src/server/runner/library-fixture';
@@ -232,11 +233,13 @@ it('Stop then Start survives an older lock holder through the authenticated serv
   const fetcher = vi.fn(async () => POST(request()));
   vi.stubGlobal('fetch', fetcher);
   expect((await POST(request())).status).toBe(202);
-  await hooks.after.shift()!(); // Start's tick is busy and must leave another callback.
-  expect(hooks.after).toHaveLength(1);
+  await hooks.after.shift()!(); // Start's tick is busy. The lock holder owns the follow up, so no busy chain.
+  expect(hooks.after).toHaveLength(0);
   expect(await reportsFor(next.id)).toHaveLength(0);
-  release(); await previous;
-  await hooks.after.shift()!(); // The delayed authenticated fetch schedules work after its response.
+  release();
+  expect(await previous).toMatchObject({ pending: true }); // The route chains on pending, as below.
+  scheduleRunner();
+  await hooks.after.shift()!(); // The authenticated fetch schedules work after its response.
   expect(fetcher).toHaveBeenCalledTimes(1);
   await hooks.after.shift()!();
   expect(await reportsFor(next.id)).toHaveLength(1);

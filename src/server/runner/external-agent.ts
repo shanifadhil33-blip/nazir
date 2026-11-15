@@ -37,18 +37,18 @@ export async function externalConversation(row: ExternalRow, turns: string[], se
 export function externalReplyFinding(input: {
   workspaceId: string; runId: string; conversationId: string; scenarioId: string; attempt: number;
   language: string; agentVersionId: string; rulePackVersionId: string; sourceClause: string; severity: string;
-  reply: string; semantic: import('../judge/judge').SemanticResult;
+  reply: string; semantic: import('../judge/judge').SemanticResult; spans?: import('../checks/trace-checks').TraceSpan[] | null;
 }) {
   const s = input.semantic;
   return {
     workspace_id: input.workspaceId, run_id: input.runId, conversation_id: input.conversationId, scenario_id: input.scenarioId,
     check_id: 'semantic', attempt: input.attempt, language: input.language, check_layer: 'semantic',
     title: s.labels.en, title_ar: s.labels.ar, agent_said: s.span || input.reply,
-    really_happened: en.connect.replyScope,
-    really_happened_ar: ar.connect.replyScope,
+    really_happened: input.spans ? whatItDid(input.spans, 'en') : en.connect.replyScope,
+    really_happened_ar: input.spans ? whatItDid(input.spans, 'ar') : ar.connect.replyScope,
     rule_pack_version_id: input.rulePackVersionId, rule_clause: input.sourceClause, agent_version_id: input.agentVersionId,
     severity: input.severity, root_cause_class: 'unknown', owner_role: 'quality_reviewer',
-    evidence: { source: 'external_agent', records_available: false, expected: 'chosen service rubric and owner knowledge', observed: { status: s.status, issue: s.issue, reason: s.reason },
+    evidence: { source: input.spans ? 'sdk_trace' : 'external_agent', records_available: Boolean(input.spans), expected: 'chosen service rubric and owner knowledge', observed: { status: s.status, issue: s.issue, reason: s.reason },
       judge: { provider: s.provider, model: s.model, promptHash: s.promptHash, rubricVersion: s.rubricVersion } },
   };
 }

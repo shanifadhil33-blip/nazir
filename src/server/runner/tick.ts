@@ -24,18 +24,27 @@ type TickDeps = {
   /** Injectable wait keeps retry backoff and expired leases alive after the tab closes. */
   wait?: (ms: number) => Promise<void>;
   budgetMs?: number;
+  idleWatchMs?: number;
 };
 
 /** Oldest first, four independent claims per batch. Only trusted starters enter this loop. */
-export async function tick({ driver, inspectionDriver, lock, run = runNextConversation, now = Date.now, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), budgetMs = tickBudgetMs }: TickDeps) {
+export async function tick({ driver, inspectionDriver, lock, run = runNextConversation, now = Date.now, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), budgetMs = tickBudgetMs, idleWatchMs = 0 }: TickDeps) {
   const release = await lock();
   if (!release) return { busy: true, pending: false };
   const deadline = now() + budgetMs;
   let parallel = stepParallel;
+  let idleSince: number | null = null; // idle rounds of 2 s
   try {
     while (deadline - now() >= minConversationMs) {
       const pending = await pendingRuns(driver);
-      if (!pending.length) return { busy: false, pending: false };
+      if (!pending.length) {
+        // Keep watching briefly: a Start that lands while this tick finishes is picked up here, not lost.
+        idleSince = (idleSince ?? 0) + 1;
+        if ((idleSince - 1) * 2000 >= idleWatchMs) return { busy: false, pending: false };
+        await wait(2000);
+        continue;
+      }
+      idleSince = null;
       let advanced = false;
       for (const item of pending) {
         if (deadline - now() < minConversationMs) break;
