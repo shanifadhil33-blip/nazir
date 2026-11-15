@@ -3,7 +3,7 @@ import 'server-only';
 import { Coded } from '../http/errors';
 import { externalAgentForWorker, type ExternalTransport } from '../settings/external-agent';
 import { externalConversation, externalRecordChecks, externalReplyFinding, externalTraceFinding } from './external-agent';
-import { traceChecks, type TraceCheck, type TraceSpan } from '../checks/trace-checks';
+import { claimJudgedByTrace, traceChecks, whatItDid, type TraceCheck, type TraceSpan } from '../checks/trace-checks';
 import { personaFacts } from '../driver/driver';
 import governmentPack from '../packs/government/pack.json';
 import { clauseText } from '../judge/rubric';
@@ -210,14 +210,15 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
       const knowledge=await searchKnowledgeForWorker(driver,wid,turns.join(' '),agentId,3,runtime?.id ?? 'government');
       const input=buildPackJudgeInput({ pack:runtime?.pack ?? governmentPack,policyRules:runtime?.policyRules,clause:runtime && c ? runtime.clause(c.source_clause) : clauseText(data.scenario.source_clause),
         scenario:c ?? { language:data.scenario.language,resident_turns:turns,expected:{ ...(typeof data.scenario.expected_state === 'object' && data.scenario.expected_state ? data.scenario.expected_state : {}),outcome:String(data.scenario.canonical?.outcome ?? 'Follow the service rules') } },
-        reply,facts:{ recordsAvailable:false,note:'External agent has no records link. Assess the reply against the rubric and knowledge. Record claims cannot be verified.' },notes:judgeNotes(data.manifest.lessons,c?.family ?? String(data.scenario.family)),knowledge });
+        reply,facts:traceSpans ? { recordsAvailable:true,whatTheAgentDid:whatItDid(traceSpans,'en'),note:'The Nazir SDK reported what the agent really did in this test. Treat that list as true. A reference or filing backed by an action in the list is supported, and a test reference is fine.' } : { recordsAvailable:false,note:'External agent has no records link. Assess the reply against the rubric and knowledge. Record claims cannot be verified.' },notes:judgeNotes(data.manifest.lessons,c?.family ?? String(data.scenario.family)),knowledge });
       input.externalAgent=true;
       const seed=`${cid}:${attempt}`;
       try { semantic=await bounded((judgeFactory ? judgeFactory(context) : networkJudge(driver,context))({ input,agentFamilies:['unknown'],seed })); }
       catch { semantic=unavailable(input,seed); }
       if(reason==='budget_reached') reason=undefined;
     }
-    verdict=traceSpans ? { ...combineVerdicts(records,semantic),results:{ records,semantic } }
+    // With the SDK, what the agent did decides filing claims. The reply judge still checks everything else.
+    verdict=traceSpans ? { ...combineVerdicts(records,claimJudgedByTrace(semantic) ? null : semantic),results:{ records,semantic } }
       : semantic?.status==='contradicted' ? { status:'failed',results:{ records,semantic } } : { status:'inconclusive',reason:'external_agent_no_records_link',results:{ records,semantic } };
   };
   const attemptWork = async () => {
@@ -325,7 +326,7 @@ export async function runNextConversation({ driver,inspectionDriver,chatModelFac
     if(!retry && (external || packReading || (evaluationInput && reading)) && status!=='inconclusive') {
       const findings=external ? [
         ...traceRecords.filter((r) => r.status==='fail').map((check) => externalTraceFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',reply,check,spans:traceSpans ?? [] })),
-        ...(semantic?.status === 'contradicted' ? [externalReplyFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',severity:data.scenario.severity ?? 'high',reply,semantic,spans:traceSpans })] : []),
+        ...(semantic?.status === 'contradicted' && !(traceSpans && claimJudgedByTrace(semantic)) ? [externalReplyFinding({ workspaceId:wid,runId:rid,conversationId:cid,scenarioId:data.scenario.id,attempt,language:data.scenario.language,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,sourceClause:data.scenario.source_clause ?? '3.1',severity:data.scenario.severity ?? 'high',reply,semantic,spans:traceSpans })] : []),
       ] : runtime?packFindings:buildFindings({ ...evaluationInput!,workspaceId:wid,runId:rid,conversationId:cid,attempt,agentVersionId:data.agent_version_id,rulePackVersionId:data.rulePackVersionId,records,semantic,lessons:data.manifest.lessons });
       for(const finding of findings) {
         const previous = (await db.query<{ id: string }>('SELECT id FROM nazir.findings WHERE run_id=$1 AND scenario_id=$2 AND check_id=$3', [rid, data.scenario.id, finding.check_id])).rows[0];
