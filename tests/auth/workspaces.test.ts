@@ -68,7 +68,7 @@ it('never returns shared library or demo workspaces without an active membership
   const home = await ensureHomeWorkspace(db.driver, user.id);
   expect([library.workspace_id, demo.workspace_id, otherWorkspace.workspaceId, removed.workspaceId]).not.toContain(home);
   expect(await authCall(db.driver, 'auth_memberships', [user.id], user.id)).toEqual([
-    expect.objectContaining({ workspaceId: home, workspaceName: 'My workspace', kind: 'real', roles: ['service_owner'] }),
+    expect.objectContaining({ workspaceId: home, workspaceName: 'My workspace', kind: 'real', roles: ['quality_reviewer', 'service_owner', 'supplier_maintainer'] }),
   ]);
 });
 

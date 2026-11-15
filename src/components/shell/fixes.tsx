@@ -128,12 +128,13 @@ function FixCardView({ lang, item, access, open, busy, links, onToggle, onAction
           <p className="nz-fix-text">{item.fix}</p>
         </div>
         <p className="nz-fix-recheck">{recheckLine(item.recheck, copy)}</p>
-        {access.decide && !mine ? (
+        {access.decide ? <>
+          {mine ? <p className="nz-fix-wait">{text.soloLine}</p> : null}
           <div className="nz-fix-actions">
-            <PillButton variant="ink" icon="tick" className="nz-fix-approve" label={busy === 'approve' ? text.sending : text.approve} disabled={busy !== null} onClick={() => onAction?.(item.id, 'approve')} />
+            <PillButton variant="ink" icon="tick" className="nz-fix-approve" label={busy === 'approve' ? text.sending : mine ? text.approveMine : text.approve} disabled={busy !== null} onClick={() => onAction?.(item.id, 'approve')} />
             <PillButton className="nz-fix-turn" label={busy === 'reject' ? text.sending : text.turnDown} disabled={busy !== null} onClick={() => onAction?.(item.id, 'reject')} />
           </div>
-        ) : <p className="nz-fix-wait">{text.someoneElse}</p>}
+        </> : null}
       </> : null}
     </article>
   );

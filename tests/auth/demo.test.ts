@@ -74,14 +74,14 @@ it('signs in each fixed person with a short Auth.js database session cookie', as
   expect(demoCookie('t', new Date(), false).name).toBe('authjs.session-token');
 });
 
-it('gives each demo person exactly one role in the demo workspace', async () => {
+it('gives Omar every flow role and each other demo person one role in the demo workspace', async () => {
   const rows = (await db.owner.query<{ email: string; roles: string[]; kind: string; status: string }>(
-    `SELECT u.email,array_agg(r.role) AS roles,w.kind,m.status FROM nazir.users u JOIN nazir.members m ON m.user_id=u.id JOIN nazir.workspaces w ON w.id=m.workspace_id JOIN nazir.member_roles r ON r.member_id=m.id
+    `SELECT u.email,array_agg(r.role ORDER BY r.role) AS roles,w.kind,m.status FROM nazir.users u JOIN nazir.members m ON m.user_id=u.id JOIN nazir.workspaces w ON w.id=m.workspace_id JOIN nazir.member_roles r ON r.member_id=m.id
      WHERE u.email LIKE '%@demo.nazir.test' GROUP BY u.email,w.kind,m.status ORDER BY u.email`)).rows;
   expect(rows).toEqual([
     { email: 'bilal.nasser@demo.nazir.test', roles: ['supplier_maintainer'], kind: 'demo', status: 'active' },
     { email: 'khalid.rahman@demo.nazir.test', roles: ['viewer'], kind: 'demo', status: 'active' },
-    { email: 'omar.mansoor@demo.nazir.test', roles: ['service_owner'], kind: 'demo', status: 'active' },
+    { email: 'omar.mansoor@demo.nazir.test', roles: ['quality_reviewer', 'service_owner', 'supplier_maintainer'], kind: 'demo', status: 'active' },
     { email: 'yusuf.haddad@demo.nazir.test', roles: ['quality_reviewer'], kind: 'demo', status: 'active' },
   ]);
   expect((await db.owner.query('SELECT a.name,s.focus_pack FROM nazir.agents a JOIN nazir.agent_settings s ON s.workspace_id=a.workspace_id WHERE a.workspace_id=$1', [demoWorkspaceId])).rows)
@@ -103,7 +103,7 @@ it('keeps demo people out of workspace creation and real workspaces', async () =
   expect(shape.memberships.map((m) => m.workspaceId)).toEqual([demoWorkspaceId]);
   fake.auth.mockResolvedValue(shape);
   await expect(requireMember(realWorkspace)).rejects.toBeInstanceOf(Forbidden);
-  expect((await requireMember(demoWorkspaceId)).roles).toEqual(['service_owner']);
+  expect((await requireMember(demoWorkspaceId)).roles).toEqual(['quality_reviewer', 'service_owner', 'supplier_maintainer']);
   expect((await db.owner.query("SELECT count(*)::int AS n FROM nazir.workspaces WHERE created_by=$1", [omar])).rows[0]).toEqual({ n: 1 });
 });
 

@@ -35,19 +35,22 @@ it('lets only the reviewer approve or turn down, like the server', () => {
   expect(reviewer).toContain('Approve');
   expect(reviewer).toContain('Turn down');
   expect(reviewer).not.toContain('Someone else decides this one');
-  for (const seat of ['owner', 'supplier', 'viewer'] as Seat[]) {
-    const html = render(seat === 'owner' ? 'en' : 'en', seat);
-    expect(html, seat).toContain('Someone else decides this one');
+  for (const seat of ['supplier', 'viewer'] as Seat[]) {
+    const html = render('en', seat);
     expect(html, seat).not.toContain('data-action');
     expect(html, seat).not.toContain('>Approve<');
+    expect(html, seat).not.toContain('Someone else');
   }
 });
 
-it('never lets the person who suggested a fix approve it', () => {
+it('lets you approve a fix you suggested yourself, and says why in plain words', () => {
   const mine = previewFixes('en', 'list').map((item) => ({ ...item, by: { ...item.by, mine: true } }));
   const html = render('en', 'editor', { fixes: mine });
-  expect(html).toContain('Someone else decides this one');
-  expect(html).not.toContain('>Approve<');
+  expect(html).toContain('Approve my fix');
+  expect(html).toContain('You are the only person here, so you approve your own fixes.');
+  expect(html).not.toContain('Someone else');
+  const ar = render('ar', 'editor', { fixes: mine });
+  expect(ar).toContain('وافق على إصلاحي');
 });
 
 it('shows the opened fix with its three lines and Omar as avatar OS', () => {

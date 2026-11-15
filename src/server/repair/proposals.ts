@@ -74,7 +74,8 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
     if (!p) throw new NotFound();
     if (!p.title_ar) throw new Forbidden();
     const me = (await sql.query<{ id: string }>('SELECT nazir.current_member_id() AS id')).rows[0]!.id;
-    if (p.proposed_by === me) throw new Coded(403, 'four_eyes', errorLines.four_eyes.en);
+    // Alone in the workspace (or the demo), you approve your own fixes. With a second person, another one decides.
+    if (p.proposed_by === me && !(await sql.query<{ solo: boolean }>('SELECT nazir.solo_decider() AS solo')).rows[0]?.solo) throw new Coded(403, 'four_eyes', errorLines.four_eyes.en);
     if (p.status !== 'proposed') {
       // The row lock above made a double tap wait. The same person repeating the same decision gets the saved answer and no second approval, audit row or version.
       const prior = (await sql.query<{ id: string }>("SELECT id FROM nazir.approvals WHERE subject_type='proposal' AND subject_id=$1 AND decided_by=$2 AND decision=$3 ORDER BY created_at,id LIMIT 1", [p.id, me, input.decision])).rows[0];
