@@ -52,14 +52,19 @@ it('stops chaining only when idle', async () => {
   await hooks.after.shift()!();
   expect(hooks.after).toHaveLength(0);
 });
-it('chains a busy tick after a short delay even without pending work', async () => {
-  vi.useFakeTimers();
+it('does not chain a busy tick, because the lock holder keeps watching for new work', async () => {
   vi.stubEnv('CRON_SECRET', 'test_tick_secret'); vi.stubEnv('VERCEL_URL', 'preview.example.test');
   runtime.tick.mockResolvedValue({ pending: false, busy: true });
-  const fetcher = vi.fn(async () => new Response(null, { status: 202 })); vi.stubGlobal('fetch', fetcher);
   await POST(new Request('https://example.test/api/runner/tick', { method: 'POST', headers: { authorization: 'Bearer test_tick_secret' } }));
   await hooks.after.shift()!();
-  expect(hooks.after).toHaveLength(1);
+  expect(hooks.after).toHaveLength(0);
+  expect(runtime.tick).toHaveBeenCalledWith(expect.objectContaining({ idleWatchMs: 20_000 }));
+});
+it('waits briefly before a busy retry when one is asked for', async () => {
+  vi.useFakeTimers();
+  vi.stubEnv('CRON_SECRET', 'test_tick_secret'); vi.stubEnv('VERCEL_URL', 'preview.example.test');
+  const fetcher = vi.fn(async () => new Response(null, { status: 202 })); vi.stubGlobal('fetch', fetcher);
+  scheduleRunner({ busy: true });
   const chained = hooks.after.shift()!();
   await vi.advanceTimersByTimeAsync(busyDelayMs - 1);
   expect(fetcher).not.toHaveBeenCalled();

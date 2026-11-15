@@ -16,8 +16,10 @@ export async function POST(request: Request) {
   }
   after(async () => {
     try {
-      const result = await tick({ driver: runtimeDriver(), inspectionDriver: inspectionRuntimeDriver(), lock: runnerLock });
-      if (result.pending || result.busy) scheduleRunner({ busy: result.busy });
+      const result = await tick({ driver: runtimeDriver(), inspectionDriver: inspectionRuntimeDriver(), lock: runnerLock, idleWatchMs: 20_000 });
+      // Busy means another tick holds the lock. It watches for new work for 20 s before it lets go,
+      // and a Start re kicks while its check waits, so a busy tick does not chain another one.
+      if (result.pending) scheduleRunner();
     } catch {
       // Recovery will inspect existing conversation leases, never duplicate completed answers.
       scheduleRunner();

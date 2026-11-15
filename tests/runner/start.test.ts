@@ -31,3 +31,17 @@ it('says why a refused start failed, with 429 for daily limits', async () => {
   state.propose = { done: false, data: null };
   await expect(startCheck(driver, 'm')).rejects.toMatchObject({ status: 409, code: 'start_failed' });
 });
+
+it('re kicks the runner while a started check is still waiting, and stops once it began', async () => {
+  vi.resetModules();
+  const hooks: (() => Promise<void>)[] = [];
+  const kicks = vi.fn();
+  vi.doMock('next/server', () => ({ after: (fn: () => Promise<void>) => { hooks.push(fn); } }));
+  vi.doMock('../../src/server/runner/schedule', () => ({ scheduleRunner: kicks }));
+  const rows = [{ status: 'queued', started_at: null }, { status: 'running', started_at: 'now' }];
+  vi.doMock('../../src/server/db/context', () => ({ withMember: async () => rows.shift() }));
+  const { superviseStart } = await import('../../src/server/runner/start');
+  superviseStart({} as never, 'm', 'r', [1, 2, 3], async () => {});
+  await hooks[0]!();
+  expect(kicks).toHaveBeenCalledTimes(1);
+});
