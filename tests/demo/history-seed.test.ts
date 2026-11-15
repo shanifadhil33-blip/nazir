@@ -16,7 +16,7 @@ it('fills the demo workspace with two finished checks, findings and two fixes wh
   expect(await count('runs')).toBe(2);
   expect(await count('reports')).toBe(2);
   expect(await count('conversations')).toBe(16);
-  expect(await count('findings')).toBe(5);
+  expect(await count('findings')).toBe(3);
   expect(await count('proposals')).toBe(2);
   const statuses = (await db.owner.query<{ status: string }>('SELECT status FROM nazir.proposals WHERE workspace_id=$1 ORDER BY created_at', [demoWorkspaceId])).rows.map((r) => r.status);
   expect(statuses).toEqual(['approved', 'proposed']);
@@ -29,7 +29,7 @@ it('every role sees the saved checks, newest first, as independent labelled samp
     const [latest, first] = reports.map((r) => r.body as ReportBody);
     expect(first!.sample).toBe(true);
     expect(latest!.sample).toBe(true);
-    expect(first!.counts).toMatchObject({ conversations: 8, passed: 5, failed: 3, findings: 3 });
+    expect(first!.counts).toMatchObject({ conversations: 8, passed: 7, failed: 1, findings: 1 });
     expect(latest!.counts).toMatchObject({ conversations: 8, passed: 6, failed: 2, findings: 2 });
     expect(caseResults(latest!.conversations).filter((c) => c.status === 'failed')).toHaveLength(2);
   }
@@ -157,7 +157,7 @@ it('replaces one entire seeded graph while preserving visitor checks, other work
   expect((await db.owner.query<{ ok: boolean }>('SELECT nazir.demo_seed() AS ok')).rows[0]!.ok).toBe(false);
   expect(await count('reports')).toBe(2);
   expect(await count('conversations')).toBe(16);
-  expect(await count('findings')).toBe(5);
+  expect(await count('findings')).toBe(3);
   expect(await count('proposals')).toBe(2);
   expect(await count('approvals')).toBe(2); // The unrelated rule approval is preserved too.
   for (const table of ['tool_events', 'state_readings', 'finding_attempts', 'comparisons']) expect(await count(table), table).toBe(0);

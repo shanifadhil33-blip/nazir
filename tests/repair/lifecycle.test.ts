@@ -68,3 +68,18 @@ it('Not now moves a fix to Done as skipped, and your own agent gets a plain inst
   expect(listed).toMatchObject({ own_agent: true, instruction: { en: expect.stringContaining('filing tool returns a reference') } });
   expect((listed.instruction as { ar: string }).ar).toMatch(/[؀-ۿ]/);
 }, 180000);
+
+it('a sample wrong answer with no allowed change gets no fix card, and an old patchless fix cannot be approved', async () => {
+  const run = await enqueueRun(db.driver, { workspaceId: lib.workspaceId, planId: lib.planId, agentVersionId: version('planted_wrong_queue'), scenarioIds: [lib.scenarios.complaint_en!], repeats: 1, idempotencyKey: randomUUID(), recordsOnly: false });
+  await drain();
+  // The wrong queue sample never fails to save a case, so no allowlisted change fits a case_exists answer on it.
+  const odd = (await db.owner.query<{ id: string }>(`INSERT INTO nazir.findings SELECT (jsonb_populate_record(NULL::nazir.findings, to_jsonb(f) || jsonb_build_object('id', gen_random_uuid(), 'check_id', 'case_exists', 'root_cause_class', 'adapter_failure', 'attempt', 9))).*
+    FROM nazir.findings f WHERE f.run_id=$1 AND f.check_id='right_queue' LIMIT 1 RETURNING id`, [run.id])).rows[0]!;
+  await expect(suggestFix(db.driver, lib.members.supplier, odd.id)).rejects.toMatchObject({ status: 409, code: 'no_fix' });
+  expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.proposals WHERE finding_id=$1', [odd.id])).rows[0]).toEqual({ n: 0 });
+  const { submitRepair } = await import('../../src/server/repair/proposals');
+  const old = await submitRepair(db.driver, lib.members.supplier, { finding_id: odd.id, evidence: 'Made before fixes had to fit.' });
+  expect(old.patch).toBeNull();
+  await expect(fixAction(db.driver, lib.members.reviewer, old.id, 'approve')).rejects.toMatchObject({ status: 409, code: 'no_fix' });
+  expect(await fixAction(db.driver, lib.members.reviewer, old.id, 'reject')).toEqual({ id: old.id, status: 'rejected' });
+}, 120000);
