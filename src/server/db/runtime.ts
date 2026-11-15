@@ -1,6 +1,7 @@
 import 'server-only';
 import { Pool } from '@neondatabase/serverless';
 import { poolDriver } from './driver';
+import { leaseLock } from '../runner/lease';
 
 let pool: Pool | undefined;
 export function getPool(): Pool {
@@ -34,18 +35,7 @@ export function inspectionRuntimeDriver() {
   return poolDriver(inspectionPool);
 }
 
-/** Reserve one session for the entire tick. Never keep a transaction open during model calls. */
-export async function runnerLock() {
-  const connection = await getPool().connect();
-  let held = false;
-  try {
-    held = (await connection.query<{ held: boolean }>("SELECT pg_try_advisory_lock(hashtextextended('nazir:runner:tick',0)) AS held")).rows[0]?.held === true;
-    if (!held) { connection.release(); return null; }
-  } catch (error) { connection.release(true); throw error; }
-  return async () => {
-    try {
-      const released = (await connection.query<{ released: boolean }>("SELECT pg_advisory_unlock(hashtextextended('nazir:runner:tick',0)) AS released")).rows[0]?.released;
-      connection.release(released ? undefined : true);
-    } catch { connection.release(true); }
-  };
+/** One tick at a time: a renewed lease row (see runner/lease.ts), safe through the transaction pooler. */
+export function runnerLock() {
+  return leaseLock(runtimeDriver())();
 }
