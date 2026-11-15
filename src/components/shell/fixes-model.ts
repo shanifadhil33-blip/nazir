@@ -23,15 +23,22 @@ export type StoredFix = {
   decided?: { at: string; name: string; initials: string; status: 'approved' | 'turnedDown' };
 };
 
+/** Where a fix is in its life, read from the server list every device shares. */
+export type Retest = { state: 'none' | 'running' | 'done' | 'stopped'; done: number; total: number };
+
 export type FixCard = {
   id: string;
+  findingId: string;
   status: FixStatus;
   title: string;
   by: { name: string; initials: string; mine: boolean };
   wrong: string;
+  /** Built in sample: what the fix changes. Your own agent: the instruction change to copy. */
   fix: string;
-  recheck: number;
-  rerun: boolean;
+  ownAgent: boolean;
+  retest: Retest;
+  /** Before and after for this fix, once its test again has a saved check. */
+  change: Change | null;
 };
 
 export type FixesAccess = { decide: boolean; recheck: boolean };
@@ -45,23 +52,13 @@ export function canSuggest(roles: readonly string[]) {
   return can(roles as Role[], 'proposal.create');
 }
 
-export const storeKeyFor = (workspaceId: string) => `nz-fixes-${workspaceId}`;
-
-export function readStore(raw: string | null): StoredFix[] {
-  if (!raw) return [];
-  try {
-    const list = JSON.parse(raw) as unknown;
-    if (!Array.isArray(list)) return [];
-    return list.filter((item): item is StoredFix => Boolean(item) && typeof item === 'object' && typeof (item as StoredFix).id === 'string' && typeof (item as StoredFix).findingId === 'string');
-  } catch {
-    return [];
-  }
-}
-
 /** One suggested fix as the proposals route returns it. */
 export type ServerFix = {
   id: string; finding_id: string; status: string; title: string; title_ar: string; created_at: string;
   proposed_by_name: string | null; decided_at: string | null; decided_by_name: string | null;
+  mine?: boolean; own_agent?: boolean; instruction?: { en: string; ar: string } | null; expected_benefit?: string | null;
+  finding_title?: string | null; finding_title_ar?: string | null; finding_language?: string | null; before_run_id?: string | null;
+  retest_run_id?: string | null; retest_run_status?: string | null; retest_done?: number | null; retest_total?: number | null; retest_report_id?: string | null;
 };
 const firstName = (name: string | null) => (name ?? '').trim().split(/\s+/)[0] ?? '';
 const initialsFor = (name: string | null) => (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((word) => Array.from(word)[0] ?? '').join('').toUpperCase();
@@ -84,67 +81,47 @@ export function mergeServerFixes(local: StoredFix[], server: readonly ServerFix[
   return [...merged, ...local.filter((item) => !serverIds.has(item.id))].sort((a, b) => new Date(b.at ?? 0).getTime() - new Date(a.at ?? 0).getTime());
 }
 
-export function upsertFix(list: StoredFix[], next: StoredFix): StoredFix[] {
-  return [next, ...list.filter((item) => item.id !== next.id)];
+export function retestOf(row: ServerFix): Retest {
+  const done = Number(row.retest_done ?? 0), total = Number(row.retest_total ?? 0);
+  if (!row.retest_run_id) return { state: 'none', done, total };
+  if (row.retest_run_status === 'queued' || row.retest_run_status === 'running') return { state: 'running', done, total };
+  if (row.retest_run_status === 'cancelled') return { state: 'stopped', done, total };
+  return row.retest_report_id ? { state: 'done', done, total } : { state: 'running', done, total };
 }
 
-export function patchFix(list: StoredFix[], id: string, patch: Partial<StoredFix>): StoredFix[] {
-  return list.map((item) => item.id === id ? { ...item, ...patch } : item);
-}
-
-const uuid = /^[0-9a-f-]{36}$/i;
-export function idOf(data: unknown): string | null {
-  const id = data && typeof data === 'object' ? (data as { id?: unknown }).id : null;
-  return typeof id === 'string' && uuid.test(id) ? id : null;
-}
-
-export function titleOf(data: unknown, fallback: { en: string; ar: string }): { en: string; ar: string } {
-  const title = data && typeof data === 'object' ? (data as { title?: { en?: unknown; ar?: unknown } }).title : null;
-  return { en: typeof title?.en === 'string' ? title.en : fallback.en, ar: typeof title?.ar === 'string' ? title.ar : fallback.ar };
-}
-
-/** How many questions the server chose to ask again, read from the approval answer. */
-export function recheckCount(data: unknown): number | null {
-  const retest = data && typeof data === 'object' ? (data as { retest?: { retest?: unknown[] } | null }).retest : null;
-  const list = retest?.retest;
-  return Array.isArray(list) ? list.length : null;
-}
-
-/** The two exact messages the server expects. Same wording as the chat screen. */
-export function decisionMessage(id: string, decision: 'approve' | 'reject', lang: Lang) {
-  if (decision === 'approve') {
-    return lang === 'ar'
-      ? `أوافق على الإصلاح ${id} لأن مراجعتي للإجابة المتوقعة والإجابة الفعلية تمت في عرض الخطأ. اطلعت على الدليل.`
-      : `I approve repair ${id} because I reviewed the expected and actual answers in the failure view. I opened the evidence.`;
-  }
-  return lang === 'ar'
-    ? `أرفض الإصلاح ${id} لأن مراجعتي للإجابة المتوقعة والإجابة الفعلية تمت ولا أوافق على التغيير الآن. اطلعت على الدليل.`
-    : `I reject repair ${id} because I reviewed the expected and actual answers and do not accept this change yet. I opened the evidence.`;
-}
-
-export function recheckMessage(id: string, lang: Lang) {
-  return lang === 'ar' ? `أعد الاختبارات المتأثرة ${id}` : `rerun the affected tests ${id}`;
-}
-
-/** Turns what was kept plus the latest report into cards. Plain words only. */
-export function cardsFrom(stored: StoredFix[], bodies: ReportBody | null | readonly ReportBody[], lang: Lang, copy: Messages, me: string): FixCard[] {
-  const list: readonly ReportBody[] = Array.isArray(bodies) ? bodies : bodies ? [bodies as ReportBody] : [];
-  return stored.map((item) => {
+/** Server fixes plus the saved checks become cards. Plain words only, nothing kept on the device. */
+export function fixCards(server: readonly ServerFix[], reports: readonly { id: string; body: ReportBody }[], lang: Lang, copy: Messages): FixCard[] {
+  return server.filter((row) => ['proposed', 'approved', 'rejected'].includes(row.status)).map((row) => {
     // A fix can belong to an earlier check, so every saved check is searched, newest first.
-    const body = list.find((candidate) => candidate.findings.some((row) => row.id === item.findingId)) ?? null;
-    const finding = body?.findings.find((row) => row.id === item.findingId);
+    const body = reports.find((r) => r.body.findings.some((f) => f.id === row.finding_id))?.body ?? null;
+    const finding = body?.findings.find((f) => f.id === row.finding_id);
     const record = finding ? presentRecord(finding.really_happened, finding.really_happened_ar) : null;
-    const wrong = record ? (lang === 'ar' ? record.ar : record.en) : copy.fixesScreen.noDetail;
-    const cases = body ? caseResults(body.conversations) : [];
-    const related = finding ? cases.filter((row) => row.status === 'failed' && (row.scenario_id === finding.scenario_id || row.attempts.some((a) => a.id === finding.conversation_id))).length : 0;
-    const title = finding ? (lang === 'ar' ? (finding.title_ar || finding.title) : finding.title) : (lang === 'ar' ? item.title.ar : item.title.en);
+    const baseTitle = (lang === 'ar' ? row.finding_title_ar || row.finding_title : row.finding_title) || (lang === 'ar' ? row.title_ar : row.title);
+    const language = row.finding_language === 'ar' ? copy.fixesScreen.inArabic : row.finding_language === 'en' ? copy.fixesScreen.inEnglish : '';
+    const status: FixStatus = row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'turnedDown' : 'waiting';
+    const retest = retestOf(row);
+    const before = reports.find((r) => r.body.run.id === row.before_run_id)?.body;
+    const after = row.retest_report_id ? reports.find((r) => r.id === row.retest_report_id)?.body : undefined;
+    const instruction = row.instruction ? (lang === 'ar' ? row.instruction.ar : row.instruction.en) : null;
     return {
-      id: item.id, status: item.status, title, by: { ...item.by, mine: item.by.name === me }, wrong,
-      fix: lang === 'ar' ? item.title.ar : item.title.en,
-      recheck: item.recheck ?? Math.max(1, related),
-      rerun: item.rerun,
+      id: row.id, findingId: row.finding_id, status, title: `${baseTitle}${language}`,
+      by: { name: firstName(row.proposed_by_name), initials: initialsFor(row.proposed_by_name), mine: Boolean(row.mine) },
+      wrong: record ? (lang === 'ar' ? record.ar : record.en) : copy.fixesScreen.noDetail,
+      fix: instruction ?? (lang === 'ar' ? row.title_ar : row.title),
+      ownAgent: Boolean(row.own_agent), retest,
+      change: before && after && retest.state === 'done' ? changeBetween(before, after) : null,
     };
   });
+}
+
+/** Testing the fix 3 of 8, then the result in one line. */
+export function retestLine(card: FixCard, copy: Messages) {
+  const text = copy.fixesScreen;
+  if (card.retest.state === 'running') return fill(text.testing, { done: String(card.retest.done), total: String(card.retest.total || 8) });
+  if (card.retest.state === 'stopped') return text.testStopped;
+  if (card.retest.state === 'done' && card.change) return fill(text.result, { fixed: String(card.change.fixed), still: String(card.change.stillWrong), newly: String(card.change.newlyWrong) });
+  if (card.retest.state === 'done') return text.tested;
+  return text.notTested;
 }
 
 export function recheckLine(count: number, copy: Messages) {

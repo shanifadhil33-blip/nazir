@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
 import { DocumentLocale } from './document-locale';
-import { storeKeyFor } from './fixes-model';
 import { historyAccess } from './history-model';
 import { homeLinks } from './home-model';
 import { personFor } from './people';
@@ -25,7 +24,6 @@ export function SettingsScreen({ workspaceId, initialLang }: { workspaceId: stri
     setReset('busy');
     const response = await fetch(`/api/workspaces/${workspaceId}/demo-reset`, { method: 'POST', headers: { 'accept-language': data.lang } }).catch(() => null);
     if (!response?.ok) { setReset('failed'); return; }
-    localStorage.removeItem(storeKeyFor(workspaceId));
     setReset('done');
     data.reload();
   }

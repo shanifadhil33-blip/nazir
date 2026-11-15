@@ -5,11 +5,10 @@ import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
 import type { ReportBody } from '@/server/reports/build';
 import { ChecksView, type ChecksNote } from './checks';
-import { checksAccess, checksFromReports, suggestMessage, type CheckRow } from './checks-model';
+import { checksAccess, checksFromReports, type CheckRow } from './checks-model';
 import { readActiveRuns, kickRun, startQuickCheckOutcome, stopRun } from './checks-run';
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
-import { idOf, readStore, storeKeyFor, titleOf, upsertFix } from './fixes-model';
 import { useMemberData } from './member-data';
 import { useMemberSnapshot } from './member-snapshot';
 import { activeChecksEmpty, initialActiveChecks, receiveActiveChecks } from './checks-active';
@@ -18,7 +17,7 @@ type Report = { id: string; created_at: string; body: ReportBody };
 
 /** The signed in checks screen. It reads the same member APIs as the home, and starts and stops runs with the existing endpoints. */
 export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { workspaceId: string; initialLang: Lang; initialCheck?: string }) {
-  const data = useMemberData(workspaceId, initialLang, true);
+  const data = useMemberData(workspaceId, initialLang, true, true);
   const { lang, phase, reports, roles, assistant, person, setReports } = data;
   const [openId, setOpenId] = useState<string | null>(initialCheck ?? null);
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
@@ -118,22 +117,16 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     if (!access.suggest || busy) return;
     setNote(null);
     setBusy('suggesting');
-    const response = await fetch(`/api/workspaces/${workspaceId}/agent/chat`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'accept-language': langRef.current },
-      body: JSON.stringify({ message: suggestMessage(findingId, langRef.current) }),
+    const response = await fetch(`/api/workspaces/${workspaceId}/proposals`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': langRef.current }, body: JSON.stringify({ finding_id: findingId }),
     }).catch(() => null);
-    const payload = await response?.json().catch(() => null) as { done?: boolean; data?: unknown } | null;
+    // The fix lives on the server; refetch so this answer shows Fix suggested on every device.
+    if (response?.ok) await data.reload();
     setBusy(null);
-    const proposalId = response?.ok && payload?.done ? idOf(payload.data) : null;
-    if (proposalId) {
-      // Kept on this device so the Fixes screen can show the card.
-      const name = person?.name ?? copy.shell.omar;
-      const list = readStore(localStorage.getItem(storeKeyFor(workspaceId)));
-      localStorage.setItem(storeKeyFor(workspaceId), JSON.stringify(upsertFix(list, { id: proposalId, findingId, status: 'waiting', by: { name, initials: person?.initials ?? 'OS', mine: true }, title: titleOf(payload?.data, { en: copy.fixesScreen.fix, ar: copy.fixesScreen.fix }), recheck: null, rerun: false, at: new Date().toISOString() })));
-    }
-    setNote(response?.ok && payload?.done ? 'suggested' : response?.status === 429 ? 'limit' : 'suggestFailed');
+    setNote(response?.ok ? 'suggested' : response?.status === 429 ? 'limit' : 'suggestFailed');
   }
+
+  const fixFor = Object.fromEntries(data.fixes.filter((f) => f.status !== 'withdrawn').map((f) => [f.finding_id, f.id]));
 
   return <>
     <DocumentLocale lang={lang} />
@@ -160,6 +153,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       onStart={() => void start()}
       onStop={(id) => void stop(id)}
       onSuggest={(id) => void suggest(id)}
+      fixFor={fixFor}
       onRetry={() => { if (phase === 'ready') void refresh(true); else data.reload(); }}
     />
   </>;

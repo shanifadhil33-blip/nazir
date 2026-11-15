@@ -1,16 +1,16 @@
 import Link from 'next/link';
 import { Heading } from '@/components/heading';
-import { messagesFor, type Lang } from '@/components/ocean/copy';
+import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
 import { Bell } from './bell';
-import { betterLine, languageLine, type Change } from './fixes-model';
+import type { ReportBody } from '@/server/reports/build';
+import { changeBetween, languageLine, type Change, type ServerFix } from './fixes-model';
 import { navLinks } from './fixes';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
-import { PastelCard } from './pastel-card';
 import { helpLine, whoFor } from './people';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
@@ -19,20 +19,48 @@ export type AfterViewProps = {
   lang: Lang;
   seat: Seat;
   phase: 'loading' | 'ready' | 'error';
-  /** Null when there are not two saved checks to compare. */
-  change: Change | null;
+  /** The fix from ?fix=. Without one, the newest tested fix is shown. */
+  fixId: string | null;
+  fixes: readonly ServerFix[];
+  reports: readonly { id: string; body: ReportBody }[];
   canStart: boolean;
   assistant: string;
   person?: { initials: string; name: string };
   links: HomeLinks;
   onRetry?: () => void;
+  /** Preview pages pass a made up comparison instead of saved checks. */
+  sample?: FixCompare | null;
 };
 
-/** Before and after the fix. Plain props in, markup out. */
-export function AfterView({ lang, seat, phase, change, canStart, assistant, person, links, onRetry }: AfterViewProps) {
+/** Thu 09:04, in Dubai time, the same on the server and the phone. */
+export function whenLabel(at: string | null | undefined, lang: Lang) {
+  if (!at) return '';
+  return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(at));
+}
+
+export type FixCompare = { title: string; change: Change; before: { right: number; total: number; at: string }; after: { right: number; total: number; at: string }; sample: boolean };
+
+/** The check the fix came from, next to the check that tested it again. Each fix compares only its own two checks. */
+export function compareFix(fixId: string | null, fixes: readonly ServerFix[], reports: readonly { id: string; body: ReportBody }[], lang: Lang): FixCompare | null {
+  const tested = fixes.filter((f) => f.retest_report_id && f.before_run_id);
+  const fix = fixId ? tested.find((f) => f.id === fixId) : tested[0];
+  if (!fix) return null;
+  const before = reports.find((r) => r.body.run.id === fix.before_run_id)?.body;
+  const after = reports.find((r) => r.id === fix.retest_report_id)?.body;
+  if (!before || !after) return null;
+  const change = changeBetween(before, after);
+  const count = (b: ReportBody) => ({ right: b.counts.passed, total: b.counts.conversations, at: whenLabel(b.run.finished_at ?? b.run.started_at, lang) });
+  const title = (lang === 'ar' ? fix.finding_title_ar || fix.finding_title : fix.finding_title) || (lang === 'ar' ? fix.title_ar : fix.title);
+  return { title, change, before: count(before), after: count(after), sample: Boolean(before.sample || after.sample) };
+}
+
+/** Before and after one fix. Plain props in, markup out. */
+export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, assistant, person, links, onRetry, sample }: AfterViewProps) {
   const copy = messagesFor(lang);
   const text = copy.afterScreen;
   const who = whoFor(person, seat, copy, phase === 'loading');
+  const compared = sample !== undefined ? sample : compareFix(fixId, fixes, reports, lang);
+  const change = compared?.change ?? null;
   const rows = change ? [
     { id: 'fixed', label: text.fixed, n: change.fixed, tone: 'right', icon: 'tick' },
     { id: 'still', label: text.stillWrong, n: change.stillWrong, tone: 'wrong', icon: 'cross' },
@@ -55,11 +83,14 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
           </> : <>
             <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
             {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
-            {change ? <>
-              <div className="nz-after-stats">
-                <PastelCard tone="peach" layout="stat" title={text.before} value={String(change.before)} caption={text.rightAnswers} />
-                <PastelCard tone="mint" layout="stat" title={text.after} value={String(change.after)} caption={betterLine(change, copy)} icon={change.after >= change.before ? 'up' : 'down'} />
-              </div>
+            {compared && change ? <>
+              <p className="nz-after-title"><strong dir="auto">{compared.title}</strong></p>
+              <p className="nz-check-sub">{text.intro}</p>
+              {compared.sample ? <p className="nz-check-sub">{text.sample}</p> : null}
+              <ul className="nz-after-sides">
+                <li className="nz-after-side" data-side="before"><span>{text.beforeAt}</span><strong>{fill(text.ofRight, { n: String(compared.before.right), total: String(compared.before.total) })}</strong><small>{compared.before.at}</small></li>
+                <li className="nz-after-side" data-side="after"><span>{text.afterAt}</span><strong>{fill(text.ofRight, { n: String(compared.after.right), total: String(compared.after.total) })}</strong><small>{compared.after.at}</small></li>
+              </ul>
               <ul className="nz-after-rows">
                 {rows.map((row) => (
                   <li key={row.id} className="nz-after-row" data-row={row.id}>
@@ -69,7 +100,7 @@ export function AfterView({ lang, seat, phase, change, canStart, assistant, pers
                 ))}
               </ul>
               {line ? <p className="nz-after-lang">{line}</p> : null}
-            </> : <StateCard kind="empty" title={text.emptyTitle} action={{ label: text.goChecks, href: links.checks }} />}
+            </> : <StateCard kind="empty" title={text.emptyTitle} action={{ label: text.goChecks, href: links.fixes }} />}
           </>}
         </div>
       </div>

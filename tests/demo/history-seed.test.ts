@@ -79,7 +79,9 @@ it('lists the two fixes for every role, with titles, people and times but no evi
     expect(proposals.map((p) => p.status), role).toEqual(expect.arrayContaining(['approved', 'proposed']));
     const approved = proposals.find((p) => p.status === 'approved')!;
     expect(approved).toMatchObject({ proposed_by_name: 'Bilal Nasser', decided_by_name: 'Yusuf Haddad', title: 'Restore the approved complaint routing' });
-    expect(Object.keys(approved).sort()).toEqual(['created_at', 'decided_at', 'decided_by_name', 'finding_id', 'id', 'proposed_by_name', 'status', 'title', 'title_ar']);
+    expect(Object.keys(approved).sort()).toEqual(['before_run_id', 'created_at', 'decided_at', 'decided_by_name', 'expected_benefit', 'finding_id', 'finding_language', 'finding_title', 'finding_title_ar', 'id', 'instruction', 'mine', 'own_agent', 'proposed_by_name', 'retest_done', 'retest_report_id', 'retest_run_id', 'retest_run_status', 'retest_total', 'status', 'title', 'title_ar']);
+    expect(approved).not.toHaveProperty('patch');
+    expect(approved).not.toHaveProperty('evidence');
   }
 });
 
