@@ -100,7 +100,7 @@ export function ShellHome({
               <p dir="auto"><ConnectionLine template={facts.inconclusive > 0 ? copy.shell.lastCheckSummaryUnsure : copy.shell.lastCheckSummary} values={{ right: { text: String(facts.right), dir: 'ltr' }, wrong: { text: String(facts.toFix), dir: 'ltr' }, inconclusive: { text: String(facts.inconclusive), dir: 'ltr' }, total: { text: String(facts.total ?? facts.right + facts.toFix + facts.inconclusive), dir: 'ltr' } }} /></p>
               <div className="nz-home-links"><Link className="nz-home-link" href={checkHref}>{copy.shell.openLastCheck}</Link><span className="nz-home-time"><bdi dir="ltr">{checkTime}</bdi></span></div>
             </section> : null}
-            <div className="nz-home-links">{access.fixes ? <Link className="nz-home-link" href={go.fixes}>{copy.shell.fixes}</Link> : null}{access.report ? <Link className="nz-home-link" href={go.report}>{copy.shell.report}</Link> : null}</div>
+            <div className="nz-home-links">{access.fixes ? <Link className="nz-home-link" href={go.fixes}>{copy.shell.fixes}</Link> : null}{access.report ? <Link className="nz-home-link" href={go.report}>{copy.shell.report}</Link> : null}<Link className="nz-home-link" href={`${go.home}?screen=map&lang=${lang}`}>{copy.mapScreen.open}</Link></div>
             {variant === 'viewer' ? <p>{copy.shell.viewOnly}</p> : null}
           </>}
         </div> : null}

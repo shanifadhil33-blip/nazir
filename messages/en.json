@@ -704,5 +704,109 @@
     "complaintExample": "How do I make a complaint?",
     "suggestionExample": "How do I suggest a change?",
     "informationExample": "How can you help me?"
+  },
+  "safetyScreen": {
+    "answers": "Answers",
+    "safety": "Safety",
+    "chooseTitle": "What do you want to start?",
+    "checkAnswers": "Check answers",
+    "checkAnswersNote": "8 questions in English and Arabic. About 2 minutes.",
+    "testSafety": "Test safety",
+    "testSafetyNote": "Tricks and attacks on your agent. About 5 to 10 minutes.",
+    "empty": "No safety tests yet. Test how your agent handles tricks and attacks.",
+    "needAgent": "Connect your agent first, then test its safety.",
+    "confirmTitle": "Before the first safety test",
+    "confirmLine": "I own this agent or have written permission to test it.",
+    "confirmNote": "Point Nazir at a test copy of your agent if it can change real data.",
+    "confirmStart": "Confirm and start",
+    "starting": "Starting",
+    "running": "Testing safety {done} of {total}",
+    "stop": "Stop the test",
+    "stopping": "Stopping",
+    "paused": "Your agent stopped answering, so Nazir paused the test.",
+    "stopped": "Stopped after {done} of {total}",
+    "rowTitle": "Safety test, {day}",
+    "back": "All safety tests",
+    "verdict": {
+      "ready_safe": "Ready and safe",
+      "ready_warnings": "Ready, with warnings",
+      "not_ready": "Not ready yet",
+      "replies_clean": "No problems found in replies",
+      "replies_problems": "Problems found in replies"
+    },
+    "repliesOnly": "Replies only, no inside view. Add the SDK for the full check.",
+    "sampleLine": "City Help Desk is a sample agent. Its weaknesses are planted on purpose.",
+    "weaknesses": "Weaknesses",
+    "noWeakness": "No weaknesses found.",
+    "heldUp": "Held up against {n} kinds of tricks.",
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "outcome": {
+      "broken": "It worked",
+      "partial": "Partly worked",
+      "could_not_tell": "Could not tell",
+      "not_run": "Not tested",
+      "resisted": "Held up"
+    },
+    "proven": {
+      "trace": "Proven from what your agent did",
+      "canary": "Proven from a canary",
+      "reply": "From the reply only"
+    },
+    "tried": "What we tried",
+    "evidence": "What happened",
+    "replyLabel": "Your agent said",
+    "didLabel": "What your agent did",
+    "wouldHave": "Test mode stopped it, but it would have happened.",
+    "fix": "The fix",
+    "mapping": "Where this is listed",
+    "approveFix": "Approve the fix",
+    "fixApproved": "Fix approved. Test again to see the result.",
+    "testAgain": "Test again",
+    "changedTestAgain": "I changed my agent, test again",
+    "reason": {
+      "test_people": "Add two test people to check this.",
+      "agent_changed": "Your connection changed during the test.",
+      "needs_sdk": "Needs the full check."
+    },
+    "notTested": "Not tested",
+    "limit": "You have used today's safety tests. More open tomorrow.",
+    "failed": "That did not work. Try again.",
+    "report": "Open the report",
+    "inEnglish": "In English",
+    "inArabic": "In Arabic",
+    "inBoth": "In English and Arabic"
+  },
+  "mapScreen": {
+    "light": "Your agent's",
+    "bold": "map",
+    "intro": "What your agent can use, with plain risk labels.",
+    "groups": {
+      "tools": "Tools",
+      "mcp": "Connected MCP servers",
+      "services": "Services",
+      "data": "Data",
+      "permissions": "Permissions"
+    },
+    "risks": {
+      "changes_data": "Can change data",
+      "outside_content": "Reads outside content",
+      "sends_out": "Can send data out",
+      "personal_data": "Holds personal data",
+      "wide_access": "Wide access"
+    },
+    "dangerMix": "Danger mix",
+    "dangerMixNote": "Private data, outside content and a way to send data out meet in one agent. Safety tests always try to leak data here.",
+    "aimed": "Tests aimed at this: {n}",
+    "empty": "Nazir can only see your agent's replies. Add the SDK to see its tools and data.",
+    "addSdk": "Add the SDK",
+    "skills": "Skills your agent lists in its agent card.",
+    "none": "Your agent has not sent its map yet. Run a full check and it will show here.",
+    "open": "See your agent's map",
+    "sample": "City Help Desk is a sample agent."
   }
 }

@@ -12,11 +12,12 @@ import { homeLinks } from './home-model';
 import { useMemberData } from './member-data';
 import { useMemberSnapshot } from './member-snapshot';
 import { activeChecksEmpty, initialActiveChecks, receiveActiveChecks } from './checks-active';
+import { SafetyBody, useSafety } from './safety';
 
 type Report = { id: string; created_at: string; body: ReportBody };
 
 /** The signed in checks screen. It reads the same member APIs as the home, and starts and stops runs with the existing endpoints. */
-export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { workspaceId: string; initialLang: Lang; initialCheck?: string }) {
+export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTab }: { workspaceId: string; initialLang: Lang; initialCheck?: string; initialTab?: 'answers' | 'safety' }) {
   const data = useMemberData(workspaceId, initialLang, true, true);
   const { lang, phase, reports, roles, assistant, person, setReports } = data;
   const [openId, setOpenId] = useState<string | null>(initialCheck ?? null);
@@ -27,6 +28,9 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'suggesting' | null>(null);
   const [note, setNote] = useState<ChecksNote>(null);
   const auto = useRef(false);
+  const [tab, setTab] = useState<'answers' | 'safety'>(initialTab ?? 'answers');
+  const [choosing, setChoosing] = useState(false);
+  const safety = useSafety(workspaceId, lang, phase === 'ready' && tab === 'safety');
   const langRef = useRef(lang);
   useEffect(() => { langRef.current = lang; }, [lang]);
   const kicking = useRef(new Map<string, number>());
@@ -72,7 +76,8 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     if (wanted.get('start') === '1') {
       wanted.delete('start');
       window.history.replaceState(null, '', `${window.location.pathname}${wanted.size ? `?${wanted}` : ''}`);
-      auto.current = true;
+      // Start asks first: Check answers or Test safety.
+      setChoosing(true);
     }
     void refresh();
     const timer = setInterval(() => { void refresh(); }, 5000);
@@ -126,6 +131,18 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
     setNote(response?.ok ? 'suggested' : response?.status === 429 ? 'limit' : 'suggestFailed');
   }
 
+  function chooseTab(next: 'answers' | 'safety') {
+    setTab(next); setNote(null);
+    const url = new URL(window.location.href);
+    if (next === 'safety') url.searchParams.set('tab', 'safety'); else url.searchParams.delete('tab');
+    window.history.replaceState(null, '', url);
+  }
+  function choose(what: 'answers' | 'safety' | null) {
+    setChoosing(false);
+    if (what === 'answers') { chooseTab('answers'); void start(); }
+    if (what === 'safety') { chooseTab('safety'); void safety.reload().then((list) => { if (list && list.agent && (list.demo || list.confirmed) && !list.runs.some((r) => r.status === 'queued' || r.status === 'running')) void safety.start(false); }); }
+  }
+
   const fixFor = Object.fromEntries(data.fixes.filter((f) => f.status !== 'withdrawn').map((f) => [f.finding_id, f.id]));
 
   return <>
@@ -155,6 +172,12 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck }: { works
       onSuggest={(id) => void suggest(id)}
       fixFor={fixFor}
       onRetry={() => { if (phase === 'ready') void refresh(true); else data.reload(); }}
+      tab={tab}
+      onTab={chooseTab}
+      choosing={choosing}
+      onChoose={choose}
+      safetyOpen={Boolean(safety.openId)}
+      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}${lang === 'ar' ? '?lang=ar' : ''}`} settingsHref={homeLinks(workspaceId).settings} />}
     />
   </>;
 }

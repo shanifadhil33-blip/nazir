@@ -82,7 +82,9 @@ export function clientReportSections(body: ReportBody, extras: PdfExtras) {
 }
 
 /** Pure builder: the caller supplies the font and safe report context, with no I/O here. */
-export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promise<Uint8Array> {
+export type PdfSection = { title: string; lines: string[] };
+/** One plain document: a title, a few head lines and sections, in English or Arabic, with the footer on every page. */
+export async function linesPdf(input: { lang: 'en' | 'ar'; fontBytes: Uint8Array; title: string; head: string[]; sections: PdfSection[]; footer: string }): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   // Text is already in visual order. Fontkit must not reverse Arabic a second time.
   doc.registerFontkit({ create: (bytes: Uint8Array) => {
@@ -91,25 +93,24 @@ export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promi
     font.layout = (text, features) => layout(text, features, 'latn', 'ARA', 'ltr');
     return font;
   } });
-  const font = await doc.embedFont(extras.fontBytes, { subset: true });
-  const c = copy[extras.lang];
+  const font = await doc.embedFont(input.fontBytes, { subset: true });
   const accent = rgb(14 / 255, 124 / 255, 134 / 255); // App teal #0E7C86
   const black = rgb(0, 0, 0);
   const width = 595.28, height = 841.89, margin = 48, usable = width - margin * 2;
   let page: PDFPage;
   let y = 0;
-  const visual = (text: string) => shapePdfLine(text, extras.lang);
+  const visual = (text: string) => shapePdfLine(text, input.lang);
   const draw = (text: string, size: number, atY: number, color = black) => {
     const value = visual(text);
     const textWidth = font.widthOfTextAtSize(value, size);
-    page.drawText(value, { font, size, x: extras.lang === 'ar' ? width - margin - textWidth : margin, y: atY, color });
+    page.drawText(value, { font, size, x: input.lang === 'ar' ? width - margin - textWidth : margin, y: atY, color });
   };
   const addPage = () => {
     page = doc.addPage([width, height]);
     y = height - margin;
     page.drawRectangle({ x: margin, y: y + 8, width: usable, height: 3, color: accent });
     // Reserve footer space on every page.
-    for (const [i, line] of wrapPdfText(c.footer, usable, (v) => font.widthOfTextAtSize(visual(v), 9)).entries()) draw(line, 9, 28 - i * 12);
+    for (const [i, line] of wrapPdfText(input.footer, usable, (v) => font.widthOfTextAtSize(visual(v), 9)).entries()) draw(line, 9, 28 - i * 12);
   };
   const line = (text: string, size = 11, heading = false) => {
     const lines = wrapPdfText(text, usable, (v) => font.widthOfTextAtSize(visual(v), size));
@@ -120,14 +121,9 @@ export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promi
     }
   };
   addPage();
-  line(c.title, 22, true);
-  if (body.sample) line((extras.lang === 'ar' ? ar : en).shell.sample);
-  line(suiteLabel(body, extras.lang));
-  line(`${c.agent}: ${extras.agentName}`);
-  line(`${c.pack}: ${extras.focusPack}`);
-  line(`${c.date}: ${extras.runDate}`);
-  line(`${c.run}: ${body.run.id.slice(0, 8)}`);
-  for (const section of clientReportSections(body, extras)) {
+  line(input.title, 22, true);
+  for (const text of input.head) line(text);
+  for (const section of input.sections) {
     y -= 12;
     // Keep a section heading with at least one content line.
     if (y < 135) addPage();
@@ -135,4 +131,17 @@ export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promi
     for (const text of section.lines) line(text);
   }
   return doc.save();
+}
+
+export async function buildReportPdf(body: ReportBody, extras: PdfExtras): Promise<Uint8Array> {
+  const c = copy[extras.lang];
+  const head = [
+    ...(body.sample ? [(extras.lang === 'ar' ? ar : en).shell.sample] : []),
+    suiteLabel(body, extras.lang),
+    `${c.agent}: ${extras.agentName}`,
+    `${c.pack}: ${extras.focusPack}`,
+    `${c.date}: ${extras.runDate}`,
+    `${c.run}: ${body.run.id.slice(0, 8)}`,
+  ];
+  return linesPdf({ lang: extras.lang, fontBytes: extras.fontBytes, title: c.title, head, sections: clientReportSections(body, extras), footer: c.footer });
 }

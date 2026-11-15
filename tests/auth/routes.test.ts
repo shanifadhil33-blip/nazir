@@ -19,6 +19,6 @@ it('returns the session shape and requires membership in the requested workspace
   const session = { user: { id: crypto.randomUUID(), name: 'Saeed', email: 'saeed@example.test', image: null }, memberships: [{ workspaceId: 'workspace-a', memberId: 'member-a', roles: ['service_owner'], roleLabels: { en: ['Service owner'], ar: ['مالك الخدمة'] }, workspaceName: 'Test', kind: 'real' }] };
   fake.auth.mockResolvedValue(session);
   expect(await (await GET()).json()).toEqual(session);
-  expect(await requireMember('workspace-a')).toEqual({ memberId: 'member-a', roles: ['service_owner'] });
+  expect(await requireMember('workspace-a')).toEqual({ memberId: 'member-a', roles: ['service_owner'], kind: 'real' });
   await expect(requireMember('workspace-b')).rejects.toBeInstanceOf(Forbidden);
 });
