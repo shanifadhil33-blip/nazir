@@ -17,5 +17,6 @@ export async function MemberShell({ workspaceId, lang, pinned, withReports = tru
     if (error instanceof Unauthorized) redirect('/signin');
     // Preserve the existing client error/retry path if first-paint reads fail.
   }
-  return <MemberSnapshotProvider key={workspaceId} value={value}>{children}</MemberSnapshotProvider>;
+    // Keyed on the language too: switching language in Settings remounts the screens with the new snapshot, no full reload.
+  return <MemberSnapshotProvider key={`${workspaceId}:${lang}`} value={value}>{children}</MemberSnapshotProvider>;
 }
