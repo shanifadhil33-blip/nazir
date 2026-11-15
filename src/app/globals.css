@@ -1110,7 +1110,8 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 /* Fixes and Before and after. Logical properties so Arabic mirrors with dir. */
 .nz-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .nz-tab { min-block-size: 44px; padding-inline: 22px; border: 0; border-radius: var(--radius-pill); background: var(--card); color: var(--ink-muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); transition: transform 150ms var(--ease); }
-.nz-tab[aria-selected="true"] { background: var(--ink); color: var(--on-accent); }
+.nz-tab[aria-selected="true"], .nz-tab[aria-pressed="true"] { background: var(--ink); color: var(--on-accent); }
+.nz-tab:disabled { cursor: default; }
 .nz-tab:active { transform: scale(.97); }
 .nz-tab:focus-visible, .nz-fix-head:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .nz-fix-list { display: grid; gap: 16px; align-content: start; min-inline-size: 0; }
