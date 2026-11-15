@@ -43,7 +43,6 @@ export function MorePreview({ screen, lang, seat, state }: { screen: 'history' |
   const canStart = seat === 'owner' || seat === 'editor';
   const now = new Date();
   const [older, setOlder] = useState(state === 'older');
-  const [people, setPeople] = useState(state !== 'ask');
   const [reset, setReset] = useState<ResetState>(state === 'ask' ? 'ask' : state === 'done' ? 'done' : 'idle');
   const [note, setNote] = useState<ReportNote>(state === 'done' ? 'copied' : null);
   const common = { lang, seat, phase: phaseOf(state) as 'loading' | 'ready' | 'error', canStart, links, assistant: copy.shell.helpDesk };
@@ -51,9 +50,9 @@ export function MorePreview({ screen, lang, seat, state }: { screen: 'history' |
   if (screen === 'history') return <HistoryView {...common} allowed={history} items={previewItems(lang, state, now)} now={now} older={older} onOlder={() => setOlder(true)} />;
   if (screen === 'settings') {
     const act = (next: ResetState, after?: ResetState) => { setReset(next); if (after) setTimeout(() => setReset(after), 500); };
-    return <SettingsViewScreen {...common} history={history} peopleOpen={people} reset={reset} access={settingsAccess(roles)}
-      view={{ assistant: copy.shell.helpDesk, topic: 'government', language: lang, people: previewPeople(copy) }}
-      onPeople={() => setPeople((open) => !open)} onAsk={() => setReset('ask')} onCancel={() => setReset('idle')} onConfirm={() => act('busy', 'done')} />;
+    return <SettingsViewScreen {...common} history={history} reset={reset} access={settingsAccess(roles)}
+      view={{ assistant: copy.shell.helpDesk, topic: 'government', language: lang }}
+      onAsk={() => setReset('ask')} onCancel={() => setReset('idle')} onConfirm={() => act('busy', 'done')} />;
   }
   return <ReportView {...common} history={history} workspaceId="preview" now={now} note={note}
     facts={state === 'empty' ? null : previewFacts(now)}

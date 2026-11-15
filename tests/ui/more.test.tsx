@@ -38,8 +38,8 @@ const history = (lang: Lang, seat: Seat, extra: Partial<Parameters<typeof Histor
     assistant="City Help Desk" canStart={seat === 'owner' || seat === 'editor'} links={links} {...extra} />,
 );
 const settings = (lang: Lang, seat: Seat, reset: ResetState = 'idle') => renderToStaticMarkup(
-  <SettingsViewScreen lang={lang} seat={seat} phase="ready" view={{ assistant: 'City Help Desk', topic: 'government', language: lang, people: previewPeople(messagesFor(lang)) }}
-    access={settingsAccess(rolesForSeat(seat))} history={historyAccess(rolesForSeat(seat))} canStart={seat !== 'viewer'} links={links} peopleOpen reset={reset} />,
+  <SettingsViewScreen lang={lang} seat={seat} phase="ready" view={{ assistant: 'City Help Desk', demo: true, topic: 'government', language: lang }}
+    access={settingsAccess(rolesForSeat(seat))} history={historyAccess(rolesForSeat(seat))} canStart={seat !== 'viewer'} links={links} reset={reset} />,
 );
 const report = (lang: Lang, seat: Seat, facts = previewFacts(now)) => renderToStaticMarkup(
   <ReportView lang={lang} seat={seat} phase="ready" facts={facts} workspaceId="w1" assistant="City Help Desk" canStart={seat !== 'viewer'} history={seat !== 'viewer'} links={links} now={now} note={null} />,
@@ -76,32 +76,32 @@ it('gives History an empty state with a way forward', () => {
   expect(html).toContain(links.checks);
 });
 
-it('shows Settings cards to everyone and chevrons only to people who can edit', () => {
+it('shows Settings cards to everyone, all inside the shell', () => {
   for (const role of ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'] as Role[]) {
     expect(settingsAccess([role]).edit, role).toBe(can([role], 'agent.write'));
     expect(settingsAccess([role]).reset, role).toBe(can([role], 'demo.reset'));
   }
   const owner = settings('en', 'owner');
-  for (const line of ['Your', 'settings', 'Your agent', 'City Help Desk', 'connected', 'Topic', 'Language', 'English', 'People', 'Omar', 'Start again']) expect(owner, line).toContain(line);
-  expect(owner).toContain('>OS<');
-  for (const word of ['Owner', 'Fixer', 'Reviewer', 'Viewer']) expect(owner).not.toContain(word);
-  expect(owner).toContain(links.editor.replace('&', '&amp;'));
+  for (const line of ['Your', 'settings', 'Your agent', 'City Help Desk', 'What your agent helps with', 'Language', 'English', 'العربية', 'Saved for you only', 'Reset the sample', 'Sign out']) expect(owner, line).toContain(line);
+  // One person: no People list, no role words, and Settings never leaves the shell for the old editor.
+  for (const word of ['People', 'Owner', 'Fixer', 'Reviewer', 'Viewer', 'screen=chat']) expect(owner).not.toContain(word);
+  expect(owner).toContain('aria-pressed="true"');
   expect(owner).not.toContain('You can view this');
   const viewer = settings('en', 'viewer');
   expect(viewer).toContain('You can view this');
-  expect(viewer).not.toContain('Start again');
+  expect(viewer).not.toContain('Reset the sample');
   expect(viewer).not.toContain('settings=open');
-  expect(viewer).toContain('?connect=quick');
   expect(viewer).toContain('Your agent');
-  expect(settings('en', 'editor')).not.toContain('Start again');
-  expect(settings('en', 'supplier')).not.toContain('Start again');
+  expect(settings('en', 'editor')).not.toContain('Reset the sample');
+  expect(settings('en', 'supplier')).not.toContain('Reset the sample');
+  expect(settings('ar', 'owner')).toContain('تسجيل الخروج');
 });
 
-it('asks before starting the demo again, and says what happened', () => {
-  expect(settings('en', 'owner', 'ask')).toContain('Yes, start again');
+it('asks before resetting the sample, and says what happened', () => {
+  expect(settings('en', 'owner', 'ask')).toContain('Yes, reset it');
   expect(settings('en', 'owner', 'busy')).toContain('disabled');
-  expect(settings('en', 'owner', 'done')).toContain('Started again');
-  expect(settings('en', 'owner', 'failed')).toContain('Could not start again');
+  expect(settings('en', 'owner', 'done')).toContain('The sample is back the way it started.');
+  expect(settings('en', 'owner', 'failed')).toContain('Could not reset');
 });
 
 it('names one person without internal access words', () => {
@@ -146,7 +146,7 @@ it('puts every screen in Arabic and right to left', () => {
   }
   expect(plain(history('ar', 'owner'))).toContain('وافق Yusuf على إصلاح');
   expect(history('ar', 'owner')).toContain(arabic.historyScreen.showOlder);
-  expect(settings('ar', 'owner')).toContain(arabic.settingsScreen.startAgain);
+  expect(settings('ar', 'owner')).toContain(arabic.settingsScreen.resetDemo);
   expect(report('ar', 'owner')).toContain('82 إجابة صحيحة من 100');
 });
 
@@ -160,7 +160,7 @@ it('keeps every key in English and Arabic and the copy rules', () => {
       if (lang === en) expect(value as string, name).not.toBe((value as string).toUpperCase());
     }
   }
-  expect(en.settingsScreen.startAgain).toBe('Start again');
+  expect(en.settingsScreen.resetDemo).toBe('Reset the sample');
 });
 
 it('keeps each screen under 25 words of its own copy', () => {

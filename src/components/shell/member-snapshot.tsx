@@ -8,7 +8,7 @@ import type { ExternalView } from '@/server/settings/external-agent';
 import type { RunProgress } from './checks-run';
 
 export type SavedReport = { id: string; created_at: string; body: ReportBody };
-export type LoadedSettings = { name?: string | null; language?: Lang; focus_pack?: string } | null;
+export type LoadedSettings = { name?: string | null; language?: Lang; my_language?: Lang | null; focus_pack?: string } | null;
 export type MemberSnapshot = {
   workspaceId: string;
   lang: Lang;
