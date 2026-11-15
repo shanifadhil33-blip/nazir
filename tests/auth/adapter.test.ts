@@ -53,9 +53,9 @@ it.each(['nazir_app', 'nazir_worker', 'nazir_sandbox', 'nazir_inspector', 'nazir
 it('creates a real workspace, owner membership and an audit snapshot', async () => {
   const created = await createWorkspace(db.driver, user.id, { name: 'Saeed test workspace' });
   const result = await sessionShape(db.driver, user);
-  expect(result.memberships).toEqual([{ ...created, workspaceName: 'Saeed test workspace', kind: 'real', roles: ['service_owner'], roleLabels: { en: ['Service owner'], ar: ['مالك الخدمة'] } }]);
+  expect(result.memberships).toEqual([{ ...created, workspaceName: 'Saeed test workspace', kind: 'real', roles: ['quality_reviewer', 'service_owner', 'supplier_maintainer'], roleLabels: { en: ['Service quality reviewer', 'Service owner', 'Supplier maintainer'], ar: ['مراجع جودة الخدمة', 'مالك الخدمة', 'مسؤول صيانة المورّد'] } }]);
   expect((await db.owner.query('SELECT action,actor_member_id,actor_roles_at_event FROM nazir.audit_events WHERE workspace_id=$1', [created.workspaceId])).rows).toEqual([{ action: 'workspace.created', actor_member_id: created.memberId, actor_roles_at_event: ['service_owner'] }]);
-  await db.owner.query("INSERT INTO nazir.member_roles(workspace_id,member_id,role) VALUES($1,$2,'quality_reviewer')", [created.workspaceId, created.memberId]);
+  await db.owner.query("DELETE FROM nazir.member_roles WHERE member_id=$1 AND role='supplier_maintainer'", [created.memberId]);
   expect((await sessionShape(db.driver, user)).memberships[0]!.roles).toEqual(['quality_reviewer', 'service_owner']);
   await db.owner.query("UPDATE nazir.members SET status='removed' WHERE id=$1", [created.memberId]);
   expect((await sessionShape(db.driver, user)).memberships).toEqual([]);

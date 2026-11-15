@@ -33,5 +33,5 @@ export function navIcon(id: NavId): ShellIconName {
   if (id === 'checks') return 'checks';
   if (id === 'start') return 'play';
   if (id === 'fixes') return 'wrench';
-  return 'more';
+  return 'clock';
 }

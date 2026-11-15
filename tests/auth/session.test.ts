@@ -23,7 +23,7 @@ it('loads only the signed in user memberships and fresh active roles', async () 
   const other = await createAuthAdapter(() => db.driver).createUser!({ id: crypto.randomUUID(), email: 'yousef@example.test', name: 'Yousef Karim', image: null, emailVerified: null });
   await createWorkspace(db.driver, other.id, { name: 'Yousef workspace' });
   const own = await createWorkspace(db.driver, user.id, { name: 'Omar workspace' });
-  await db.owner.query("INSERT INTO nazir.member_roles(workspace_id,member_id,role) VALUES($1,$2,'quality_reviewer')", [own.workspaceId, own.memberId]);
+  await db.owner.query("DELETE FROM nazir.member_roles WHERE member_id=$1 AND role='supplier_maintainer'", [own.memberId]);
   const session = await authConfig.callbacks.session({ session: { expires: new Date().toISOString() }, user } as never);
   expect(session.memberships).toEqual([{ ...own, workspaceName: 'Omar workspace', kind: 'real', roles: ['quality_reviewer', 'service_owner'], roleLabels: { en: ['Service quality reviewer', 'Service owner'], ar: ['مراجع جودة الخدمة', 'مالك الخدمة'] } }]);
 });
