@@ -43,6 +43,8 @@ export type ChecksViewProps = {
   onStart?: () => void;
   onStop?: (runId?: string) => void;
   onSuggest?: (findingId: string) => void;
+  /** Wrong answers that already have a fix, by finding. One fix per wrong answer. */
+  fixFor?: Record<string, string>;
   onRetry?: () => void;
 };
 
@@ -100,7 +102,7 @@ export function ChecksView(props: ChecksViewProps) {
                 })}
                 {canStart && checks.length > 0 ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
               </div>
-              {showCheck ? <CheckDetail lang={lang} check={showCheck} now={now} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} /> : null}
+              {showCheck ? <CheckDetail lang={lang} check={showCheck} now={now} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} /> : null}
             </div>
           </>}
         </div>
@@ -136,9 +138,9 @@ const markLabel = (mark: Mark, lang: Lang) => {
   return mark === 'notChecked' ? text.notChecked : mark === 'right' ? text.right : mark === 'wrong' ? text.wrong : text.unsure;
 };
 
-function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest }: {
+function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest, fixFor }: {
   lang: Lang; check: CheckRow; now: Date; access: ChecksAccess; openQuestion: string | null; busy: ChecksViewProps['busy']; links: HomeLinks;
-  onBack?: () => void; onOpenQuestion?: (id: string) => void; onSuggest?: (findingId: string) => void;
+  onBack?: () => void; onOpenQuestion?: (id: string) => void; onSuggest?: (findingId: string) => void; fixFor: Record<string, string>;
 }) {
   const copy = messagesFor(lang);
   const text = copy.checksScreen;
@@ -161,7 +163,9 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
               {isOpen ? <div className="nz-question-body">
                 <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.said}</p><p dir="auto">{item.said}</p></div>
                 {item.record ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.record}</p><p dir="auto">{item.record}</p></div> : null}
-                {access.suggest && item.mark === 'wrong' && item.findingId ? <PillButton variant="ink" icon="wrench" className="nz-suggest" label={busy === 'suggesting' ? text.suggesting : text.suggest} disabled={busy === 'suggesting'} onClick={() => onSuggest?.(item.findingId!)} /> : null}
+                {item.mark === 'wrong' && item.findingId && fixFor[item.findingId]
+                  ? <PillButton icon="wrench" className="nz-suggest nz-suggested" label={text.fixSuggested} href={links.fixes} />
+                  : access.suggest && item.mark === 'wrong' && item.findingId ? <PillButton variant="ink" icon="wrench" className="nz-suggest" label={busy === 'suggesting' ? text.suggesting : text.suggest} disabled={busy === 'suggesting'} onClick={() => onSuggest?.(item.findingId!)} /> : null}
               </div> : null}
             </li>
           );

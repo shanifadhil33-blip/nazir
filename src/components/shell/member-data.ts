@@ -12,7 +12,8 @@ export type { LoadedSettings, SavedReport } from './member-snapshot';
 type Membership = { workspaceId: string; workspaceName: string; roles: string[]; kind?: 'real' | 'demo' };
 export type MemberData = MemberSnapshot & {
   phase: 'loading' | 'ready' | 'error';
-  reload: () => void;
+  /** Refetches; resolves once the fresh data (or the failure) is in. */
+  reload: () => Promise<void>;
   canStart: boolean;
   setReports: (reports: SavedReport[]) => void;
 };
@@ -50,6 +51,8 @@ export function useMemberData(workspaceId: string, initialLang: Lang, withReport
   const [data, setData] = useState<MemberSnapshot>(() => initial ?? { workspaceId, lang: initialLang, roles: [], assistant: '', person: undefined, fullName: '', settings: null, reports: [], fixes: [] });
   const [phase, setPhase] = useState<MemberData['phase']>(initial ? 'ready' : 'loading');
   const [attempt, setAttempt] = useState(0);
+  const waiting = useRef<(() => void)[]>([]);
+  const settle = () => { const list = waiting.current; waiting.current = []; for (const resolve of list) resolve(); };
   const langRef = useRef(data.lang);
   const hasData = useRef(Boolean(initial));
   const pinned = useRef(new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search).has('lang'));
@@ -63,13 +66,15 @@ export function useMemberData(workspaceId: string, initialLang: Lang, withReport
       hasData.current = true;
       setData(loaded);
       setPhase('ready');
+      settle();
     }).catch(() => { if (!cancelled) {
       setData((current) => ({ ...current, connection: null, assistant: agentHeader(current.kind, null, messagesFor(current.lang)) }));
       if (!hasData.current) setPhase('error');
+      settle();
     } });
     return () => { cancelled = true; };
   }, [router, workspaceId, initial, attempt, withReports, withFixes]);
-  const reload = useCallback(() => { setAttempt((value) => value + 1); }, []);
+  const reload = useCallback(() => new Promise<void>((resolve) => { waiting.current.push(resolve); setAttempt((value) => value + 1); }), []);
   const setReports = useCallback((reports: SavedReport[]) => setData((current) => ({ ...current, reports })), []);
   return { ...data, phase, reload, setReports, canStart: (data.kind === 'demo' || data.connection?.ready === true) && data.roles.some((role) => role === 'service_owner' || role === 'quality_reviewer') };
 }

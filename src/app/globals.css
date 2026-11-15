@@ -1140,6 +1140,16 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-fix-approved .nz-fix-sub { color: var(--right); }
 .nz-fix-approved .nz-fix-sub:not(.nz-fix-next) { color: var(--ink); font-weight: 600; }
 .nz-fix-change, .nz-after-back { justify-content: center; }
+.nz-after-title { margin: 0; font-size: 20px; line-height: 1.3; }
+.nz-after-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.nz-after-side { display: grid; gap: 4px; padding: 16px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
+.nz-after-side[data-side="before"] { background: var(--peach); }
+.nz-after-side[data-side="after"] { background: color-mix(in srgb, var(--right) 14%, white); }
+.nz-after-side span { font-size: 13px; color: var(--muted, #5b6170); }
+.nz-after-side strong { font-size: 20px; }
+.nz-after-side small { font-size: 13px; color: var(--muted, #5b6170); }
+.nz-fix-instr { white-space: pre-wrap; }
+.nz-fix-approved .nz-bar { margin-block-start: 4px; }
 .nz-after-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .nz-after-stats .nz-pastel-stat { min-block-size: 140px; }
 .nz-after-stats .nz-pastel-peach { background: var(--peach); }

@@ -9,6 +9,7 @@ import { runStarter } from '../runner/run-cap';
 import { repairPatch, resolveRepairVersion, RepairRefused, type RepairPatch } from './executable';
 import { budgetFor, selectRetest, type RetestScenario } from './retest';
 import { hash } from '../../sandbox/demo-rule-pack';
+import { ownAgentInstruction } from './instructions';
 
 type FindingRow = { id: string; check_id: string | null; root_cause_class: string; agent_said: string; scenario_id: string; agent_version_id: string; run_id: string; evidence: { receipts?: { tool?: string; outcome?: string }[]; observed?: unknown } };
 export const repairTitles: Record<string, { en: string; ar: string; benefit: string; regression: string }> = {
@@ -46,6 +47,20 @@ export async function submitRepair(driver: TransactionDriver, memberId: string, 
     await requireRole(sql, 'proposal.create');
     const finding = (await sql.query<FindingRow>('SELECT * FROM nazir.findings WHERE id=$1', [input.finding_id])).rows[0];
     if (!finding) throw new NotFound();
+    // One open fix per wrong answer: a second tap, a second tab or a second device gets the same fix.
+    await sql.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`fix:${finding.id}`]);
+    const open = (await sql.query<{ id: string; status: string; title: string; title_ar: string }>("SELECT id,status,title,title_ar FROM nazir.proposals WHERE finding_id=$1 AND status='proposed' LIMIT 1", [finding.id])).rows[0];
+    if (open) return { id: open.id, status: open.status, patch: null, note: null, title: { en: open.title, ar: open.title_ar }, existing: true as const };
+    const registry = (await sql.query<{ registry_id: string | null }>("SELECT config->>'registry_id' AS registry_id FROM nazir.agent_versions WHERE id=$1", [finding.agent_version_id])).rows[0]?.registry_id;
+    if (!registry) {
+      // Your own agent: Nazir cannot change it, so the fix is a plain instruction change you copy into it.
+      const instruction = ownAgentInstruction(finding);
+      const row = (await sql.query<{ id: string; status: string }>(`INSERT INTO nazir.proposals(workspace_id,finding_id,proposed_by_type,proposed_by,evidence,patch,instruction,expected_benefit,possible_regression,title,title_ar,root_cause_class,suggested_by_nazir)
+        VALUES(nazir.current_workspace_id(),$1,'member',nazir.current_member_id(),$2,NULL,$3::jsonb,$4,$5,$6,$7,$8,true) RETURNING id,status`,
+      [finding.id, input.evidence, JSON.stringify(instruction), 'This wrong answer becomes right when you test again.', 'Other answers must stay right.', instruction.en.slice(0, 200), instruction.ar.slice(0, 200), finding.root_cause_class])).rows[0]!;
+      await sql.query("SELECT nazir.append_audit('proposal.create','proposal',$1,$2)", [row.id, JSON.stringify({ finding_id: finding.id, root_cause_class: finding.root_cause_class, own_agent: true })]);
+      return { ...row, patch: null, note: null, title: { en: instruction.en, ar: instruction.ar }, instruction, existing: false as const };
+    }
     const parent = await parentOf(sql, finding);
     const suggestion = suggestRepair(finding, parent);
     const patch = input.patch === undefined ? suggestion.patch : repairPatch.parse(input.patch);
@@ -58,7 +73,7 @@ export async function submitRepair(driver: TransactionDriver, memberId: string, 
     await sql.query("SELECT nazir.append_audit('proposal.create','proposal',$1,$2)", [row.id, JSON.stringify({ finding_id: finding.id, root_cause_class: finding.root_cause_class, patch_ops: patch?.map((p) => p.op) ?? [] })]);
     await asWorker(sql);
     await sql.query('SELECT nazir.repair_mark_used($1,$2)', [row.id, memberId]);
-    return { ...row, patch, note: patch ? null : suggestion.note, title: { en: title.en, ar: title.ar } };
+    return { ...row, patch, note: patch ? null : suggestion.note, title: { en: title.en, ar: title.ar }, existing: false as const };
   });
 }
 async function scenariosFor(sql: SqlConnection) {
@@ -70,7 +85,7 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
   const input = decideInput.parse(value);
   return withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'proposal.decide');
-    const p = (await sql.query<{ id: string; status: string; proposed_by: string | null; patch: RepairPatch | null; finding_id: string; title_ar: string | null; resulting_agent_version_id: string | null }>('SELECT * FROM nazir.proposals WHERE id=$1 FOR UPDATE', [input.id])).rows[0];
+    const p = (await sql.query<{ id: string; status: string; proposed_by: string | null; patch: RepairPatch | null; instruction: { en: string; ar: string } | null; finding_id: string; title_ar: string | null; resulting_agent_version_id: string | null }>('SELECT * FROM nazir.proposals WHERE id=$1 FOR UPDATE', [input.id])).rows[0];
     if (!p) throw new NotFound();
     if (!p.title_ar) throw new Forbidden();
     const me = (await sql.query<{ id: string }>('SELECT nazir.current_member_id() AS id')).rows[0]!.id;
@@ -85,7 +100,8 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
     const finding = (await sql.query<FindingRow>('SELECT * FROM nazir.findings WHERE id=$1', [p.finding_id])).rows[0];
     if (!finding) throw new NotFound();
     let executable: string | null = null, parent: string | null = null;
-    if (input.decision === 'approve') {
+    const ownAgent = !p.patch && Boolean(p.instruction);
+    if (input.decision === 'approve' && !ownAgent) {
       if (!p.patch) throw new RepairRefused('invalid_patch');
       parent = await parentOf(sql, finding);
       executable = resolveRepairVersion(parent, p.patch).configHash;
@@ -95,7 +111,7 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
     const status = input.decision === 'approve' ? 'approved' : 'rejected';
     await sql.query('UPDATE nazir.proposals SET status=$1 WHERE id=$2', [status, p.id]);
     await sql.query("SELECT nazir.append_audit('proposal.decide','proposal',$1,$2)", [p.id, JSON.stringify({ decision: input.decision, approval_id: decision.id, evidence_opened: input.evidence_opened })]);
-    if (input.decision === 'reject') return { id: p.id, status, approval_id: decision.id, version_id: null, retest: null, repeated: false as const };
+    if (input.decision === 'reject' || ownAgent) return { id: p.id, status, approval_id: decision.id, version_id: null, retest: null, repeated: false as const };
     const scenarios = await scenariosFor(sql);
     const used = new Set((await sql.query<{ k: string }>("SELECT coalesce(m.canonical->>'meaning_key',m.id::text) AS k FROM nazir.library_fix_usage u JOIN nazir.scenario_meanings m ON m.id=u.meaning_id")).rows.map((r) => r.k));
     const own = scenarios.find((s) => s.id === finding.scenario_id);
