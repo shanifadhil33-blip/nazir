@@ -4,7 +4,7 @@ import { withMember } from '../db/context';
 import type { SqlConnection, TransactionDriver } from '../db/driver';
 import { Forbidden, NotFound } from '../http/errors';
 
-export type DemoProgress = { step: number; fixId: string | null };
+export type DemoProgress = { step: number; fixId: string | null; checkId: string | null };
 async function requireDemo(sql: SqlConnection) {
   const row = (await sql.query<{ kind: string }>('SELECT kind FROM nazir.workspaces WHERE id=nazir.current_workspace_id()')).rows[0];
   if (row?.kind !== 'demo') throw new Forbidden();
@@ -20,7 +20,12 @@ async function progress(sql: SqlConnection): Promise<DemoProgress> {
     WHEN EXISTS(SELECT 1 FROM events WHERE action IN ('proposal.create','demo.fix_opened')) THEN 2
     WHEN EXISTS(SELECT 1 FROM events WHERE action='demo.check_opened') THEN 1 ELSE 0 END AS step,
     (SELECT target_id FROM events WHERE action IN ('proposal.create','proposal.decide','demo.after_opened','demo.fix_opened') ORDER BY seq DESC LIMIT 1) AS fix_id`)).rows[0]!;
-  return { step: row.step, fixId: row.fix_id };
+  // Visitor checks remain in history after a reset. The guide must lead to the
+  // planted mistake, even when a newer visitor check has no wrong answers.
+  const check = (await sql.query<{ id: string }>(`SELECT id FROM nazir.reports
+    WHERE body->>'sample'='true' AND jsonb_array_length(coalesce(body->'findings','[]'::jsonb))>0
+    ORDER BY created_at DESC,id DESC LIMIT 1`)).rows[0];
+  return { step: row.step, fixId: row.fix_id, checkId: check?.id ?? null };
 }
 export async function readDemoProgress(driver: TransactionDriver, memberId: string) {
   return withMember(driver, memberId, async (sql) => { await requireDemo(sql); return progress(sql); });

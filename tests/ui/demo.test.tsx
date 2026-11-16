@@ -22,9 +22,10 @@ it('explains the sample in both languages, with an own account link, and never a
 it('offers the next actual guide action at each stage and keeps pinned languages through shell links', () => {
   for (const lang of ['en', 'ar'] as const) {
     for (let step = 0; step <= 4; step++) {
-      const html = renderToStaticMarkup(<DemoGuide lang={lang} home="/w/w" progress={{ step, fixId: 'fix' }} />);
+      const html = renderToStaticMarkup(<DemoGuide lang={lang} home="/w/w" progress={{ step, fixId: 'fix', checkId: 'sample' }} />);
       expect(html).toContain(`lang=${lang}`);
       expect(html).toContain(step === 4 ? '/signin' : step === 3 ? 'screen=after' : step === 2 ? 'screen=failures' : 'screen=checks');
+      if (step < 2) expect(html).toContain('check=sample&amp;show=wrong');
     }
     expect(localeHref('/w/w?screen=checks', lang)).toBe(`/w/w?screen=checks&lang=${lang}`);
     expect(localeHref('/w/w?lang=en&screen=history', lang)).toContain(`lang=${lang}`);
