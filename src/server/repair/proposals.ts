@@ -148,7 +148,7 @@ export async function startRetest(driver: TransactionDriver, memberId: string, i
   for (const set of input.sets ?? ['retest', 'suite']) {
     const plan = plans.find((x) => x.stop_rules.set === set);
     if (!plan) throw new NotFound();
-    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids, startedBy });
+    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, maxAttempts: repeatCount === 1 ? 1 : undefined, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids, startedBy });
     out[set] = run.id;
     // One audit row per run; a retry or double tap of the same rerun finds its row and adds none.
     await withMember(driver, memberId, async (sql) => {

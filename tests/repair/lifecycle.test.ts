@@ -39,6 +39,9 @@ it('keeps one open fix per wrong answer, then approve and test is tracked on the
   let row = (await list(lib.members.reviewer)).find((r) => r.id === first.id)!;
   expect(row).toMatchObject({ status: 'approved', retest_run_id: approved.retest_run_id, retest_run_status: 'queued', own_agent: false, before_run_id: run.id });
   expect(Number(row.retest_total)).toBeGreaterThan(0);
+  const retryBudget = (await db.owner.query<{ max_attempts: number }>('SELECT max_attempts FROM nazir.conversations WHERE run_id=$1', [approved.retest_run_id])).rows;
+  expect(retryBudget.length).toBeGreaterThan(0);
+  expect(retryBudget.every((c) => c.max_attempts === 1)).toBe(true);
   await drain();
   await createReport(db.driver, lib.members.reviewer, { run_id: approved.retest_run_id! });
   row = (await list(lib.members.reviewer)).find((r) => r.id === first.id)!;
