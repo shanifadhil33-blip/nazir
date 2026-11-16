@@ -63,8 +63,8 @@ it('hides the centre start button for a viewer and keeps it for the other seats'
   expect(navIds(viewer, 'nz-float-nav')).toEqual(['home', 'checks', 'fixes', 'more']);
   expect(navIds(viewer, 'nz-side-nav')).toEqual(['home', 'checks', 'fixes', 'more', 'settings']);
   expect(viewer).not.toContain('data-nav="start"');
-  expect(viewer).toContain('Ahmed');
-  expect(viewer).toContain('>AK<');
+  expect(viewer).toContain('Omar');
+  expect(viewer).toContain('>OM<');
   for (const seat of ['owner', 'editor'] as const) {
     const html = renderToStaticMarkup(<ShellHome lang="en" seat={seat} />);
     expect(navIds(html, 'nz-float-nav')).toContain('start');
@@ -72,13 +72,13 @@ it('hides the centre start button for a viewer and keeps it for the other seats'
   }
   // The server lets only an owner or a reviewer start a check, so a fixer does not see the button.
   expect(navIds(renderToStaticMarkup(<ShellHome lang="en" seat="supplier" />), 'nz-float-nav')).not.toContain('start');
-  expect(renderToStaticMarkup(<ShellHome lang="en" seat="owner" />)).toContain('Khalid Hassan');
+  expect(renderToStaticMarkup(<ShellHome lang="en" seat="owner" />)).toContain('Omar');
   expect(renderToStaticMarkup(<ShellHome lang="en" seat="supplier" />)).toContain('Omar');
-  expect(renderToStaticMarkup(<ShellHome lang="en" seat="editor" />)).toContain('Yusuf');
-  expect(personFor('owner', messagesFor('en')).initials).toBe('KH');
-  expect(personFor('supplier', messagesFor('en')).initials).toBe('OS');
-  expect(personFor('editor', messagesFor('en')).initials).toBe('YR');
-  expect(personFor('viewer', messagesFor('en')).initials).toBe('AK');
+  expect(renderToStaticMarkup(<ShellHome lang="en" seat="editor" />)).toContain('Omar');
+  expect(personFor('owner', messagesFor('en')).initials).toBe('OM');
+  expect(personFor('supplier', messagesFor('en')).initials).toBe('OM');
+  expect(personFor('editor', messagesFor('en')).initials).toBe('OM');
+  expect(personFor('viewer', messagesFor('en')).initials).toBe('OM');
 });
 
 it('renders pills, cards, chips, the avatar and the four state cards', () => {

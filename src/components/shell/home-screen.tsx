@@ -62,9 +62,9 @@ function WorkspaceHome({ workspaceId, initialLang, initialConnect }: { workspace
       state={ready ? 'ready' : phase === 'error' ? 'error' : 'loading'}
       view={view}
       person={data.person}
-      links={homeLinks(workspaceId)}
+      links={homeLinks(workspaceId, lang)}
       onRetry={() => retry.current?.()}
-      workspaceId={workspaceId} kind={data.kind} connection={data.connection} panel={initialConnect} onConnected={data.reload} active={active.runs} activeStatus={active.status}
+      demoProgress={data.demoProgress} workspaceId={workspaceId} kind={data.kind} connection={data.connection} panel={initialConnect} onConnected={data.reload} active={active.runs} activeStatus={active.status}
     />
   </>;
 }

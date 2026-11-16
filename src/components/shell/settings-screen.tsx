@@ -49,7 +49,7 @@ export function SettingsScreen({ workspaceId, initialLang }: { workspaceId: stri
       lang={data.lang} seat={seat} phase={data.phase}
       view={{ demo: data.kind === 'demo', connected: connection?.ready, agentName: connection?.name, kind: connection?.connection_kind, host, assistant: data.assistant, topic: data.settings?.focus_pack ?? 'government', language: data.lang }}
       access={{ ...settingsAccess(data.roles), reset: data.kind === 'demo' && settingsAccess(data.roles).reset }} history={historyAccess(data.roles)} canStart={data.canStart}
-      person={data.person} links={homeLinks(workspaceId)} reset={reset} languageBusy={languageBusy} languageFailed={languageFailed}
+      person={data.person} links={homeLinks(workspaceId, data.lang)} reset={reset} languageBusy={languageBusy} languageFailed={languageFailed}
       onLanguage={(next) => void language(next)} onAsk={() => setReset('ask')} onCancel={() => setReset('idle')} onConfirm={() => void confirm()} onRetry={data.reload}
       signOut={signOutAction}
     />

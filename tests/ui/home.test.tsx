@@ -63,7 +63,7 @@ it('shows a viewer only Report and Fixes with one soft line and no start button'
   expect(html).not.toContain('Start a check');
   expect(html).not.toContain('nz-pill-btn-lilac');
   expect(html).not.toContain('data-nav="start"');
-  expect(html).toContain('>AK<');
+  expect(html).toContain('>OM<');
 });
 
 it('shows the first time home with one start pill and no cards', () => {
@@ -127,7 +127,8 @@ it('makes every tap go somewhere', () => {
   const links = homeLinks('w1');
   const html = renderToStaticMarkup(<ShellHome lang="en" seat="owner" links={links} view={buildHomeView(['service_owner'], checked, 'x')} now={now} />);
   for (const href of [links.start, links.fixes, links.report, links.settings, links.checks, links.home]) {
-    expect(html).toContain(`href="${href.replace('&', '&amp;')}"`);
+    const pinned = href === links.home ? `${href}?lang=en` : href === links.checks ? `${href}&lang=en` : href;
+    expect(html).toContain(`href="${pinned.replaceAll('&', '&amp;')}"`);
   }
   expect(html).toContain('aria-expanded="false"');
 });

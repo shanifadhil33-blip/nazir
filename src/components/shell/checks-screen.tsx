@@ -7,6 +7,7 @@ import type { ReportBody } from '@/server/reports/build';
 import { ChecksView, type ChecksNote } from './checks';
 import { checksAccess, checksFromReports, type CheckFilter, type CheckRow } from './checks-model';
 import { readActiveRuns, kickRun, startQuickCheckOutcome, stopRun } from './checks-run';
+import { DemoViewMarker } from './demo-guide';
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
 import { useMemberData } from './member-data';
@@ -178,6 +179,8 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
 
   return <>
     <DocumentLocale lang={lang} />
+    <DemoViewMarker workspaceId={workspaceId} view="check" id={selectedId} />
+    <DemoViewMarker workspaceId={workspaceId} view="fix" id={(() => { const finding = checks.find((c) => c.id === selectedId)?.questions.find((q) => q.id === openQuestion)?.findingId; return finding ? fixFor[finding] : null; })()} />
     <ChecksView
       lang={lang}
       seat={seatFromRoles(roles)}
@@ -186,7 +189,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       access={access}
       assistant={assistant}
       person={person}
-      links={homeLinks(workspaceId)}
+      links={homeLinks(workspaceId, lang)}
       now={new Date()}
       openId={selectedId} questionIds={questionIds}
       openQuestion={openQuestion}
@@ -211,7 +214,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       choosing={choosing}
       onChoose={choose}
       safetyOpen={Boolean(safety.openId)}
-      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}?lang=${lang}`} settingsHref={homeLinks(workspaceId).settings} onOpen={(id) => { safety.setOpenId(id); writeUrl({ safety: id }, true); }} />}
+      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}?lang=${lang}`} settingsHref={homeLinks(workspaceId, lang).settings} onOpen={(id) => { safety.setOpenId(id); writeUrl({ safety: id }, true); }} />}
     />
   </>;
 }

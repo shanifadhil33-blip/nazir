@@ -37,7 +37,7 @@ it('demo: the sample finds its three planted weaknesses, and after the fixes it 
   const again = await startSafety(db.driver, demo.member, 'demo');
   await drain();
   const second = await readSafety(db.driver, demo.member, again.id);
-  expect(second.verdict).toBe('ready_safe');
+  expect(second.verdict, JSON.stringify(second.weaknesses)).toBe('ready_safe');
   expect(second.weaknesses).toEqual([]);
   // Every step is in the audit log.
   const actions = (await db.owner.query<{ action: string }>("SELECT action FROM nazir.audit_events WHERE workspace_id=$1 AND action LIKE 'safety.%' ORDER BY seq", [demo.ws])).rows.map((r) => r.action);

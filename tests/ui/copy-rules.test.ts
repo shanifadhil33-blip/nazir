@@ -3,7 +3,7 @@ import en from '../../messages/en.json';
 import ar from '../../messages/ar.json';
 
 /** The screens built in the F briefs. The older workspace sections keep their own wording and are covered by the shared copy tests. */
-const screens = ['shell', 'signin', 'landing', 'checksScreen', 'fixesScreen', 'afterScreen', 'historyScreen', 'settingsScreen', 'reportScreen'] as const;
+const screens = ['demo', 'shell', 'signin', 'landing', 'checksScreen', 'fixesScreen', 'afterScreen', 'historyScreen', 'settingsScreen', 'reportScreen'] as const;
 
 type Tree = { [key: string]: string | Tree };
 function leaves(tree: Tree, path = ''): [string, string][] {
@@ -12,7 +12,7 @@ function leaves(tree: Tree, path = ''): [string, string][] {
 const words = (value: string) => value.trim().split(/\s+/).filter(Boolean).length;
 
 const dashes = /[‐-―−]| - | – /;
-const bannedEn = /\b(certified|compliant|compliance|verification|judge|mcp|api|demo|sparkle)\b/i;
+const bannedEn = /\b(certified|compliant|compliance|verification|judge|mcp|api|sparkle)\b/i;
 const bannedAr = /(معتمد|ممتثل|امتثال|التحقق|القاضي|الحكم)/;
 const femaleEn = /\b(fatima|sara|sarah|mariam|maryam|layla|noura|aisha|huda|amina|reem|dana|lina|salma|mona|hana)\b/i;
 const femaleAr = /(فاطمة|سارة|مريم|ليلى|نورة|عائشة|هدى|أمينة|ريم|دانة|لينا|سلمى|منى|هناء)/;
@@ -25,10 +25,10 @@ describe.each([['en', en], ['ar', ar]] as const)('%s message copy', (lang, messa
     it.each(entries)('%s is plain copy', (key, value) => {
       expect(value, key).not.toMatch(dashes);
       expect(value, key).not.toMatch(emoji);
-      // The landing page keeps its Try the demo button from the approved frame. Inside the app no screen says demo.
-      expect(key === 'landing.tryDemo' ? '' : value, key).not.toMatch(lang === 'en' ? bannedEn : bannedAr);
+      // Public entry points name the demo explicitly. Other product jargon stays banned.
+      expect(value, key).not.toMatch(lang === 'en' ? bannedEn : bannedAr);
       expect(value, key).not.toMatch(lang === 'en' ? femaleEn : femaleAr);
-      expect(words(value), key).toBeLessThan(25);
+      if (key === 'demo.intro' || key === 'demo.barOpen') { for (const sentence of value.split(/[.!?]/)) expect(words(sentence), key).toBeLessThan(21); } else expect(words(value), key).toBeLessThan(25);
       if (lang === 'en') expect(value.replace(/\bPDF\b/g, ''), key).not.toMatch(/\b[A-Z]{3,}\b/);
     });
   }

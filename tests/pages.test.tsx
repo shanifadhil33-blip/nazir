@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { SqlConnection, TransactionDriver } from '../src/server/db/driver';
-const fake = vi.hoisted(() => ({ auth: vi.fn(), signIn: vi.fn(), runtimeDriver: vi.fn(), pending: false }));
-vi.mock('../src/auth', () => ({ auth: fake.auth, signIn: fake.signIn }));
+const fake = vi.hoisted(() => ({ auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), runtimeDriver: vi.fn(), pending: false }));
+vi.mock('../src/auth', () => ({ auth: fake.auth, signIn: fake.signIn, signOut: fake.signOut }));
 vi.mock('react-dom', async (orig) => ({ ...(await orig<typeof import('react-dom')>()), useFormStatus: () => ({ pending: fake.pending }) }));
 import { SignInButton } from '../src/components/sign-in-button';
 import WorkspaceLoading from '../src/app/w/loading';
@@ -21,7 +21,7 @@ beforeEach(() => {
 
 it('shows the landing page without any demo or service banner', async () => {
   const html = renderToStaticMarkup(await HomePage());
-  expect(html).toContain('Test your AI assistant');
+  expect(html).toContain('Test your AI agent');
   expect(html).toContain('before people use it');
   expect(html).not.toContain('Fictional service');
   expect(html).not.toContain('made up service');
@@ -33,7 +33,7 @@ it('shows the landing page without any demo or service banner', async () => {
 it('renders the landing page in Arabic from the lang query', async () => {
   const html = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ lang: 'ar' }) }));
   expect(html).toContain('dir="rtl"');
-  expect(html).toContain('اختبر مساعدك الذكي');
+  expect(html).toContain('اختبر وكيلك الذكي');
   expect(html).toContain('href="/signin?lang=ar"');
 });
 

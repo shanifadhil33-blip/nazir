@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
-import { ShellIcon, type ShellIconName } from '@/components/shell/icons';
+import { ShellIcon } from '@/components/shell/icons';
 import { localeAttrs } from '@/components/shell/locale';
 import { SiteBar, SiteFooter } from './site-bar';
 
@@ -9,14 +9,10 @@ export function heroSrc(lang: Lang) {
   return lang === 'ar' ? '/hero-home-ar.png' : '/hero-home-en.png';
 }
 
-/** The three small cards, two words each. */
-export function landingCards(lang: Lang): Array<{ tone: 'mint' | 'sky' | 'peach'; icon: ShellIconName; label: string }> {
+/** Three plain lines describing the actual flow. */
+export function landingSteps(lang: Lang): string[] {
   const copy = messagesFor(lang).landing;
-  return [
-    { tone: 'mint', icon: 'help', label: copy.askQuestions },
-    { tone: 'sky', icon: 'eye', label: copy.seeMistakes },
-    { tone: 'peach', icon: 'wrench', label: copy.fixSafely },
-  ];
+  return [copy.askQuestions, copy.seeMistakes, copy.fixSafely];
 }
 
 export function HeroPhone({ lang }: { lang: Lang }) {
@@ -33,7 +29,7 @@ export function HeroPhone({ lang }: { lang: Lang }) {
 export function Landing({ lang }: { lang: Lang }) {
   const copy = messagesFor(lang);
   const attrs = localeAttrs(lang);
-  const signin = lang === 'ar' ? '/signin?lang=ar#demo' : '/signin#demo';
+  const signin = `/demo?lang=${lang}`;
   return (
     <div className="nz-site" {...attrs}>
       <SiteBar lang={lang} path="/" signInLink />
@@ -52,13 +48,8 @@ export function Landing({ lang }: { lang: Lang }) {
           <p className="nz-hero-note">{copy.landing.free}</p>
         </section>
         <HeroPhone lang={lang} />
-        <ul id="how" className="nz-landing-cards">
-          {landingCards(lang).map((card) => (
-            <li key={card.tone} className={`nz-landing-card nz-landing-card-${card.tone}`}>
-              <span className="nz-landing-ico"><ShellIcon name={card.icon} /></span>
-              <span>{card.label}</span>
-            </li>
-          ))}
+        <ul id="how" className="nz-landing-steps">
+          {landingSteps(lang).map((line) => <li key={line}>{line}</li>)}
         </ul>
       </main>
       <SiteFooter lang={lang} />

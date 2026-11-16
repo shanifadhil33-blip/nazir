@@ -4,6 +4,7 @@ import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
+import { DemoBar } from './demo-bar';
 import { Bell } from './bell';
 import { Chip } from './chip';
 import { checkResultLabel, countsLine, dateTimeLabel, progressLine, progressPercent, type CheckFilter, type CheckRow, type ChecksAccess, type Mark } from './checks-model';
@@ -90,6 +91,7 @@ export function ChecksView(props: ChecksViewProps) {
           </div>
           <Bell lang={lang} home={links.home} />
         </header>
+        <DemoBar lang={lang} />
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />

@@ -1,4 +1,5 @@
 'use server';
+import { signOut } from '@/auth';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { runtimeDriver } from '../db/runtime';
@@ -12,6 +13,7 @@ export type DemoState = { error: 'limit' | 'failed' } | null;
  * The language the person chose is kept, so Arabic stays Arabic after the sign in.
  */
 export async function demoSignIn(role: string, lang: string): Promise<DemoState> {
+  if (role !== 'owner') return { error: 'failed' };
   if (!demoLoginEnabled()) throw new Error('Demo sign in is not available.');
   const h = await headers();
   const secure = (h.get('x-forwarded-proto') ?? 'http').split(',')[0]!.trim() === 'https';
@@ -19,6 +21,7 @@ export async function demoSignIn(role: string, lang: string): Promise<DemoState>
   try {
     if (!(await allowDemoLogin(driver, demoCallerKey(h, process.env.AUTH_SECRET!)))) return { error: 'limit' };
     const cookie = await startDemoSession(driver, role, secure);
+    await signOut({ redirect: false });
     (await cookies()).set(cookie.name, cookie.value, cookie.options);
   } catch { return { error: 'failed' }; }
   redirect(`/w/${demoWorkspaceId}?lang=${lang === 'ar' ? 'ar' : 'en'}`);

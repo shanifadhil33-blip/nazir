@@ -38,10 +38,12 @@ export async function fetchMemberSnapshot(workspaceId: string, lang: Lang, pinne
     fixesResponse?.ok ? fixesResponse.json().catch(() => null) as Promise<{ proposals?: ServerFix[] } | null> : null,
     connectionResponse?.ok ? connectionResponse.json().catch(() => null) as Promise<ExternalView | null> : null,
   ]);
+  const progressResponse = member.kind === 'demo' ? await fetch(`/api/workspaces/${workspaceId}/demo-progress`, options).catch(() => null) : null;
+  const demoProgress = progressResponse?.ok ? await progressResponse.json().catch(() => null) : null;
   const name = typeof meBody?.user?.name === 'string' ? meBody.user.name.trim() : '';
   const shown: Lang = pinned ? lang : settings?.my_language ?? settings?.language ?? lang;
   return { workspaceId, lang: shown, roles: member.roles,
-    kind: member.kind, connection, assistant: agentHeader(member.kind, connection, messagesFor(shown)), fullName: name,
+    kind: member.kind, demoProgress, connection, assistant: agentHeader(member.kind, connection, messagesFor(shown)), fullName: name,
     person: name ? { name: name.split(/\s+/)[0]!, initials: initialsOf(name) } : undefined,
     settings: settings ? { name: settings.name, language: settings.language, focus_pack: settings.focus_pack } : null, reports: list?.reports ?? [], fixes: shared?.proposals ?? [] };
 }

@@ -12,7 +12,7 @@ it('names no one while loading and the person is not known', () => {
 });
 it('keeps the person and the workspace once they are known, and the defaults when not loading', () => {
   expect(whoFor({ initials: 'YH', name: 'Yusuf' }, 'editor', copy, true)).toEqual({ initials: 'YH', name: 'Yusuf', full: 'Yusuf' });
-  expect(whoFor(undefined, 'viewer', copy, false).name).toBe(copy.shell.ahmed);
+  expect(whoFor(undefined, 'viewer', copy, false).name).toBe(copy.shell.omar);
   expect(helpLine('Nazir demo', copy, true)).toBe('');
   expect(helpLine('', copy, false)).toBe(copy.agentStatus.none);
 });

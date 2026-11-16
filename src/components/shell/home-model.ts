@@ -1,4 +1,4 @@
-import { fill, type Messages } from '@/components/ocean/copy';
+import { fill, type Lang, type Messages } from '@/components/ocean/copy';
 import { rolesForSeat, type Seat } from '@/components/ocean/model';
 import { can, type Role } from '@/server/auth/roles';
 
@@ -89,18 +89,19 @@ export function lastCheckText(at: Date | null, now: Date, copy: Messages): strin
 export type HomeLinks = { start: string; fixes: string; report: string; settings: string; checks: string; more: string; home: string; after: string; history: string; editor: string };
 
 /** Where each tap goes for one workspace. */
-export function homeLinks(workspaceId: string): HomeLinks {
+export function homeLinks(workspaceId: string, lang?: Lang): HomeLinks {
   const base = `/w/${workspaceId}`;
+  const pin = (href: string) => lang ? `${href}${href.includes('?') ? '&' : '?'}lang=${lang}` : href;
   return {
     home: base,
-    start: `${base}?screen=checks&start=1`,
-    checks: `${base}?screen=checks`,
-    fixes: `${base}?screen=failures`,
-    after: `${base}?screen=after`,
-    report: `${base}/report`,
-    settings: `${base}?screen=settings`,
-    editor: `${base}?screen=chat&settings=open`,
-    history: `${base}?screen=history`,
-    more: `${base}?screen=history`,
+    start: pin(`${base}?screen=checks&start=1`),
+    checks: pin(`${base}?screen=checks`),
+    fixes: pin(`${base}?screen=failures`),
+    after: pin(`${base}?screen=after`),
+    report: pin(`${base}/report`),
+    settings: pin(`${base}?screen=settings`),
+    editor: pin(`${base}?screen=chat&settings=open`),
+    history: pin(`${base}?screen=history`),
+    more: pin(`${base}?screen=history`),
   };
 }

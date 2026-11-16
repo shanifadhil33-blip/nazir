@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 
 /** Wordmark, language switch, and (landing only) a quiet Sign in link. */
-export function SiteBar({ lang, path, signInLink = false }: { lang: Lang; path: '/' | '/signin'; signInLink?: boolean }) {
+export function SiteBar({ lang, path, signInLink = false }: { lang: Lang; path: '/' | '/signin' | '/demo'; signInLink?: boolean }) {
   const copy = messagesFor(lang);
   const other = lang === 'ar' ? 'en' : 'ar';
   const switchHref = other === 'ar' ? `${path}?lang=ar` : path;

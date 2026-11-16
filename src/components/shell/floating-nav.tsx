@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Messages } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { ShellIcon } from './icons';
-import { localeAttrs } from './locale';
+import { localeAttrs, localeHref } from './locale';
 import { navIcon, navItems, navLabel, type NavId, type NavLinks } from './nav';
 
 export function FloatingBottomNav({ lang, seat, copy, canStart, homeOnly, links = {}, current = 'home' }: { lang: 'en' | 'ar'; seat: Seat; copy: Messages; canStart?: boolean; homeOnly?: boolean; links?: NavLinks; current?: NavId | null }) {
@@ -15,7 +15,7 @@ export function FloatingBottomNav({ lang, seat, copy, canStart, homeOnly, links 
   return (
     <nav className="nz-float-nav" aria-label={copy.shell.nav} {...localeAttrs(lang)} data-seat={seat}>
       <div className="nz-float-bar">
-        {items.map((id) => <FloatItem key={id} id={id} label={navLabel(copy, id)} current={id === current} href={links[id]} />)}
+        {items.map((id) => <FloatItem key={id} id={id} label={navLabel(copy, id)} current={id === current} href={links[id] ? localeHref(links[id]!, lang) : undefined} />)}
       </div>
     </nav>
   );

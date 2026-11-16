@@ -12,6 +12,7 @@ import { messagesFor } from '@/components/ocean/copy';
 import { readExternalAgent } from '@/server/settings/external-agent';
 import { readMyLanguage } from '@/server/settings/language';
 import { agentHeader, initialsOf } from '@/components/shell/people';
+import { readDemoProgress } from './demo-progress';
 import { readHistory } from './history';
 import { activeRuns } from '@/server/runner/runs';
 
@@ -21,7 +22,7 @@ export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned
   const member = session.memberships.find((item) => item.workspaceId === workspaceId);
   if (!member) throw new Forbidden();
   const driver = runtimeDriver();
-  const [settings, list, shared, active, connection, mine, history] = await Promise.all([
+  const [settings, list, shared, active, connection, mine, history, demoProgress] = await Promise.all([
     readAgentSettings(driver, member.memberId, false).catch(() => null),
     withReports ? listReports(driver, member.memberId, reportIds) : null,
     withFixes ? listProposals(driver, member.memberId).catch(() => null) : null,
@@ -29,12 +30,13 @@ export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned
     readExternalAgent(driver, member.memberId).catch(() => null),
     pinned ? null : readMyLanguage(driver, member.memberId).catch(() => null),
     withHistory ? readHistory(driver, member.memberId).catch(() => null) : null,
+    member.kind === 'demo' ? readDemoProgress(driver, member.memberId).catch(() => null) : null,
   ]);
   const name = session.user.name?.trim() ?? '';
   // A language in the address wins, then yours, then the workspace's.
   const displayLang: Lang = pinned ? lang : mine ?? settings?.language ?? lang;
   return {
-    workspaceId, lang: displayLang,
+    workspaceId, lang: displayLang, demoProgress,
     roles: member.roles, kind: member.kind, connection, assistant: agentHeader(member.kind, connection, messagesFor(displayLang)),
     fullName: name, person: name ? { name: name.split(/\s+/)[0]!, initials: initialsOf(name) } : undefined,
     // Pass only the settings the shell uses across the server/client boundary.

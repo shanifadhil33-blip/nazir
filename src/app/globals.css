@@ -1449,3 +1449,30 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 @media (hover: hover) and (pointer: fine) {
   .nz-after-side > a:hover, .nz-after-row > a:hover, .nz-rep-row > a:hover, .nz-hist-link:hover { background-color: var(--page); }
 }
+/* The sample and a real account have separate doors. */
+.nz-signin-solo { display: grid; grid-template-columns: 1fr; justify-items: center; }
+.nz-signin-solo .nz-signin-card { inline-size: min(100%, 440px); }
+.nz-signin-card > p { font-size: 16px; line-height: 1.6; color: var(--ink-muted); margin: 0; }
+.nz-signin-demo-link { min-block-size: 44px; display: flex; align-items: center; color: var(--ink); font-size: 14px; }
+.nz-demo-start { inline-size: min(100%, 620px); margin-inline: auto; padding: 48px 24px; display: grid; gap: 24px; }
+.nz-demo-start p { margin: 0; font-size: 16px; line-height: 1.6; }
+.nz-demo-start .nz-heading { margin: 0; }
+.nz-demo-start > a { color: var(--ink); min-block-size: 44px; display: flex; align-items: center; }
+.nz-demo-sample { justify-self: start; padding: 4px 12px; border-radius: var(--radius-pill); background: var(--mint); font-size: 14px; }
+.nz-demo-safe { color: var(--ink-muted); }
+.nz-demo-start .nz-demo-btn { inline-size: 100%; min-block-size: 60px; }
+.nz-demo-start .nz-demo-btn .nz-demo-text { align-items: center; }
+.nz-demo-start .nz-demo-btn .nz-demo-text span { color: inherit; }
+.nz-landing-steps { grid-column: 1 / -1; display: grid; gap: 24px; list-style: none; margin: 0; padding: 24px 0; font-size: 16px; line-height: 1.6; }
+.nz-demo-bar { margin-block: 0 16px; font-size: 14px; color: var(--ink-muted); }
+.nz-demo-bar summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-block-size: 44px; cursor: pointer; border-radius: 12px; padding-inline: 12px; background: var(--card); list-style: none; transition: background-color 140ms ease; }
+.nz-demo-bar summary::-webkit-details-marker { display: none; }
+.nz-demo-more { color: var(--ink); text-decoration: underline; }
+.nz-demo-bar-body { padding: 12px; }
+.nz-demo-bar-body p { margin: 0 0 8px; line-height: 1.6; }
+.nz-demo-bar-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+.nz-demo-bar button, .nz-demo-bar a { display: inline-flex; align-items: center; min-block-size: 44px; background: none; border: 0; padding: 4px; color: var(--ink); text-decoration: underline; font: inherit; cursor: pointer; }
+.nz-demo-bar summary:active, .nz-demo-bar button:active { background-color: var(--page); }
+.nz-demo-guide { display: grid; gap: 4px; padding-block: 8px; font-size: 14px; }
+.nz-demo-guide a { min-block-size: 44px; display: flex; align-items: center; color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .nz-demo-bar summary:hover, .nz-demo-bar button:hover { background-color: var(--page); } }
