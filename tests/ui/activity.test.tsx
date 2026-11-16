@@ -66,3 +66,10 @@ it('links report rows to the right buckets and offers a manual share fallback wi
   for (const part of ['change=fixed', 'from=base', 'show=wrong', 'show=unsure', 'Copy this link', 'value="https://example.test/report"']) expect(html).toContain(part);
   expect(html).not.toContain('aria-current="page"');
 });
+
+it('opens the specific suggested fix from its answer', () => {
+  const checks = previewChecks('en', now);
+  const finding = checks.find((c) => c.id === 'quick')!.questions.find((q) => q.id === 'q1')!.findingId!;
+  const html = renderToStaticMarkup(<ChecksView lang="en" seat="owner" phase="ready" checks={checks} assistant="Desk" access={{ start: true, stop: true, suggest: true }} now={now} links={homeLinks('w')} openId="quick" openQuestion="q1" running={null} busy={null} note={null} fixFor={{ [finding]: 'exact-fix' }} />);
+  expect(html).toContain('href="/w/w?screen=failures&amp;fix=exact-fix"');
+});

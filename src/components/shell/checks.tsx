@@ -208,7 +208,7 @@ function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, o
                 <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.said}</p><p dir="auto">{item.said}</p></div>
                 {item.record ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.record}</p><p dir="auto">{item.record}</p></div> : null}
                 {item.mark === 'wrong' && item.findingId && fixFor[item.findingId]
-                  ? <PillButton icon="wrench" className="nz-suggest nz-suggested" label={text.fixSuggested} href={links.fixes} />
+                  ? <PillButton icon="wrench" className="nz-suggest nz-suggested" label={text.fixSuggested} href={`${links.fixes}&fix=${fixFor[item.findingId]}`} />
                   : access.suggest && item.mark === 'wrong' && item.findingId ? <PillButton variant="ink" icon="wrench" className="nz-suggest" label={busy === 'suggesting' ? text.suggesting : text.suggest} disabled={busy === 'suggesting'} onClick={() => onSuggest?.(item.findingId!)} /> : null}
               </div> : null}
             </li>
