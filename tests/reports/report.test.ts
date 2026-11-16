@@ -144,3 +144,16 @@ it('enriches legacy dates after role projection under RLS without changing store
   expect(repeated.id).toBe(created.id);
   expect(repeated.body_hash).toBe(created.body_hash);
 });
+
+it('keeps an explicitly linked old report available beyond the newest twenty without crossing the workspace boundary', async () => {
+  const old = await seed(db, 'OldLinkedReport');
+  await db.owner.query(`INSERT INTO nazir.reports(workspace_id,run_id,created_by,body,supplier_body,viewer_body)
+    SELECT workspace_id,run_id,created_by,body,supplier_body,viewer_body FROM nazir.reports CROSS JOIN generate_series(1,21) WHERE id=$1`, [old.ids.reports]);
+  const recent = await listReports(db.driver, old.member_id);
+  expect(recent.reports).toHaveLength(20);
+  expect(recent.reports.some((r) => r.id === old.ids.reports)).toBe(false);
+  const linked = await listReports(db.driver, old.member_id, [old.ids.reports!]);
+  expect(linked.reports).toHaveLength(21);
+  expect(linked.reports.some((r) => r.id === old.ids.reports)).toBe(true);
+  expect((await listReports(db.driver, owner, [old.ids.reports!])).reports.some((r) => r.id === old.ids.reports)).toBe(false);
+});

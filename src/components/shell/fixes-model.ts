@@ -178,3 +178,16 @@ export function languageLine(change: Change, copy: Messages) {
   ].filter(Boolean);
   return parts.join(copy.afterScreen.join);
 }
+
+/** Question ids in the AFTER check, grouped by how their verdict changed. */
+export function changedQuestions(before: ReportBody, after: ReportBody) {
+  const was = new Map(caseResults(before.conversations).map((row) => [keyOf(row), row.status]));
+  const groups: { fixed: string[]; still: string[]; newly: string[] } = { fixed: [], still: [], newly: [] };
+  for (const row of caseResults(after.conversations)) {
+    const old = was.get(keyOf(row));
+    if (old === 'failed' && row.status === 'passed') groups.fixed.push(row.id);
+    if (old === 'failed' && row.status === 'failed') groups.still.push(row.id);
+    if (old === 'passed' && row.status === 'failed') groups.newly.push(row.id);
+  }
+  return groups;
+}

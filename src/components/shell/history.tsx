@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
@@ -22,6 +23,9 @@ export type HistoryViewProps = {
   person?: { initials: string; name: string };
   canStart: boolean;
   links: HomeLinks;
+  more?: boolean;
+  busy?: boolean;
+  failed?: boolean;
   onOlder?: () => void;
   onRetry?: () => void;
 };
@@ -30,9 +34,14 @@ function Row({ item, lang, older }: { item: HistoryItem; lang: Lang; older: bool
   const copy = messagesFor(lang);
   return (
     <li className="nz-hist-row" data-kind={item.kind}>
-      <span className="nz-hist-ini" aria-hidden="true">{item.who ? item.who.initials : <ShellIcon name="check" />}</span>
-      <span className="nz-hist-text"><strong>{sentenceFor(item, copy)}</strong><small>{item.detail}</small></span>
-      <time className="nz-hist-time" dateTime={item.at.toISOString()}>{older ? `${dayText(item.at, lang)} ${clockText(item.at, lang)}` : clockText(item.at, lang)}</time>
+      {(() => {
+        const body = <>
+          <span className="nz-hist-ini" aria-hidden="true"><ShellIcon name={item.who ? 'wrench' : 'check'} /></span>
+          <span className="nz-hist-text"><strong>{sentenceFor(item, copy)}</strong><small dir="auto">{item.detail}</small></span>
+          <time className="nz-hist-time" dateTime={item.at.toISOString()}>{older ? `${dayText(item.at, lang)} ${clockText(item.at, lang)}` : clockText(item.at, lang)}</time>
+        </>;
+        return item.href ? <Link className="nz-hist-link" href={item.href}>{body}</Link> : body;
+      })()}
     </li>
   );
 }
@@ -43,10 +52,12 @@ export function HistoryView(props: HistoryViewProps) {
   const copy = messagesFor(lang);
   const text = copy.historyScreen;
   const groups = groupByDay(items, now);
+  // Nothing today or yesterday: show the older days at once instead of an empty page with Show older.
+  const older = props.older || (groups.today.length === 0 && groups.yesterday.length === 0);
   const sections = [
     { id: 'today', title: text.today, rows: groups.today, older: false },
     { id: 'yesterday', title: text.yesterday, rows: groups.yesterday, older: false },
-    ...(props.older ? [{ id: 'earlier', title: text.earlier, rows: groups.earlier, older: true }] : []),
+    ...(older ? [{ id: 'earlier', title: text.earlier, rows: groups.earlier, older: true }] : []),
   ].filter((section) => section.rows.length > 0);
   return (
     <ScreenFrame lang={lang} seat={seat} phase={phase} name="history" assistant={props.assistant} person={props.person} links={links} canStart={props.canStart} history={props.allowed} onRetry={props.onRetry}>
@@ -62,7 +73,8 @@ export function HistoryView(props: HistoryViewProps) {
               <ul className="nz-hist-list">{section.rows.map((item) => <Row key={item.id} item={item} lang={lang} older={section.older} />)}</ul>
             </section>
           ))}
-          {groups.earlier.length > 0 && !props.older ? <PillButton className="nz-hist-more" label={text.showOlder} onClick={props.onOlder} /> : null}
+          {props.failed ? <button type="button" className="nz-text-link" onClick={props.onRetry}>{copy.shell.retry}</button> : null}
+          {(groups.earlier.length > 0 && !older) || props.more ? <PillButton className="nz-hist-more" label={text.showOlder} disabled={props.busy} onClick={props.onOlder} /> : null}
         </>}
       </>}
     </ScreenFrame>

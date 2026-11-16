@@ -6,7 +6,7 @@ import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
 import { Bell } from './bell';
 import { Chip } from './chip';
-import { dayLabel, kindLabel, progressLine, progressPercent, checkResultLabel, type CheckRow, type ChecksAccess, type Mark } from './checks-model';
+import { checkResultLabel, countsLine, dateTimeLabel, progressLine, progressPercent, type CheckFilter, type CheckRow, type ChecksAccess, type Mark } from './checks-model';
 import type { RunProgress } from './checks-run';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
@@ -56,13 +56,19 @@ export type ChecksViewProps = {
   /** Start asks: Check answers or Test safety. */
   choosing?: boolean;
   onChoose?: (what: 'answers' | 'safety' | null) => void;
+  /** Which answers the open check shows. */
+  questionIds?: string[];
+  filter?: CheckFilter;
+  onFilter?: (filter: CheckFilter) => void;
+  /** The saved report for one check. */
+  reportHref?: (checkId: string) => string;
 };
 
 const noteKey = { startFailed: 'startFailed', stopFailed: 'stopFailed', suggested: 'suggested', suggestFailed: 'suggestFailed' } as const;
 
 /** The checks screen. Plain props in, markup out, so the same view renders signed in and in tests. */
 export function ChecksView(props: ChecksViewProps) {
-  const { lang, seat, phase, checks, access, running, busy, note, openId, openQuestion, links, now } = props;
+  const { lang, seat, phase, checks, access, running, busy, note, openId, openQuestion, links } = props;
   const copy = messagesFor(lang);
   const text = copy.checksScreen;
   const who = whoFor(props.person, seat, copy, phase === 'loading');
@@ -82,7 +88,7 @@ export function ChecksView(props: ChecksViewProps) {
             <Link href={links.settings} aria-label={copy.shell.settings}><Avatar initials={who.initials} label={who.full} /></Link>
             <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(props.assistant, copy, phase === 'loading')}</small></p>
           </div>
-          <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
+          <Bell lang={lang} home={links.home} />
         </header>
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
@@ -123,7 +129,7 @@ export function ChecksView(props: ChecksViewProps) {
                     <button key={item.id} type="button" className="nz-check-card" data-check={item.kind} data-clean={clean} aria-pressed={showCheck?.id === item.id} onClick={() => props.onOpenCheck?.(item.id)}>
                       <span className={clean ? 'nz-check-mark nz-check-mark-right' : 'nz-check-mark nz-check-mark-wrong'}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
                       <span className="nz-check-text">
-                        <strong>{kindLabel(item.kind, copy)}{lang === 'ar' ? '، ' : ', '}{dayLabel(item.at, now, lang, copy)}</strong>
+                        <strong>{fill(text.checkTitle, { when: dateTimeLabel(item.at, lang) })}</strong>
                         {item.sample ? <small>{copy.shell.sample}</small> : null}
                         <small className={clean ? 'nz-check-right' : 'nz-check-wrong'}>{checkResultLabel(item, copy)}</small>
                       </span>
@@ -133,7 +139,7 @@ export function ChecksView(props: ChecksViewProps) {
                 })}
                 {canStart && checks.length > 0 ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
               </div>
-              {showCheck ? <CheckDetail lang={lang} check={showCheck} now={now} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} /> : null}
+              {showCheck ? <CheckDetail lang={lang} check={showCheck} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} questionIds={props.questionIds} filter={props.filter ?? 'all'} onFilter={props.onFilter} reportHref={props.reportHref?.(showCheck.id)} /> : null}
             </div>}
           </>}
         </div>
@@ -169,21 +175,26 @@ const markLabel = (mark: Mark, lang: Lang) => {
   return mark === 'notChecked' ? text.notChecked : mark === 'right' ? text.right : mark === 'wrong' ? text.wrong : text.unsure;
 };
 
-function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest, fixFor }: {
-  lang: Lang; check: CheckRow; now: Date; access: ChecksAccess; openQuestion: string | null; busy: ChecksViewProps['busy']; links: HomeLinks;
+function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest, fixFor, questionIds, filter, onFilter, reportHref }: {
+  lang: Lang; check: CheckRow; access: ChecksAccess; openQuestion: string | null; busy: ChecksViewProps['busy']; links: HomeLinks;
   onBack?: () => void; onOpenQuestion?: (id: string) => void; onSuggest?: (findingId: string) => void; fixFor: Record<string, string>;
+  questionIds?: string[]; filter: CheckFilter; onFilter?: (filter: CheckFilter) => void; reportHref?: string;
 }) {
   const copy = messagesFor(lang);
   const text = copy.checksScreen;
-  const opened = openQuestion === '' ? null : check.questions.some((item) => item.id === openQuestion) ? openQuestion : (check.questions.find((item) => item.mark === 'wrong') ?? check.questions[0])?.id ?? null;
+  const shown = check.questions.filter((item) => (filter === 'all' || item.mark === filter) && (!questionIds || questionIds.includes(item.id)));
+  const opened = shown.some((item) => item.id === openQuestion) ? openQuestion : null;
   return (
-    <section className="nz-check-page" aria-label={kindLabel(check.kind, copy)}>
+    <section className="nz-check-page" aria-label={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })}>
       <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
-      <Heading as="h2" light={kindLabel(check.kind, copy)} bold={checkResultLabel(check, copy)} lang={lang} flow="inline" />
-      <p className="nz-check-sub">{dayLabel(check.at, now, lang, copy)}{lang === 'ar' ? '، ' : ', '}{fill(text.questionsCount, { n: String(check.questions.length) })}</p>
+      <Heading as="h2" light={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })} bold={countsLine(check, copy)} lang={lang} flow="stack" />
       {check.sample ? <p className="nz-check-sub">{copy.shell.sample}</p> : null}
+      <div className="nz-tabs nz-check-filter" role="group" aria-label={text.filterAll}>
+        {(['all', 'wrong', 'right', ...(check.questions.some((q) => q.mark === 'unsure') ? ['unsure' as const] : [])] as const).map((id) => <button key={id} type="button" className="nz-tab" data-filter={id} aria-pressed={filter === id} onClick={() => onFilter?.(id)}>{id === 'all' ? text.filterAll : id === 'wrong' ? text.filterWrong : id === 'right' ? text.filterRight : text.unsure}</button>)}
+      </div>
+      {shown.length === 0 ? <p className="nz-check-sub">{text.noneHere}</p> : null}
       <ul className="nz-questions">
-        {check.questions.map((item) => {
+        {shown.map((item) => {
           const isOpen = opened === item.id;
           return (
             <li key={item.id} className="nz-question" data-mark={item.mark} data-open={isOpen}>
@@ -203,6 +214,7 @@ function CheckDetail({ lang, check, now, access, openQuestion, busy, links, onBa
         })}
       </ul>
       {check.toFix > 0 && !access.suggest ? <PillButton className="nz-checks-start" icon="pencil" label={copy.shell.fixes} href={links.fixes} /> : null}
+      {reportHref ? <PillButton className="nz-see-report" icon="pencil" label={text.seeReport} href={reportHref} /> : null}
     </section>
   );
 }

@@ -14,14 +14,16 @@ type List = { runs: SafetySummary[]; confirmed: boolean; demo: boolean; agent: b
 export type SafetyNote = 'limit' | 'failed' | 'fixApproved' | null;
 
 /** Safety tab data: the list, one open test, and the actions. Polls only while a test runs. */
-export function useSafety(workspaceId: string, lang: Lang, enabled: boolean) {
+export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, initialOpen?: string) {
   const [list, setList] = useState<List | null>(null);
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpen ?? null);
   const [detail, setDetail] = useState<SafetyDetail | null>(null);
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'fixing' | null>(null);
   const [note, setNote] = useState<SafetyNote>(null);
   const langRef = useRef(lang);
+  const openRef = useRef(openId);
+  useEffect(() => { openRef.current = openId; }, [openId]);
   useEffect(() => { langRef.current = lang; }, [lang]);
   const headers = useCallback(() => ({ 'content-type': 'application/json', 'accept-language': langRef.current }), []);
 
@@ -38,7 +40,7 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean) {
   }, [workspaceId, headers]);
 
   // The first read waits a tick so it never runs inside the render that turned the tab on.
-  useEffect(() => { if (!enabled) return; const t = setTimeout(() => { void load(); }, 0); return () => clearTimeout(t); }, [enabled, load]);
+  useEffect(() => { if (!enabled) return; const t = setTimeout(() => { void load(); if (openRef.current) void loadDetail(openRef.current); }, 0); return () => clearTimeout(t); }, [enabled, load, loadDetail]);
   const active = list?.runs.find((r) => r.status === 'queued' || r.status === 'running') ?? null;
   useEffect(() => {
     if (!enabled || !active) return;
@@ -85,10 +87,11 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean) {
   return { list, phase, openId, setOpenId: openTest, detail, busy, note, active, start, stop, approve, reload: load };
 }
 
-type Props = { lang: Lang; now: Date; safety: ReturnType<typeof useSafety>; canStart: boolean; reportHref: (id: string) => string; settingsHref: string };
+type Props = { lang: Lang; now: Date; safety: ReturnType<typeof useSafety>; canStart: boolean; reportHref: (id: string) => string; settingsHref: string; /** Opens or closes one test, through the address. */ onOpen?: (id: string | null) => void };
 
 /** The Safety tab body: running card, confirm, list of tests, and one test's verdict and weaknesses. */
-export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHref }: Props) {
+export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHref, onOpen }: Props) {
+  const open_ = onOpen ?? safety.setOpenId;
   const copy = messagesFor(lang);
   const text = copy.safetyScreen;
   const { list, phase, busy, note, active } = safety;
@@ -112,7 +115,7 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
         ) : null}
         {list.agent && list.runs.length === 0 && !needConfirm ? <StateCard kind="empty" title={text.empty} action={canStart ? { label: startLabel, onClick: busy === 'starting' ? undefined : () => void safety.start(false) } : null} /> : null}
         {list.runs.map((run) => (
-          <button key={run.id} type="button" className="nz-check-card nz-safety-card" data-verdict={run.verdict ?? run.status} aria-pressed={safety.openId === run.id} onClick={() => safety.setOpenId(run.id)}>
+          <button key={run.id} type="button" className="nz-check-card nz-safety-card" data-verdict={run.verdict ?? run.status} aria-pressed={safety.openId === run.id} onClick={() => open_(run.id)}>
             <span className={run.verdict === 'ready_safe' || run.verdict === 'replies_clean' ? 'nz-check-mark nz-check-mark-right' : 'nz-check-mark nz-check-mark-wrong'}><ShellIcon name={run.verdict === 'ready_safe' || run.verdict === 'replies_clean' ? 'check' : 'dot'} /></span>
             <span className="nz-check-text">
               <strong>{fill(text.rowTitle, { day: dayLabel(new Date(run.at), now, lang, copy) })}</strong>
@@ -123,7 +126,7 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
         ))}
         {list.agent && list.runs.length > 0 && !active && !needConfirm && canStart ? <PillButton className="nz-checks-start nz-safety-start" icon="play" directional label={startLabel} disabled={busy === 'starting'} onClick={() => void safety.start(false)} /> : null}
       </div>
-      {safety.openId ? (open ? <SafetyDetailView lang={lang} now={now} run={open} demo={list.demo} busy={busy} canStart={canStart && !active} onBack={() => safety.setOpenId(null)} onApprove={(f) => void safety.approve(f)} onAgain={() => void safety.start(false)} reportHref={reportHref(open.id)} />
+      {safety.openId ? (open ? <SafetyDetailView lang={lang} now={now} run={open} demo={list.demo} busy={busy} canStart={canStart && !active} onBack={() => open_(null)} onApprove={(f) => void safety.approve(f)} onAgain={() => void safety.start(false)} reportHref={reportHref(open.id)} />
         : <section className="nz-check-page"><PhaseCard phase="loading" copy={copy} /></section>) : null}
     </div>
   );

@@ -12,21 +12,23 @@ import { messagesFor } from '@/components/ocean/copy';
 import { readExternalAgent } from '@/server/settings/external-agent';
 import { readMyLanguage } from '@/server/settings/language';
 import { agentHeader, initialsOf } from '@/components/shell/people';
+import { readHistory } from './history';
 import { activeRuns } from '@/server/runner/runs';
 
 /** Request-local data only. Use the same RLS services as the member APIs. */
-export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned: boolean, withReports: boolean, withFixes = false, withActive = false): Promise<MemberSnapshot> {
+export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned: boolean, withReports: boolean, withFixes = false, withActive = false, withHistory = false, reportIds: string[] = []): Promise<MemberSnapshot> {
   const session = await requireUser();
   const member = session.memberships.find((item) => item.workspaceId === workspaceId);
   if (!member) throw new Forbidden();
   const driver = runtimeDriver();
-  const [settings, list, shared, active, connection, mine] = await Promise.all([
+  const [settings, list, shared, active, connection, mine, history] = await Promise.all([
     readAgentSettings(driver, member.memberId, false).catch(() => null),
-    withReports ? listReports(driver, member.memberId) : null,
+    withReports ? listReports(driver, member.memberId, reportIds) : null,
     withFixes ? listProposals(driver, member.memberId).catch(() => null) : null,
     withActive ? activeRuns(driver, member.memberId).catch(() => null) : null,
     readExternalAgent(driver, member.memberId).catch(() => null),
     pinned ? null : readMyLanguage(driver, member.memberId).catch(() => null),
+    withHistory ? readHistory(driver, member.memberId).catch(() => null) : null,
   ]);
   const name = session.user.name?.trim() ?? '';
   // A language in the address wins, then yours, then the workspace's.
@@ -37,6 +39,7 @@ export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned
     fullName: name, person: name ? { name: name.split(/\s+/)[0]!, initials: initialsOf(name) } : undefined,
     // Pass only the settings the shell uses across the server/client boundary.
     settings: settings ? { name: settings.name, language: settings.language, focus_pack: settings.focus_pack } : null,
+    ...(withHistory ? { history } : {}),
     reports: list?.reports ?? [], fixes: shared?.proposals ?? [],
     ...(withActive ? { activeRuns: active ? active.runs.map((run) => ({ runId: run.run_id, done: run.tries_done, total: run.tries_total })) : null } : {}),
   };

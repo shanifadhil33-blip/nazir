@@ -12,7 +12,7 @@ import { homeLinks } from './home-model';
 import { ReportView, type ReportNote } from './report';
 import { previewFacts } from './report-model';
 import { SettingsViewScreen, type ResetState } from './settings';
-import { previewPeople, settingsAccess } from './settings-model';
+import { settingsAccess } from './settings-model';
 
 export type MorePreviewState = 'ready' | 'older' | 'empty' | 'loading' | 'error' | 'people' | 'ask' | 'done';
 
