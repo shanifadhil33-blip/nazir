@@ -406,7 +406,11 @@
     "wrongAnswers": "إجابات خاطئة",
     "answerCount": "{right} من {total}",
     "navStart": "ابدأ",
-    "navHistory": "السجل"
+    "navHistory": "السجل",
+    "bellCheck": "انتهى فحص، {right} من {total} صحيحة",
+    "bellStopped": "توقف فحص",
+    "bellSafety": "انتهى اختبار أمان",
+    "seeAll": "عرض الكل"
   },
   "landing": {
     "home": "الصفحة الرئيسية لناظر",
@@ -461,7 +465,7 @@
     "suggestFailed": "تعذر إرسال الإصلاح. حاول مرة أخرى.",
     "right": "صحيح",
     "wrong": "خطأ",
-    "unsure": "غير متأكد",
+    "unsure": "لم نستطع التحديد",
     "question": "السؤال {n}",
     "noReply": "لم يحفظ أي رد",
     "back": "كل الفحوصات",
@@ -475,7 +479,14 @@
     "see": "اعرض الإصلاحات",
     "noRecord": "لا يوجد سجل للعرض",
     "notChecked": "لم يُفحص",
-    "fixSuggested": "تم اقتراح إصلاح، افتحه"
+    "fixSuggested": "تم اقتراح إصلاح، افتحه",
+    "counts": "{right} صحيحة، {wrong} خاطئة، {unsure} لم نستطع تحديدها",
+    "checkTitle": "فحص، {when}",
+    "filterAll": "الكل",
+    "filterWrong": "الخاطئة",
+    "filterRight": "الصحيحة",
+    "seeReport": "شاهد التقرير",
+    "noneHere": "لا توجد إجابات هنا."
   },
   "fixesScreen": {
     "light": "إصلاحات",
@@ -561,15 +572,26 @@
     "earlier": "قبل ذلك",
     "showOlder": "عرض الأقدم",
     "checkDone": "انتهى فحص",
-    "suggested": "اقترح {name} إصلاحًا",
-    "approved": "وافق {name} على إصلاح",
-    "turnedDown": "رفض {name} إصلاحًا",
-    "questions": "{n} سؤال أمان",
+    "suggested": "طلبت إصلاحا",
+    "approved": "وافقت على إصلاح",
+    "turnedDown": "اخترت ليس الآن لإصلاح",
+    "questions": "{right} من {total} صحيحة",
     "emptyTitle": "لم يحدث شيء بعد",
     "goChecks": "اذهب إلى الفحوصات",
     "noAccessTitle": "الفريق فقط يرى هذا",
     "goHome": "اذهب إلى الرئيسية",
-    "checkStopped": "تم إيقاف فحص"
+    "checkStopped": "تم إيقاف فحص",
+    "checkStarted": "بدأت فحصاً",
+    "questionsReady": "الأسئلة جاهزة",
+    "testStarted": "بدأت اختبار إصلاح",
+    "testDone": "اكتمل اختبار إصلاح",
+    "languageChanged": "غيّرت اللغة",
+    "settingsChanged": "غيّرت إعداداتك",
+    "sampleReset": "أُعيد ضبط المثال",
+    "safetyStarted": "بدأت اختبار أمان",
+    "safetyStopped": "أُوقف اختبار أمان",
+    "safetyDone": "اكتمل اختبار أمان",
+    "safetyFixed": "وافقت على إصلاح أمان"
   },
   "settingsScreen": {
     "light": "هذه",
@@ -595,8 +617,8 @@
     "address": "عنوان المحادثة"
   },
   "reportScreen": {
-    "light": "تقرير",
-    "bold": "السلامة",
+    "light": "التقرير",
+    "bold": "",
     "headline": "{n} إجابة صحيحة من {total}",
     "caption": "{name}، {when}",
     "fixed": "تم إصلاحه هذا الأسبوع",
@@ -612,7 +634,10 @@
     "sharing": "جارٍ المشاركة",
     "emptyTitle": "لا تقرير بعد",
     "goChecks": "اذهب إلى الفحوصات",
-    "goHome": "اذهب إلى الرئيسية"
+    "goHome": "اذهب إلى الرئيسية",
+    "unsure": "لم نستطع التحديد",
+    "line": "ملخص فحص واحد يمكنك تنزيله ومشاركته.",
+    "manualLink": "انسخ هذا الرابط"
   },
   "connect": {
     "title": "اربط وكيلك",

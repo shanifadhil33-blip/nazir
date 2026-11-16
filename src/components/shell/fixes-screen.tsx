@@ -14,8 +14,8 @@ import { useMemberData } from './member-data';
 export function FixesScreen({ workspaceId, initialLang, mode, fixId }: { workspaceId: string; initialLang: Lang; mode: 'fixes' | 'after'; fixId?: string | null }) {
   const data = useMemberData(workspaceId, initialLang, true, true);
   const { lang, phase, reports, roles, assistant, person } = data;
-  const [tab, setTab] = useState<Tab>('waiting');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>(() => fixId && data.fixes.find((f) => f.id === fixId)?.status !== 'proposed' ? 'done' : 'waiting');
+  const [openId, setOpenId] = useState<string | null>(fixId ?? null);
   const [busy, setBusy] = useState<{ id: string; action: FixAction } | null>(null);
   const [note, setNote] = useState<FixesNote>(null);
   // A second tap while one is in flight is ignored here. The server also answers a repeated action with the saved one.
@@ -35,6 +35,12 @@ export function FixesScreen({ workspaceId, initialLang, mode, fixId }: { workspa
     const timer = setInterval(() => { if (document.visibilityState === 'visible') reload(); }, 5000);
     return () => clearInterval(timer);
   }, [testing, reload]);
+
+  useEffect(() => {
+    const read = () => { const params = new URLSearchParams(window.location.search); const id = params.get('fix'); setOpenId(id); setTab(params.get('tab') === 'done' || (id && data.fixes.find((f) => f.id === id)?.status !== 'proposed') ? 'done' : 'waiting'); };
+    window.addEventListener('popstate', read);
+    return () => window.removeEventListener('popstate', read);
+  }, [data.fixes]);
 
   async function copyChange(id: string) {
     const card = cards.find((item) => item.id === id);
@@ -77,8 +83,8 @@ export function FixesScreen({ workspaceId, initialLang, mode, fixId }: { workspa
       : <FixesView
         lang={lang} seat={seat} phase={phase} fixes={cards} access={access} canStart={data.canStart} assistant={assistant} person={person} links={links}
         tab={tab} openId={openId} busy={busy} note={note}
-        onTab={(next) => { setTab(next); setNote(null); }}
-        onToggle={(id) => setOpenId((current) => current === id ? '' : id)}
+        onTab={(next) => { setTab(next); setOpenId(null); setNote(null); const url = new URL(window.location.href); url.searchParams.set('tab', next); url.searchParams.delete('fix'); window.history.replaceState(null, '', url); }}
+        onToggle={(id) => { const next = openId === id ? '' : id; setOpenId(next); const url = new URL(window.location.href); if (next) url.searchParams.set('fix', next); else url.searchParams.delete('fix'); window.history.pushState(null, '', url); }}
         onAction={(id, action) => void act(id, action)}
         onRetry={reload}
       />}

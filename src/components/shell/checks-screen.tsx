@@ -5,23 +5,26 @@ import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
 import type { ReportBody } from '@/server/reports/build';
 import { ChecksView, type ChecksNote } from './checks';
-import { checksAccess, checksFromReports, type CheckRow } from './checks-model';
+import { checksAccess, checksFromReports, type CheckFilter, type CheckRow } from './checks-model';
 import { readActiveRuns, kickRun, startQuickCheckOutcome, stopRun } from './checks-run';
 import { DocumentLocale } from './document-locale';
 import { homeLinks } from './home-model';
 import { useMemberData } from './member-data';
 import { useMemberSnapshot } from './member-snapshot';
 import { activeChecksEmpty, initialActiveChecks, receiveActiveChecks } from './checks-active';
+import { changedQuestions } from './fixes-model';
 import { SafetyBody, useSafety } from './safety';
 
 type Report = { id: string; created_at: string; body: ReportBody };
 
 /** The signed in checks screen. It reads the same member APIs as the home, and starts and stops runs with the existing endpoints. */
-export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTab }: { workspaceId: string; initialLang: Lang; initialCheck?: string; initialTab?: 'answers' | 'safety' }) {
+export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTab, initialQuestion, initialFilter, initialSafety, initialChange, initialFrom, initialRun }: { workspaceId: string; initialLang: Lang; initialCheck?: string; initialTab?: 'answers' | 'safety'; initialQuestion?: string; initialFilter?: CheckFilter; initialSafety?: string; initialChange?: 'fixed' | 'still' | 'newly'; initialFrom?: string; initialRun?: string }) {
   const data = useMemberData(workspaceId, initialLang, true, true);
   const { lang, phase, reports, roles, assistant, person, setReports } = data;
   const [openId, setOpenId] = useState<string | null>(initialCheck ?? null);
-  const [openQuestion, setOpenQuestion] = useState<string | null>(null);
+  const [openQuestion, setOpenQuestion] = useState<string | null>(initialQuestion ?? null);
+  const [comparison, setComparison] = useState({ change: initialChange, from: initialFrom });
+  const [filter, setFilter] = useState<CheckFilter>(initialFilter ?? 'all');
   const snapshot = useMemberSnapshot(workspaceId);
   const [active, setActive] = useState(() => initialActiveChecks(snapshot?.activeRuns));
   const running = active.runs;
@@ -30,7 +33,31 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
   const auto = useRef(false);
   const [tab, setTab] = useState<'answers' | 'safety'>(initialTab ?? 'answers');
   const [choosing, setChoosing] = useState(false);
-  const safety = useSafety(workspaceId, lang, phase === 'ready' && tab === 'safety');
+  const safety = useSafety(workspaceId, lang, phase === 'ready' && tab === 'safety', initialSafety);
+
+  /** Every tap that opens something is in the address: Back closes it, reload keeps it, a shared link opens it. */
+  const writeUrl = useCallback((next: Record<string, string | null>, push: boolean) => {
+    const url = new URL(window.location.href);
+    for (const [key, value] of Object.entries(next)) { if (value) url.searchParams.set(key, value); else url.searchParams.delete(key); }
+    if (url.href === window.location.href) return;
+    if (push) window.history.pushState(null, '', url); else window.history.replaceState(null, '', url);
+  }, []);
+  const { setOpenId: setSafetyOpen } = safety;
+  useEffect(() => {
+    const read = () => {
+      const params = new URLSearchParams(window.location.search);
+      setOpenId(params.get('check'));
+      setOpenQuestion(params.get('q'));
+      const show = params.get('show');
+      setFilter(show === 'wrong' || show === 'right' || show === 'unsure' ? show : 'all');
+      const change = params.get('change');
+      setComparison({ change: change === 'fixed' || change === 'still' || change === 'newly' ? change : undefined, from: params.get('from') ?? undefined });
+      setTab(params.get('tab') === 'safety' ? 'safety' : 'answers');
+      setSafetyOpen(params.get('safety'));
+    };
+    window.addEventListener('popstate', read);
+    return () => window.removeEventListener('popstate', read);
+  }, [setSafetyOpen]);
   const langRef = useRef(lang);
   useEffect(() => { langRef.current = lang; }, [lang]);
   const kicking = useRef(new Map<string, number>());
@@ -38,7 +65,9 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
   const alive = useRef(true);
 
   const loadReports = useCallback(async () => {
-    const response = await fetch(`/api/workspaces/${workspaceId}/reports`, { headers: { 'accept-language': langRef.current } }).catch(() => null);
+    const params = new URLSearchParams(window.location.search);
+    const include = [params.get('check'), params.get('from')].filter(Boolean).join(',');
+    const response = await fetch(`/api/workspaces/${workspaceId}/reports${include ? `?include=${encodeURIComponent(include)}` : ''}`, { headers: { 'accept-language': langRef.current } }).catch(() => null);
     if (!response?.ok) return false;
     const body = await response.json().catch(() => null) as { reports?: Report[] } | null;
     if (!alive.current) return true;
@@ -133,9 +162,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
 
   function chooseTab(next: 'answers' | 'safety') {
     setTab(next); setNote(null);
-    const url = new URL(window.location.href);
-    if (next === 'safety') url.searchParams.set('tab', 'safety'); else url.searchParams.delete('tab');
-    window.history.replaceState(null, '', url);
+    writeUrl({ tab: next === 'safety' ? 'safety' : null }, true);
   }
   function choose(what: 'answers' | 'safety' | null) {
     setChoosing(false);
@@ -143,6 +170,10 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
     if (what === 'safety') { chooseTab('safety'); void safety.reload().then((list) => { if (list && list.agent && (list.demo || list.confirmed) && !list.runs.some((r) => r.status === 'queued' || r.status === 'running')) void safety.start(false); }); }
   }
 
+  const selectedId = openId ?? (initialRun ? reports.find((r) => r.body.run.id === initialRun)?.id : null) ?? null;
+  const before = reports.find((r) => r.id === comparison.from)?.body;
+  const after = reports.find((r) => r.id === selectedId)?.body;
+  const questionIds = before && after && comparison.change ? changedQuestions(before, after)[comparison.change] : undefined;
   const fixFor = Object.fromEntries(data.fixes.filter((f) => f.status !== 'withdrawn').map((f) => [f.finding_id, f.id]));
 
   return <>
@@ -157,16 +188,19 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       person={person}
       links={homeLinks(workspaceId)}
       now={new Date()}
-      openId={openId}
+      openId={selectedId} questionIds={questionIds}
       openQuestion={openQuestion}
       running={running[0] ?? null}
       active={running}
       activeStatus={active.status}
       busy={busy}
       note={note}
-      onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setNote(null); }}
-      onBack={() => { setOpenId(null); setNote(null); }}
-      onOpenQuestion={(id) => setOpenQuestion((current) => current === id ? '' : id)}
+      onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setFilter('all'); setComparison({ change: undefined, from: undefined }); setNote(null); writeUrl({ check: id, q: null, show: null, change: null, from: null }, true); }}
+      onBack={() => { setOpenId(null); setNote(null); writeUrl({ check: null, q: null, show: null }, true); }}
+      onOpenQuestion={(id) => { const next = openQuestion === id ? '' : id; setOpenQuestion(next); writeUrl({ q: next || null }, true); }}
+      filter={filter}
+      onFilter={(next) => { setFilter(next); setOpenQuestion(null); setComparison({ change: undefined, from: undefined }); writeUrl({ show: next === 'all' ? null : next, q: null, change: null, from: null }, false); }}
+      reportHref={(id) => `/w/${workspaceId}/report/${id}?lang=${lang}`}
       onStart={() => void start()}
       onStop={(id) => void stop(id)}
       onSuggest={(id) => void suggest(id)}
@@ -177,7 +211,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       choosing={choosing}
       onChoose={choose}
       safetyOpen={Boolean(safety.openId)}
-      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}${lang === 'ar' ? '?lang=ar' : ''}`} settingsHref={homeLinks(workspaceId).settings} />}
+      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}?lang=${lang}`} settingsHref={homeLinks(workspaceId).settings} onOpen={(id) => { safety.setOpenId(id); writeUrl({ safety: id }, true); }} />}
     />
   </>;
 }

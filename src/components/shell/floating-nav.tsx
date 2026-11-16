@@ -8,7 +8,7 @@ import { ShellIcon } from './icons';
 import { localeAttrs } from './locale';
 import { navIcon, navItems, navLabel, type NavId, type NavLinks } from './nav';
 
-export function FloatingBottomNav({ lang, seat, copy, canStart, homeOnly, links = {}, current = 'home' }: { lang: 'en' | 'ar'; seat: Seat; copy: Messages; canStart?: boolean; homeOnly?: boolean; links?: NavLinks; current?: NavId }) {
+export function FloatingBottomNav({ lang, seat, copy, canStart, homeOnly, links = {}, current = 'home' }: { lang: 'en' | 'ar'; seat: Seat; copy: Messages; canStart?: boolean; homeOnly?: boolean; links?: NavLinks; current?: NavId | null }) {
   const snapshot = useMemberSnapshot('');
   const restricted = homeOnly ?? (snapshot ? snapshot.kind !== 'demo' && !snapshot.connection?.ready : false);
   const items = restricted ? ['home' as const] : navItems(seat, canStart);

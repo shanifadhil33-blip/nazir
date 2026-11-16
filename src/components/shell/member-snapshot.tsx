@@ -5,6 +5,7 @@ import type { Lang } from '@/components/ocean/copy';
 import type { ReportBody } from '@/server/reports/build';
 import type { ServerFix } from './fixes-model';
 import type { ExternalView } from '@/server/settings/external-agent';
+import type { ActivityPage } from '@/server/shell/history';
 import type { RunProgress } from './checks-run';
 
 export type SavedReport = { id: string; created_at: string; body: ReportBody };
@@ -23,6 +24,7 @@ export type MemberSnapshot = {
   fixes: ServerFix[];
   /** Null or absent means the active list is unknown, never confirmed empty. */
   activeRuns?: RunProgress[] | null;
+  history?: ActivityPage | null;
 };
 const Snapshot = createContext<MemberSnapshot | undefined>(undefined);
 export function MemberSnapshotProvider({ value, children }: { value?: MemberSnapshot; children: ReactNode }) {

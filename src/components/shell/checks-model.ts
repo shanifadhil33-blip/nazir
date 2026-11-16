@@ -75,6 +75,26 @@ export function dayLabel(at: Date, now: Date, lang: Lang, copy: Messages): strin
   return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', ...options }).format(at);
 }
 
+/** "Sun 15 Nov, 09:04" in Dubai time. Every check is named by when it ran. */
+export function dateTimeLabel(at: Date, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(at);
+}
+
+/** Right, wrong and could not tell, counted from the questions shown. */
+export function countsOf(check: CheckRow) {
+  const right = check.questions.filter((q) => q.mark === 'right').length;
+  const wrong = check.questions.filter((q) => q.mark === 'wrong').length;
+  return { right, wrong, unsure: check.questions.length - right - wrong };
+}
+
+export function countsLine(check: CheckRow, copy: Messages) {
+  if (check.stopped) return fill(copy.checksScreen.stopped, { done: String(check.stopped.done), total: String(check.stopped.total) });
+  const c = countsOf(check);
+  return fill(copy.checksScreen.counts, { right: String(c.right), wrong: String(c.wrong), unsure: String(c.unsure) });
+}
+
+export type CheckFilter = 'all' | 'wrong' | 'right' | 'unsure';
+
 export function progressLine(done: number, total: number, copy: Messages) {
   return fill(copy.checksScreen.progress, { done: String(done), total: String(total) });
 }

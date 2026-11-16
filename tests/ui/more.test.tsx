@@ -47,7 +47,7 @@ const report = (lang: Lang, seat: Seat, facts = previewFacts(now)) => renderToSt
 
 it('shows History only to the roles the server lets read it', () => {
   for (const role of ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'] as Role[]) expect(historyAccess([role]), role).toBe(can([role], 'audit.read'));
-  expect(history('en', 'owner')).toContain('Yusuf approved a fix');
+  expect(history('en', 'owner')).toContain('You approved a fix');
   const viewer = history('en', 'viewer');
   expect(viewer).toContain('Only the team sees this');
   expect(viewer).not.toContain('approved a fix');
@@ -56,7 +56,7 @@ it('shows History only to the roles the server lets read it', () => {
 
 it('writes History as plain sentences grouped by day with the clock time in Dubai', () => {
   const html = history('en', 'owner');
-  for (const line of ['What', 'happened', 'Today', 'Yesterday', 'Yusuf approved a fix', 'Omar suggested a fix', 'A check finished', '16 safety questions', '11:40', '09:15', '15:20', 'Show older']) expect(html, line).toContain(line);
+  for (const line of ['What', 'happened', 'Today', 'Yesterday', 'You approved a fix', 'You asked for a fix', 'A check finished', '14 of 16 right', '11:40', '09:15', '15:20', 'Show older']) expect(html, line).toContain(line);
   expect(html).not.toMatch(/r1|r0|\bid\b/);
   expect(html).not.toContain('Earlier');
   const open = history('en', 'owner', { older: true });
@@ -119,7 +119,7 @@ it('computes the report from real counts and reads it in both languages', () => 
   const facts = factsFromReports(reports.map((item) => ({ ...item, body: { ...item.body, conversations: [{ language: 'en', status: 'passed', id: 'x' }, { language: 'ar', status: 'passed', id: 'y' }] } as unknown as ReportBody })), now)!;
   expect(facts).toMatchObject({ right: 14, total: 16, toFix: 2, id: 'r1' });
   expect(headlineText(facts, messagesFor('en'))).toBe('14 right answers out of 16');
-  expect(captionText(facts, 'City Help Desk', now, messagesFor('en'))).toBe('City Help Desk, yesterday');
+  expect(captionText(facts, 'City Help Desk', now, messagesFor('en'))).toBe('City Help Desk, Tue 3 Nov, 15:20');
   expect(languageRow(facts, messagesFor('en'))).toBe('Checked in English and Arabic');
   expect(languageRow({ ...facts, languages: { en: false, ar: true } }, messagesFor('ar'))).toBe('فُحص بالعربية');
   expect(factsFromReports([], now)).toBeNull();
@@ -128,7 +128,7 @@ it('computes the report from real counts and reads it in both languages', () => 
 
 it('shows the report with the mint card, three rows and both pills', () => {
   const html = report('en', 'owner');
-  for (const line of ['Safety', 'report', '82 right answers out of 100', 'City Help Desk, today', 'Fixed this week', 'Still to fix', 'Checked in English and Arabic', 'Download PDF', 'Share']) expect(html, line).toContain(line);
+  for (const line of ['Report', '82 right answers out of 100', 'City Help Desk, Wed 4 Nov, 12:00', 'Fixed this week', 'Still to fix', 'Checked in English and Arabic', 'Download PDF', 'Share']) expect(html, line).toContain(line);
   expect(html).toContain('/api/workspaces/w1/reports/preview/pdf?lang=en');
   expect(html).not.toMatch(/made up|certif|demo note/i);
   expect(report('ar', 'viewer')).toContain('lang=ar');
@@ -144,7 +144,7 @@ it('puts every screen in Arabic and right to left', () => {
     expect(html).toContain('lang="ar"');
     expect(html).not.toContain('dir="ltr"');
   }
-  expect(plain(history('ar', 'owner'))).toContain('وافق Yusuf على إصلاح');
+  expect(plain(history('ar', 'owner'))).toContain('وافقت على إصلاح');
   expect(history('ar', 'owner')).toContain(arabic.historyScreen.showOlder);
   expect(settings('ar', 'owner')).toContain(arabic.settingsScreen.resetDemo);
   expect(report('ar', 'owner')).toContain('82 إجابة صحيحة من 100');
@@ -157,7 +157,7 @@ it('keeps every key in English and Arabic and the copy rules', () => {
       expect(typeof value, name).toBe('string');
       expect(value as string, name).not.toMatch(/ - |[–—]|[\u{1F300}-\u{1FAFF}✨]/u);
       expect(value as string, name).not.toMatch(/\b(demo note|certified|compliant|api|mcp|judge|verification)\b/i);
-      if (lang === en) expect(value as string, name).not.toBe((value as string).toUpperCase());
+      if (lang === en && value) expect(value as string, name).not.toBe((value as string).toUpperCase());
     }
   }
   expect(en.settingsScreen.resetDemo).toBe('Reset the sample');

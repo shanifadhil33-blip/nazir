@@ -60,7 +60,7 @@ export function FixesView(props: FixesViewProps) {
             <Link href={links.settings} aria-label={copy.shell.settings}><Avatar initials={who.initials} label={who.full} /></Link>
             <p className="nz-shell-greet"><strong>{who.name}</strong><small>{helpLine(props.assistant, copy, phase === 'loading')}</small></p>
           </div>
-          <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
+          <Bell lang={lang} home={links.home} />
         </header>
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>

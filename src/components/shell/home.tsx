@@ -75,7 +75,7 @@ export function ShellHome({
             <Link href={go.settings} aria-label={copy.shell.settings}><Avatar initials={person.initials} label={person.full} /></Link>
             <p className="nz-shell-greet"><strong>{person.name}</strong><small>{assistant}</small></p>
           </div>
-          <Bell label={copy.shell.alerts} empty={copy.shell.noAlerts} />
+          <Bell lang={lang} home={go.home} />
         </header>
         <section className="nz-home-main" aria-label={heading.bold}>
           {state === 'loading' ? <div className="nz-home-loading" aria-busy="true" aria-label={copy.shell.loadingTitle}><div className="nz-home-loading-title" /><div className="nz-connect-choices"><div /><div /></div></div> : state !== 'ready' ? <StatePanel copy={copy} state={state} onRetry={onRetry} fallback={go.home} /> : <>

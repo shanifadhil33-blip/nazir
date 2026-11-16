@@ -406,7 +406,11 @@
     "wrongAnswers": "Wrong answers",
     "answerCount": "{right} of {total}",
     "navStart": "Start",
-    "navHistory": "History"
+    "navHistory": "History",
+    "bellCheck": "A check finished, {right} of {total} right",
+    "bellStopped": "A check was stopped",
+    "bellSafety": "A safety test finished",
+    "seeAll": "See all"
   },
   "landing": {
     "home": "Nazir home",
@@ -461,7 +465,7 @@
     "suggestFailed": "Could not send the fix. Try again.",
     "right": "Right",
     "wrong": "Wrong",
-    "unsure": "Not sure",
+    "unsure": "Could not tell",
     "question": "Question {n}",
     "noReply": "No reply was saved",
     "back": "All checks",
@@ -475,7 +479,14 @@
     "see": "See fixes",
     "noRecord": "No record to show",
     "notChecked": "Not checked",
-    "fixSuggested": "Fix suggested, open it"
+    "fixSuggested": "Fix suggested, open it",
+    "counts": "{right} right, {wrong} wrong, {unsure} could not tell",
+    "checkTitle": "Check, {when}",
+    "filterAll": "All",
+    "filterWrong": "Wrong",
+    "filterRight": "Right",
+    "seeReport": "See report",
+    "noneHere": "No answers here."
   },
   "fixesScreen": {
     "light": "Fixes",
@@ -561,15 +572,26 @@
     "earlier": "Earlier",
     "showOlder": "Show older",
     "checkDone": "A check finished",
-    "suggested": "{name} suggested a fix",
-    "approved": "{name} approved a fix",
-    "turnedDown": "{name} turned down a fix",
-    "questions": "{n} safety questions",
+    "suggested": "You asked for a fix",
+    "approved": "You approved a fix",
+    "turnedDown": "You chose Not now for a fix",
+    "questions": "{right} of {total} right",
     "emptyTitle": "Nothing happened yet",
     "goChecks": "Go to checks",
     "noAccessTitle": "Only the team sees this",
     "goHome": "Go home",
-    "checkStopped": "A check was stopped"
+    "checkStopped": "A check was stopped",
+    "checkStarted": "You started a check",
+    "questionsReady": "The questions are ready",
+    "testStarted": "You started testing a fix",
+    "testDone": "Testing a fix finished",
+    "languageChanged": "You changed the language",
+    "settingsChanged": "You changed your settings",
+    "sampleReset": "The sample was reset",
+    "safetyStarted": "You started a safety test",
+    "safetyStopped": "A safety test was stopped",
+    "safetyDone": "A safety test finished",
+    "safetyFixed": "You approved a safety fix"
   },
   "settingsScreen": {
     "light": "Your",
@@ -595,8 +617,8 @@
     "address": "Chat address"
   },
   "reportScreen": {
-    "light": "Safety",
-    "bold": "report",
+    "light": "Report",
+    "bold": "",
     "headline": "{n} right answers out of {total}",
     "caption": "{name}, {when}",
     "fixed": "Fixed this week",
@@ -612,7 +634,10 @@
     "sharing": "Sharing",
     "emptyTitle": "No report yet",
     "goChecks": "Go to checks",
-    "goHome": "Go home"
+    "goHome": "Go home",
+    "unsure": "Could not tell",
+    "line": "A summary of one check you can download and share.",
+    "manualLink": "Copy this link"
   },
   "connect": {
     "title": "Connect your agent",

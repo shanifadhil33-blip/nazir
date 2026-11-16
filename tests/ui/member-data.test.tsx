@@ -12,7 +12,7 @@ import { HistoryScreen } from '../../src/components/shell/history-screen';
 import { ReportScreen } from '../../src/components/shell/report-screen';
 
 afterEach(() => vi.unstubAllGlobals());
-const snapshot: MemberSnapshot = { workspaceId: 'workspace', lang: 'en', roles: ['service_owner'], assistant: 'Assistant', person: { name: 'Omar', initials: 'OH' }, fullName: 'Omar Haddad', settings: { name: 'Assistant', language: 'en' }, reports: [], fixes: [] };
+const snapshot: MemberSnapshot = { workspaceId: 'workspace', lang: 'en', roles: ['service_owner'], assistant: 'Assistant', person: { name: 'Omar', initials: 'OH' }, fullName: 'Omar Haddad', settings: { name: 'Assistant', language: 'en' }, reports: [], fixes: [], history: { items: [], cursor: null } };
 
 it.each(['home', 'checks', 'fixes', 'after', 'settings', 'history', 'report'])('%s renders ready from the server snapshot without browser globals or API calls', (screen) => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);

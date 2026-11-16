@@ -34,7 +34,8 @@ it('shows the running card with progress and a quiet stop to someone who may sto
   expect(html).toContain('Checking now 9 of 16');
   expect(html).toContain('>Stop</button>');
   expect(html).toContain('aria-valuenow="56"');
-  expect(html).toContain('Quick check, Today');
+  // Each check is named by when it ran, in Dubai time.
+  expect(html).toMatch(/[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}, \d{2}:\d{2}/);
   expect(html).toContain('3 to fix');
   expect(html).toContain('all right');
 });
@@ -64,8 +65,10 @@ it('gives one chip per question and a way on for roles that cannot suggest', () 
   expect(html.match(/data-chip="right"/g)).toHaveLength(1);
   expect(html.match(/data-chip="unsure"/g)).toHaveLength(1);
   expect(html).toContain('href="/w/w1?screen=failures"');
-  expect(html).toContain('Quick check');
-  expect(html).toContain('3 to fix');
+  expect(html).toContain('Check, ');
+  expect(html).toContain('1 right, 3 wrong, 1 could not tell');
+  expect(html).toContain('data-filter="wrong"');
+  expect(html).toContain('Could not tell');
 });
 
 it('uses one currency, AED, in the sample answers', () => {
@@ -75,7 +78,7 @@ it('uses one currency, AED, in the sample answers', () => {
 });
 
 it('renders Arabic right to left with Arabic words', () => {
-  const html = render('ar', 'supplier', { openId: 'quick', running: { runId: 'r', done: 9, total: 16 } });
+  const html = render('ar', 'supplier', { openId: 'quick', openQuestion: 'q1', running: { runId: 'r', done: 9, total: 16 } });
   expect(render('ar', 'editor', { running: { runId: 'r', done: 9, total: 16 } })).toContain('إيقاف');
   expect(html).toContain('dir="rtl"');
   expect(html).toContain('lang="ar"');

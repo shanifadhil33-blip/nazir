@@ -3,7 +3,7 @@ import { fill, type Messages } from '@/components/ocean/copy';
 import { can, type Role } from '@/server/auth/roles';
 import { caseResults, completionOf, isCompleteReport, type ReportBody } from '@/server/reports/build';
 import { changeBetween } from './fixes-model';
-import { lastCheckText } from './home-model';
+import { dateTimeLabel } from './checks-model';
 
 export type ReportFacts = {
   sample?: boolean;
@@ -14,7 +14,10 @@ export type ReportFacts = {
   right: number;
   total: number;
   toFix: number;
+  /** Answers Nazir could not tell right or wrong. */
+  unsure?: number;
   fixedThisWeek: number;
+  baseId?: string;
   languages: { en: boolean; ar: boolean };
   at: Date;
 };
@@ -26,12 +29,15 @@ export function reportAccess(roles: readonly string[]): boolean {
 
 type Saved = { id: string; created_at: string; body: ReportBody };
 
-/** Real numbers from the newest saved check. Fixed this week compares it with the oldest check of the last seven days. */
-export function factsFromReports(reports: readonly Saved[], now: Date): ReportFacts | null {
-  const latest = reports[0];
+/**
+ * Real numbers from one saved check: the one asked for, else the newest finished one (a stopped check is not the
+ * report), else the newest. Fixed this week compares it with the oldest check of the seven days before it.
+ */
+export function factsFromReports(reports: readonly Saved[], now: Date, reportId?: string): ReportFacts | null {
+  const latest = reportId ? reports.find((r) => r.id === reportId) : reports.find((r) => isCompleteReport(r.body)) ?? reports[0];
   if (!latest) return null;
   const week = 7 * 86_400_000;
-  const base = [...reports].slice(1).filter((item) => isCompleteReport(item.body) && now.getTime() - checkDate(item.created_at, item.body).getTime() <= week).pop();
+  const base = reports.slice(reports.indexOf(latest) + 1).filter((item) => isCompleteReport(item.body) && checkDate(latest.created_at, latest.body).getTime() - checkDate(item.created_at, item.body).getTime() <= week).pop();
   const rows = caseResults(latest.body.conversations);
   const has = (language: string) => rows.some((row) => row.language === language);
   return {
@@ -43,6 +49,8 @@ export function factsFromReports(reports: readonly Saved[], now: Date): ReportFa
     right: latest.body.counts.passed,
     total: latest.body.counts.conversations,
     toFix: latest.body.counts.failed,
+    unsure: latest.body.counts.inconclusive ?? 0,
+    baseId: base?.id,
     fixedThisWeek: base && isCompleteReport(latest.body) && !base.body.sample && !latest.body.sample ? changeBetween(base.body, latest.body).fixed : 0,
     languages: { en: has('en'), ar: has('ar') },
     at: checkDate(latest.created_at, latest.body),
@@ -54,8 +62,9 @@ export function headlineText(facts: ReportFacts, copy: Messages): string {
   return fill(copy.reportScreen.headline, { n: String(facts.right), total: String(facts.total) });
 }
 
-export function captionText(facts: ReportFacts, assistant: string, now: Date, copy: Messages): string {
-  return fill(copy.reportScreen.caption, { name: facts.agentName ?? (facts.repliesOnly ? copy.settingsScreen.assistant : assistant), when: lastCheckText(facts.at, now, copy).toLowerCase() });
+export function captionText(facts: ReportFacts, assistant: string, now: Date, copy: Messages, lang: 'en' | 'ar' = 'en'): string {
+  void now;
+  return fill(copy.reportScreen.caption, { name: facts.agentName ?? (facts.repliesOnly ? copy.settingsScreen.assistant : assistant), when: dateTimeLabel(facts.at, lang) });
 }
 
 export function languageRow(facts: ReportFacts, copy: Messages): string {
