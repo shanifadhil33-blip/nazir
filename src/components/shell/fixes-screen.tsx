@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
 import { AfterView } from './after';
+import { DemoViewMarker } from './demo-guide';
 import { DocumentLocale } from './document-locale';
 import { FixesView, type FixAction, type FixesNote } from './fixes';
 import { fixCards, fixesAccess, type Tab } from './fixes-model';
@@ -26,7 +27,7 @@ export function FixesScreen({ workspaceId, initialLang, mode, fixId }: { workspa
   const seat = seatFromRoles(roles);
   const cards = useMemo(() => fixCards(data.fixes, reports, lang, copy), [data.fixes, reports, lang, copy]);
   const testing = cards.some((card) => card.retest.state === 'running');
-  const links = homeLinks(workspaceId);
+  const links = homeLinks(workspaceId, lang);
   const { reload } = data;
 
   // While a fix is being tested, read the server every 5 s so the card moves on its own. Paused when the tab is hidden.
@@ -78,6 +79,7 @@ export function FixesScreen({ workspaceId, initialLang, mode, fixId }: { workspa
 
   return <>
     <DocumentLocale lang={lang} />
+    <DemoViewMarker workspaceId={workspaceId} view={mode === 'after' ? 'after' : 'fix'} id={mode === 'after' ? fixId : openId} />
     {mode === 'after'
       ? <AfterView lang={lang} seat={seat} phase={phase} fixId={fixId ?? null} fixes={data.fixes} reports={reports} canStart={data.canStart} assistant={assistant} person={person} links={links} onRetry={reload} />
       : <FixesView

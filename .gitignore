@@ -36,3 +36,7 @@ test-results/
 .pnpm-cache/
 .pnpm-state/
 .gate-audit*/
+
+# Python SDK test output
+__pycache__/
+*.py[cod]

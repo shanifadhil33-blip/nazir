@@ -3,6 +3,7 @@ import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
+import { DemoBar } from './demo-bar';
 import { Bell } from './bell';
 import type { ReportBody } from '@/server/reports/build';
 import { changedQuestions, changeBetween, languageLine, type Change, type ServerFix } from './fixes-model';
@@ -79,6 +80,7 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
           </div>
           <Bell lang={lang} home={links.home} />
         </header>
+        <DemoBar lang={lang} />
         <div className="nz-shell-stack">
           {phase !== 'ready' ? <>
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />

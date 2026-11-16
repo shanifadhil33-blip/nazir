@@ -5,6 +5,7 @@ import type { Lang } from '@/components/ocean/copy';
 import type { ReportBody } from '@/server/reports/build';
 import type { ServerFix } from './fixes-model';
 import type { ExternalView } from '@/server/settings/external-agent';
+import type { DemoProgress } from '@/server/shell/demo-progress';
 import type { ActivityPage } from '@/server/shell/history';
 import type { RunProgress } from './checks-run';
 
@@ -25,6 +26,7 @@ export type MemberSnapshot = {
   /** Null or absent means the active list is unknown, never confirmed empty. */
   activeRuns?: RunProgress[] | null;
   history?: ActivityPage | null;
+  demoProgress?: DemoProgress | null;
 };
 const Snapshot = createContext<MemberSnapshot | undefined>(undefined);
 export function MemberSnapshotProvider({ value, children }: { value?: MemberSnapshot; children: ReactNode }) {

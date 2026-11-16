@@ -36,7 +36,7 @@ export async function signin(browser, profile = profiles[0], lang = 'en') {
   const context = await browser.newContext({ ...options, locale: lang === 'ar' ? 'ar-AE' : 'en-GB' });
   const page = await context.newPage();
   const base = baseUrl();
-  await page.goto(`${base}/signin?lang=${lang}#demo`);
+  await page.goto(`${base}/demo?lang=${lang}`);
   await page.locator('#demo button').filter({ hasText: /Omar|عمر/ }).click();
   await page.waitForURL(/\/w\/[^/?#]+/, { timeout: 45000 });
   const ws = new URL(page.url()).pathname.split('/')[2];

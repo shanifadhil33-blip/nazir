@@ -415,25 +415,25 @@
   "landing": {
     "home": "Nazir home",
     "switchLanguage": "العربية",
-    "lightLine": "Test your AI assistant",
+    "lightLine": "Test your AI agent",
     "boldLine": "before people use it",
     "tryDemo": "Try the demo",
     "howItWorks": "How it works",
-    "free": "Free. No card.",
-    "heroAlt": "The Nazir home screen for Khalid, showing City Help Desk, 82 right answers and 3 to fix.",
-    "askQuestions": "Ask questions",
-    "seeMistakes": "See mistakes",
-    "fixSafely": "Fix safely",
+    "free": "Made for government and public service agents.",
+    "heroAlt": "Omar testing City Help Desk in Nazir",
+    "askQuestions": "Connect your agent. Paste its chat address.",
+    "seeMistakes": "Nazir asks it real questions in English and Arabic.",
+    "fixSafely": "See every wrong answer and fix it.",
     "footer": "Legal"
   },
   "signin": {
-    "welcome": "Welcome",
-    "welcomeBold": "back",
+    "welcome": "Sign in",
+    "welcomeBold": "to Nazir",
     "google": "Continue with Google",
     "switchLanguage": "العربية",
     "demoTitle": "Or look around as",
     "demoNext": "You will land on the home screen as this person.",
-    "demoLimit": "Too many sign ins from your connection just now. Please wait a few minutes and try again.",
+    "demoLimit": "Too many people just started the demo from your connection. Wait a minute and try again.",
     "demoFailed": "We could not sign you in. Please try again.",
     "demoOwnerName": "Omar, service owner",
     "demoOwnerLine": "Runs checks, approves fixes and sees everything.",
@@ -442,7 +442,9 @@
     "demoViewerName": "Khalid, viewer",
     "demoViewerLine": "Looks at results and reports. Cannot change anything.",
     "demoSupplierName": "Bilal, supplier",
-    "demoSupplierLine": "Maintains the assistant and suggests fixes for review."
+    "demoSupplierLine": "Maintains the assistant and suggests fixes for review.",
+    "ownLine": "Use your own account to test your own agent.",
+    "demoLink": "Just looking? Try the demo instead"
   },
   "checksScreen": {
     "light": "Your",
@@ -832,5 +834,25 @@
     "none": "Your agent has not sent its map yet. Run a full check and it will show here.",
     "open": "See your agent's map",
     "sample": "City Help Desk is a sample agent."
+  },
+  "demo": {
+    "title": "Try Nazir",
+    "titleBold": "with a sample agent",
+    "intro": "This is City Help Desk, a made up agent that answers complaints. We broke it on purpose in a few places so you can watch Nazir catch the mistakes.",
+    "start": "Start the demo",
+    "asOmar": "You are Omar",
+    "safe": "Nothing here touches real people or data. The demo resets every day.",
+    "ownAccount": "Use your own account",
+    "unavailable": "The sample is not available right now. Please try again later.",
+    "bar": "Demo. You are Omar.",
+    "more": "More",
+    "barOpen": "City Help Desk is a sample agent with mistakes planted on purpose. Start a check, ask for a fix, approve it and see before and after. Nothing here is real.",
+    "tryThis": "Try this",
+    "guideDone": "You tried the full loop",
+    "stepCheck": "Open Checks and tap the newest check.",
+    "stepWrong": "Tap a wrong answer and ask for a fix.",
+    "stepApprove": "Open Fixes and approve it.",
+    "stepAfter": "Open Before and after.",
+    "stepDone": "Try Nazir with your own agent."
   }
 }

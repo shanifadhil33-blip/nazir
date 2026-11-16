@@ -38,7 +38,7 @@ export function ReportScreen({ workspaceId, initialLang, reportId }: { workspace
     <ReportView
       lang={data.lang} seat={seatFromRoles(data.roles)} phase={data.phase} facts={facts} workspaceId={workspaceId}
       assistant={data.assistant} person={data.person} canStart={data.canStart}
-      canExport={data.canStart} history={historyAccess(data.roles)} links={homeLinks(workspaceId)} now={now} note={note} shareUrl={shareUrl}
+      canExport={data.canStart} history={historyAccess(data.roles)} links={homeLinks(workspaceId, data.lang)} now={now} note={note} shareUrl={shareUrl}
       onDownload={() => setNote('downloading')} onShare={() => void share()} onRetry={data.reload}
     />
   </>;

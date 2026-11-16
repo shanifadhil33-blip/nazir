@@ -7,6 +7,9 @@ import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
+import { DemoGuide } from './demo-guide';
+import type { DemoProgress } from '@/server/shell/demo-progress';
+import { DemoBar } from './demo-bar';
 import { Bell } from './bell';
 import { FloatingBottomNav } from './floating-nav';
 import { headingFor, homeLinks, lastCheckText, seatAccess, type HomeLinks, type HomeView } from './home-model';
@@ -35,9 +38,10 @@ export function ShellHome({
   links,
   now = new Date(),
   onRetry,
-  person: who, workspaceId, kind, connection, panel, onConnected, active = [], activeStatus = 'ready',
+  person: who, workspaceId, kind, demoProgress, connection, panel, onConnected, active = [], activeStatus = 'ready',
 }: {
   workspaceId?: string;
+  demoProgress?: DemoProgress | null;
   kind?: 'real' | 'demo';
   connection?: ExternalView | null;
   panel?: 'full' | 'quick';
@@ -77,6 +81,7 @@ export function ShellHome({
           </div>
           <Bell lang={lang} home={go.home} />
         </header>
+        <DemoBar lang={lang} />
         <section className="nz-home-main" aria-label={heading.bold}>
           {state === 'loading' ? <div className="nz-home-loading" aria-busy="true" aria-label={copy.shell.loadingTitle}><div className="nz-home-loading-title" /><div className="nz-connect-choices"><div /><div /></div></div> : state !== 'ready' ? <StatePanel copy={copy} state={state} onRetry={onRetry} fallback={go.home} /> : <>
             <Heading light={heading.light} bold={heading.bold} lang={lang} />
@@ -100,6 +105,7 @@ export function ShellHome({
               <p dir="auto"><ConnectionLine template={facts.inconclusive > 0 ? copy.shell.lastCheckSummaryUnsure : copy.shell.lastCheckSummary} values={{ right: { text: String(facts.right), dir: 'ltr' }, wrong: { text: String(facts.toFix), dir: 'ltr' }, inconclusive: { text: String(facts.inconclusive), dir: 'ltr' }, total: { text: String(facts.total ?? facts.right + facts.toFix + facts.inconclusive), dir: 'ltr' } }} /></p>
               <div className="nz-home-links"><Link className="nz-home-link" href={checkHref}>{copy.shell.openLastCheck}</Link><span className="nz-home-time"><bdi dir="ltr">{checkTime}</bdi></span></div>
             </section> : null}
+            {kind === 'demo' && demoProgress ? <DemoGuide lang={lang} home={go.home} progress={demoProgress} /> : null}
             <div className="nz-home-links">{access.fixes ? <Link className="nz-home-link" href={go.fixes}>{copy.shell.fixes}</Link> : null}{access.report ? <Link className="nz-home-link" href={go.report}>{copy.shell.report}</Link> : null}<Link className="nz-home-link" href={`${go.home}?screen=map&lang=${lang}`}>{copy.mapScreen.open}</Link></div>
             {variant === 'viewer' ? <p>{copy.shell.viewOnly}</p> : null}
           </>}

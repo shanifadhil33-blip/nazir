@@ -119,7 +119,9 @@ it('keeps the list and the check page under 25 words of copy', () => {
   expect(words(listText)).toBeLessThan(25);
   const page = render('en', 'supplier', { openId: 'quick', checks: previewChecks('en', now).map((item) => ({ ...item, questions: item.questions.map((q) => ({ ...q, question: 'Q', said: 'A', record: 'R' })) })) });
   expect(words(column(page, 'class="nz-check-page"', '</section>'))).toBeLessThan(45);
-  expect(list).not.toMatch(/Omar|Yusuf|Ahmed/);
+  // Preview chrome uses the same one sample person on every screen.
+  expect(list).toContain('Omar');
+  expect(list).not.toMatch(/Yusuf|Ahmed/);
 });
 
 it('words the check lines from real counts and days', () => {

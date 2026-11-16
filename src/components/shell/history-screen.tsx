@@ -36,7 +36,7 @@ export function HistoryScreen({ workspaceId, initialLang }: { workspaceId: strin
     <DocumentLocale lang={data.lang} />
     <HistoryView lang={data.lang} seat={seatFromRoles(data.roles)} phase={failed && !page ? 'error' : data.phase === 'ready' && allowed && !page ? 'loading' : data.phase}
       allowed={allowed || data.phase !== 'ready'} items={items} now={new Date()} older={older}
-      assistant={data.assistant} person={data.person} canStart={data.canStart} links={homeLinks(workspaceId)}
+      assistant={data.assistant} person={data.person} canStart={data.canStart} links={homeLinks(workspaceId, data.lang)}
       more={Boolean(page?.cursor)} busy={busy} failed={failed}
       onOlder={() => { setOlder(true); if (page?.cursor && !busy) void load(page.cursor); }} onRetry={() => void load()} />
   </>;

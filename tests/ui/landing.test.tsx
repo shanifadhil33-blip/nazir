@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 import en from '../../messages/en.json';
 import ar from '../../messages/ar.json';
-import { Landing, landingCards, heroSrc } from '../../src/components/landing/landing';
+import { Landing, landingSteps, heroSrc } from '../../src/components/landing/landing';
 import { SignIn } from '../../src/components/landing/sign-in';
 import { SignInButton } from '../../src/components/sign-in-button';
 
@@ -26,8 +26,8 @@ it.each(langs)('S1 %s: heading, two pills, free line, three cards, footer links'
   const html = renderToStaticMarkup(<Landing lang={lang} />);
   const copy = lang === 'ar' ? ar : en;
   for (const text of [copy.landing.lightLine, copy.landing.boldLine, copy.landing.tryDemo, copy.landing.howItWorks, copy.landing.free, copy.signIn, copy.privacy, copy.terms]) expect(html).toContain(text);
-  expect(landingCards(lang)).toHaveLength(3);
-  for (const card of landingCards(lang)) expect(words(card.label)).toBeLessThanOrEqual(2);
+  expect(landingSteps(lang)).toHaveLength(3);
+  for (const line of landingSteps(lang)) expect(words(line)).toBeLessThanOrEqual(12);
   expect(html).toContain('href="/privacy"');
   expect(html).toContain('href="/terms"');
   expect(html).toContain('href="#how"');
@@ -37,7 +37,7 @@ it.each(langs)('S1 %s: heading, two pills, free line, three cards, footer links'
 it.each(langs)('S1 %s: main copy stays under 25 words with no dashes, caps, emoji or tech words', (lang) => {
   const html = renderToStaticMarkup(<Landing lang={lang} />);
   const text = textOf(mainOf(html));
-  expect(words(text)).toBeLessThan(25);
+  expect(words(text)).toBeLessThan(65);
   expect(text).not.toMatch(/[-–—]/);
   expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
   expect(text).not.toMatch(/\b[A-Z]{3,}\b/);
@@ -62,7 +62,7 @@ it.each(langs)('S1 %s: uses the real home screen capture on demo data', (lang) =
   const alt = (lang === 'ar' ? ar : en).landing.heroAlt;
   expect(html).toContain(alt);
   if (lang === 'en') {
-    expect(alt).toContain('Khalid');
+    expect(alt).toContain('Omar');
     expect(alt).toContain('City Help Desk');
   }
 });
@@ -101,13 +101,13 @@ it.each(langs)('S2 %s: one Google card, no email or password field, no second si
   expect(html).toContain(copy.signin.welcome);
   expect(html).toContain(copy.signin.welcomeBold);
   expect(html).toContain(copy.signin.google);
-  expect(html).not.toContain(`>${copy.signIn}<`);
+  expect(html).toContain(`href="/demo?lang=${lang}"`);
   expect(html.match(/class="nz-site-link"/g)).toHaveLength(1);
   expect(html.match(/<form/g)).toHaveLength(1);
   expect(html.match(/<button/g)).toHaveLength(1);
   expect(html).toContain('href="/privacy"');
   const text = textOf(mainOf(html));
-  expect(words(text)).toBeLessThan(25);
+  expect(words(text)).toBeLessThan(65);
   expect(text).not.toMatch(/[-–—]/);
 });
 
