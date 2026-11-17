@@ -3,6 +3,7 @@ import { withMember } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
 import { NotFound } from '../http/errors';
 import { readExternalAgent } from '../settings/external-agent';
+import { safetyOwnership } from './ownership';
 import { families, type Family } from './attacks';
 import { overall, type Outcome, type Severity, type VerdictLine } from './evidence';
 
@@ -47,12 +48,14 @@ function byFamily(attempts: AttemptRow[], fixed: ReadonlySet<string> = new Set()
 
 export async function listSafety(driver: TransactionDriver, memberId: string, kind: 'real' | 'demo' | undefined) {
   const demo = kind === 'demo';
-  const agent = demo || Boolean((await readExternalAgent(driver, memberId))?.ready);
+  const connection = demo ? null : await readExternalAgent(driver, memberId);
+  const agent = demo || Boolean(connection?.ready);
+  const ownership = demo ? { confirmed: true, proof: null } : await safetyOwnership(driver, memberId, connection);
   return withMember(driver, memberId, async (sql) => {
     const runs = (await sql.query<RunRow>('SELECT id,scope,status,agent_name,created_at,started_at,finished_at FROM nazir.safety_runs ORDER BY created_at DESC LIMIT 30')).rows;
     const attempts = runs.length ? (await sql.query<AttemptRow>('SELECT run_id,position,family,language,status,outcome,severity,proven,NULL::text AS reply,NULL::text AS did,note,attack FROM nazir.safety_attempts WHERE run_id=ANY($1::uuid[])', [runs.map((r) => r.id)])).rows : [];
-    const confirmed = (await sql.query<{ n: number }>('SELECT count(*)::int AS n FROM nazir.safety_confirmations')).rows[0]!.n > 0;
-    return { runs: runs.map((r) => summarize(r, attempts)), confirmed: demo || confirmed, demo, agent };
+    const nextAt = (await sql.query<{ at: string | null }>('SELECT nazir.safety_next_at() AS at')).rows[0]!.at;
+    return { runs: runs.map((r) => summarize(r, attempts)), ...ownership, nextAt, demo, agent };
   });
 }
 

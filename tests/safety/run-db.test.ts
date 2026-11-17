@@ -5,6 +5,8 @@ import { testDatabase, type TestDatabase } from '../helpers/pglite';
 import { fixture } from '../runner/helpers';
 import { saveExternalAgent, testExternalAgent } from '../../src/server/settings/external-agent';
 import { approveSafetyFix, confirmSafety, safetyStep, startSafety, stopSafety } from '../../src/server/safety/run';
+import { domainProof } from '../../src/server/safety/ownership';
+import { readExternalAgent } from '../../src/server/settings/external-agent';
 import { listSafety, readSafety } from '../../src/server/safety/read';
 
 const resolve = async () => [{ address: '93.184.215.14' }];
@@ -12,6 +14,7 @@ let db: TestDatabase;
 let demo: { ws: string; member: string }, real: { ws: string; member: string }, other: { ws: string; member: string };
 async function ownerOf(ws: string) { return (await db.owner.query<{ id: string }>('SELECT id FROM nazir.members WHERE workspace_id=$1 ORDER BY created_at LIMIT 1', [ws])).rows[0]!.id; }
 beforeAll(async () => {
+  vi.stubEnv('AUTH_SECRET', 'safety-test-secret-with-enough-length');
   db = await testDatabase();
   const d = await fixture(db, 'Safety demo'), r = await fixture(db, 'Safety real'), o = await fixture(db, 'Safety other');
   await db.owner.query("UPDATE nazir.workspaces SET kind='real' WHERE id=ANY($1::uuid[])", [[r.workspaceId, o.workspaceId]]);
@@ -24,6 +27,12 @@ async function drain(transport?: NonNullable<Parameters<typeof safetyStep>[1]>['
   for (let i = 0; i < 40; i++) if (!(await safetyStep(db.driver, { transport, turnGapMs: 0 })).advanced) break;
 }
 
+async function confirmWithFile(who: { ws: string; member: string }) {
+  const connection = (await readExternalAgent(db.driver, who.member))!;
+  const proof = domainProof(who.ws, connection);
+  await confirmSafety(db.driver, who.member, { resolve, fetcher: async () => new Response(proof.token) });
+}
+
 it('demo: the sample finds its three planted weaknesses, and after the fixes it is Ready and safe', async () => {
   const { id } = await startSafety(db.driver, demo.member, 'demo');
   expect((await startSafety(db.driver, demo.member, 'demo')).id, 'one test at a time').toBe(id);
@@ -34,6 +43,9 @@ it('demo: the sample finds its three planted weaknesses, and after the fixes it 
   expect(found.map((w) => w.family).sort()).toEqual(['S10', 'S2', 'S5']);
   expect(found.find((w) => w.family === 'S10')).toMatchObject({ severity: 'critical', proven: 'trace' });
   for (const w of found) await approveSafetyFix(db.driver, demo.member, w.family, 'demo');
+  await expect(startSafety(db.driver, demo.member, 'demo')).rejects.toMatchObject({ code: 'safety_daily_limit' });
+  // Test fixture advances eligibility; production never rewrites timestamps.
+  await db.owner.query("UPDATE nazir.safety_runs SET created_at=clock_timestamp()-interval '61 minutes' WHERE id=$1", [id]);
   const again = await startSafety(db.driver, demo.member, 'demo');
   await drain();
   const second = await readSafety(db.driver, demo.member, again.id);
@@ -51,7 +63,7 @@ it('your agent: needs the one time ownership confirm, talks only to the connecte
   const fetcher = (async (url: string | URL | Request) => { hosts.push(new URL(String(url instanceof Request ? url.url : url)).host); return Response.json({ reply: 'Sorry, I can only help with your own cases.' }); }) as typeof fetch;
   await testExternalAgent(db.driver, real.member, { message: 'Hi', language: 'en' }, { fetcher, resolve });
   await expect(startSafety(db.driver, real.member, 'real')).rejects.toMatchObject({ status: 409, code: 'safety_confirm_needed' });
-  await confirmSafety(db.driver, real.member);
+  await confirmWithFile(real);
   expect((await db.owner.query('SELECT host FROM nazir.safety_confirmations WHERE workspace_id=$1', [real.ws])).rows).toEqual([{ host: 'agent.example.com' }]);
   const { id } = await startSafety(db.driver, real.member, 'real');
   hosts.length = 0;
@@ -70,7 +82,7 @@ it('pauses after five errors in a row instead of hammering your agent', async ()
   let up = true;
   const fetcher = (async () => { if (up) return Response.json({ reply: 'Hello' }); throw new Error('connection refused'); }) as typeof fetch;
   await testExternalAgent(db.driver, other.member, { message: 'Hi', language: 'en' }, { fetcher, resolve });
-  await confirmSafety(db.driver, other.member);
+  await confirmWithFile(other);
   const { id } = await startSafety(db.driver, other.member, 'real');
   up = false;
   await drain({ fetcher, resolve });

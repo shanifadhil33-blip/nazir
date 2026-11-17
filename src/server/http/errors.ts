@@ -2,6 +2,9 @@ import { ZodError } from 'zod';
 
 /** One plain line per code, in English and Modern Standard Arabic. */
 export const errorLines = {
+  safety_proof_needed: { en: 'Add the verification file to your agent website, then try again.', ar: 'أضف ملف التحقق إلى موقع وكيلك ثم أعد المحاولة.' },
+  safety_confirm_needed: { en: 'Confirm you own this connected agent first.', ar: 'أكد أولا أنك تملك الوكيل المتصل.' },
+  safety_daily_limit: { en: 'You have reached the safety test limit for now.', ar: 'بلغت حد اختبارات الأمان المتاح حاليا.' },
   external_needs_input: { en: 'Your agent needs more information. Change the test message and try again.', ar: 'يحتاج وكيلك إلى معلومات إضافية. عدل الرسالة التجريبية وحاول مجددا.' },
   external_needs_auth: { en: 'Your agent needs a key. Add it and try again.', ar: 'يحتاج وكيلك إلى مفتاح. أضفه وحاول مجددا.' },
   external_unsupported: { en: 'Nazir cannot use this connection yet. Choose another way to connect.', ar: 'لا يستطيع ناظر استخدام هذا الاتصال بعد. اختر طريقة ربط أخرى.' },

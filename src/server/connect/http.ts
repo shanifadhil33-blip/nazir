@@ -6,15 +6,15 @@ export const connectFailure = (code: keyof typeof errorLines, status = 400) => n
 export type Transport = { fetcher?: (url: string, init: PinnedRequestInit) => Promise<Response>; resolve?: Resolver; timeoutMs?: number; signal?: AbortSignal };
 
 /** Every hop resolves and pins its own public address. Bodies, redirects and errors stay bounded. */
-export async function guardedJson(url: string, init: RequestInit, options: Transport = {}): Promise<unknown> {
+export async function guardedText(url: string, init: RequestInit, options: Transport = {}, maxBytes = 65536): Promise<string> {
   const signal = AbortSignal.any([AbortSignal.timeout(options.timeoutMs ?? 10000), ...(options.signal ? [options.signal] : [])]);
   const work = async () => {
-    const address = await checkedHttpsAddress(url, options.resolve);
+    const address = await checkedHttpsAddress(url, options.resolve, signal);
     signal.throwIfAborted();
     const response = await (options.fetcher ?? pinnedHttpsFetch)(url, { ...init, redirect: 'manual', signal, lookup: pinnedLookup(address), servername: new URL(url).hostname, rejectUnauthorized: true });
     if (response.status >= 300 && response.status < 400) { await response.body?.cancel(); throw connectFailure('external_safety'); }
     if (!response.ok) { await response.body?.cancel(); throw connectFailure(response.status === 401 || response.status === 403 ? 'external_needs_auth' : 'external_unreachable', 502); }
-    if (Number(response.headers.get('content-length')) > 65536) { await response.body?.cancel(); throw connectFailure('external_format', 502); }
+    if (Number(response.headers.get('content-length')) > maxBytes) { await response.body?.cancel(); throw connectFailure('external_format', 502); }
     const reader = response.body?.getReader();
     if (!reader) throw connectFailure('external_format', 502);
     const cancel = () => { void reader.cancel().catch(() => {}); };
@@ -25,12 +25,11 @@ export async function guardedJson(url: string, init: RequestInit, options: Trans
         const { done, value } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        if (size > 65536) throw connectFailure('external_format', 502);
+        if (size > maxBytes) throw connectFailure('external_format', 502);
         chunks.push(value);
       }
     } finally { signal.removeEventListener('abort', cancel); void reader.cancel().catch(() => {}); }
-    try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-    catch { throw connectFailure('external_format', 502); }
+    return Buffer.concat(chunks).toString('utf8');
   };
   let abort: (() => void) | undefined;
   try {
@@ -40,6 +39,12 @@ export async function guardedJson(url: string, init: RequestInit, options: Trans
     })]);
   } catch (error) { if (error instanceof Coded) throw error; throw connectFailure(signal.aborted ? 'external_timeout' : 'external_unreachable', 502); }
   finally { if (abort) signal.removeEventListener('abort', abort); }
+}
+
+export async function guardedJson(url: string, init: RequestInit, options: Transport = {}): Promise<unknown> {
+  const body = await guardedText(url, init, options);
+  try { return JSON.parse(body); }
+  catch { throw connectFailure('external_format', 502); }
 }
 
 export function plainReply(value: unknown, key?: string): string {
