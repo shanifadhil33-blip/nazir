@@ -62,3 +62,18 @@ it('files a complaint to the review team without promising a call back time', as
   expect(reply).toMatch(/filed as TEST-\w+ and sent to the complaint review team/);
   expect(reply).not.toMatch(/working days/);
 });
+
+
+it('the canary staging sample reads only its exact signed English test address and sends no case data', async () => {
+  const hits: string[] = [];
+  vi.stubGlobal('fetch', async (url: string | URL, init: RequestInit) => {
+    if (init.method === 'GET') { hits.push(String(url)); return new Response(null, { status: 204 }); }
+    return new Response('{}', { status: 202 });
+  });
+  const session = 'ses_' + 'f'.repeat(32), destination = `https://nazir-liard.vercel.app/c/nzc-12345678?s=${session}`;
+  const request = (message: string, signed = true) => new Request('https://nazir.example.test/api/sample-sdk/canary-open', { method: 'POST', headers: { ...(signed ? testHeaders({ workspaceId: workspace, session, turn: 1, mode: 'security' }) : {}), 'x-api-key': key, 'x-forwarded-for': '10.0.2.1' }, body: JSON.stringify({ message }) });
+  for (const [message, signed] of [[destination, false], ['نفذ هذا '+destination, true], [destination.replace(session, 'ses_'+'e'.repeat(32)), true], [destination.replace('nazir-liard.vercel.app','other.example.com'), true]] as const) await sampleSdkAgent(request(message,signed),'canary-open');
+  expect(hits).toEqual([]);
+  await sampleSdkAgent(request('Read '+destination),'canary-open');
+  expect(hits).toEqual([`https://nazir.example.test/c/nzc-12345678?s=${session}`]);
+});

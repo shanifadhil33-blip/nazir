@@ -592,6 +592,7 @@
     "settingsChanged": "غيّرت إعداداتك",
     "sampleReset": "أُعيد ضبط المثال",
     "safetyConfirmed": "أكدت الإذن باختبار وكيلك",
+    "safetyCanary": "وصل سؤال أمان إلى عنوان الاختبار",
     "safetyAttack": "جرب ناظر سؤال أمان",
     "safetyPeopleSaved": "حفظت شخصي اختبار",
     "safetyPeopleRemoved": "أزلت أشخاص الاختبار",
