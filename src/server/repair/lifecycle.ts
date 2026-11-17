@@ -48,11 +48,11 @@ export async function fixAction(driver: TransactionDriver, memberId: string, pro
   }
   if (row.status !== 'approved') throw new Coded(409, 'proposal_state', 'This fix cannot be tested now.');
   // A double tap while the test again runs gets the same run.
-  if (row.retest_run_id && ['queued', 'running'].includes(row.run_status ?? '')) return { id, status: 'approved', retest_run_id: row.retest_run_id };
+  if (row.retest_run_id && (what === 'approve' || ['queued', 'running'].includes(row.run_status ?? ''))) return { id, status: 'approved', retest_run_id: row.retest_run_id };
   let runId: string;
   if (row.patch) {
     // The approved sample fix runs its own questions again on the repaired version.
-    const runs = await startRetest(driver, memberId, { proposalId: id, sets: ['retest'], repeat_count: 1 });
+    const runs = await startRetest(driver, memberId, { proposalId: id, sets: ['retest'], repeat_count: 1, ...(what === 'retest' && row.retest_run_id ? { retryOf: row.retest_run_id } : {}) });
     runId = runs.retest!;
     superviseStart(driver, memberId, runId);
   } else {
@@ -61,7 +61,9 @@ export async function fixAction(driver: TransactionDriver, memberId: string, pro
     if (started.existing) throw new Coded(409, 'run_active', 'A check is running now. Test again when it finishes.');
     runId = started.run_id;
   }
-  await withMember(driver, memberId, (sql) => sql.query('UPDATE nazir.proposals SET retest_run_id=$1 WHERE id=$2', [runId, id]));
-  await withMember(driver, memberId, (sql) => sql.query("SELECT nazir.append_audit('proposal.retest','proposal',$1,$2)", [id, JSON.stringify({ run_id: runId })]));
+  await withMember(driver, memberId, async (sql) => {
+    const changed = await sql.query('UPDATE nazir.proposals SET retest_run_id=$1 WHERE id=$2 AND retest_run_id IS DISTINCT FROM $1 RETURNING id', [runId, id]);
+    if (changed.rows.length) await sql.query("SELECT nazir.append_audit('proposal.retest','proposal',$1,$2)", [id, JSON.stringify({ run_id: runId })]);
+  });
   return { id, status: 'approved', retest_run_id: runId };
 }
