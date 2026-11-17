@@ -7,7 +7,7 @@ import type { HistoryKind } from '@/components/shell/history-model';
 export type ActivityItem = { id: string; kind: HistoryKind; at: string; href: string; title: string; titleAr: string; right?: number; total?: number; done?: number };
 export type ActivityPage = { items: ActivityItem[]; cursor: string | null };
 // Only user facing milestones. Raw audit payloads, keys and tool traffic never leave this service.
-const actions = ['plan.proposed', 'run_enqueued', 'run_finished', 'proposal.create', 'proposal.decide', 'proposal.rerun', 'proposal.retest', 'member.language', 'agent.settings_saved', 'demo.reset', 'safety.started', 'safety.stopped', 'safety.finished', 'safety.fix_approved', 'safety.confirmed', 'safety.attack_sent', 'safety.people_saved', 'safety.people_removed'];
+const actions = ['plan.proposed', 'run_enqueued', 'run_finished', 'proposal.create', 'proposal.decide', 'proposal.rerun', 'proposal.retest', 'member.language', 'agent.settings_saved', 'demo.reset', 'safety.started', 'safety.stopped', 'safety.finished', 'safety.fix_approved', 'safety.confirmed', 'safety.attack_sent', 'safety.people_saved', 'safety.people_removed', 'safety.canary_hit'];
 export const completionActions = ['run_finished', 'safety.finished'];
 
 type Event = { seq: string; at: string; action: string; target_id: string | null; decision: string | null; event_status: string | null; report_id: string | null; run_id: string | null; fix_id: string | null; title: string | null; title_ar: string | null; right: number | null; total: number | null; done: number | null; status: string | null };
@@ -24,6 +24,7 @@ export function activityFromEvent(row: Event, base: string): ActivityItem {
     case 'member.language': kind = 'languageChanged'; href = `${base}?screen=settings`; break;
     case 'agent.settings_saved': kind = 'settingsChanged'; href = `${base}?screen=settings`; break;
     case 'demo.reset': kind = 'sampleReset'; href = base; break;
+    case 'safety.canary_hit': kind = 'safetyCanary'; href += `&tab=safety&safety=${row.target_id}`; break;
     case 'safety.confirmed': kind = 'safetyConfirmed'; href += '&tab=safety'; break;
     case 'safety.attack_sent': kind = 'safetyAttack'; href += `&tab=safety&safety=${row.target_id}`; break;
     case 'safety.people_saved': kind = 'safetyPeopleSaved'; href = `${base}?screen=settings&setup=people`; break;

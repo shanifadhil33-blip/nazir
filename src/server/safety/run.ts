@@ -7,7 +7,7 @@ import type { TraceSpan } from '../checks/trace-checks';
 import { externalConversation } from '../runner/external-agent';
 import { scheduleRunner } from '../runner/schedule';
 import { externalAgentForWorker, readExternalAgent, type ExternalTransport } from '../settings/external-agent';
-import { attacksFor, type Attack, type Family } from './attacks';
+import { attackForSession, attacksFor, type Attack, type Family } from './attacks';
 import { demoInstructions, demoOtherPerson, demoSafetyAgent } from './demo-agent';
 import { judgeAttack, type Verdict } from './evidence';
 import { readAgentMap } from './read-map';
@@ -110,7 +110,7 @@ export async function safetyStep(driver: TransactionDriver, options: { transport
       const results = await Promise.allSettled(claimed.map(async (attempt, index) => {
         // At most one message every 2 s per question, four questions at a time.
         await new Promise((r) => setTimeout(r, index * 500));
-        return { attempt, verdict: await runAttack(driver, item.workspace_id, run, attempt.attack, fixed, options.transport, options.turnGapMs ?? 2000) };
+        return { attempt, verdict: await runAttack(driver, item.workspace_id, run, attempt.attack, fixed, options.transport, options.turnGapMs ?? 2000, attempt.id) };
       }));
       let errors = run.errors_in_row;
       for (const [index, result] of results.entries()) {
@@ -135,7 +135,7 @@ export async function safetyStep(driver: TransactionDriver, options: { transport
   return { advanced };
 }
 
-async function runAttack(driver: TransactionDriver, workspaceId: string, run: RunRow, attack: Attack, fixed: ReadonlySet<Family>, transport: ExternalTransport | undefined, turnGapMs: number): Promise<Verdict & { reply: string }> {
+async function runAttack(driver: TransactionDriver, workspaceId: string, run: RunRow, attack: Attack, fixed: ReadonlySet<Family>, transport: ExternalTransport | undefined, turnGapMs: number, attemptId: string): Promise<Verdict & { reply: string }> {
   const changing = demoInventory.tools!.filter((t) => t.changes_data).map((t) => String(t.name));
   if (run.scope === 'sample') {
     const out = demoSafetyAgent(attack, fixed, run.canary);
@@ -160,6 +160,7 @@ async function runAttack(driver: TransactionDriver, workspaceId: string, run: Ru
   try {
   const openSession = (variant: string) => withWorker(driver, workspaceId, async (sql) => {
     const session = (await sql.query<{ s: string }>("SELECT nazir.open_test_session('security') AS s")).rows[0]!.s;
+    if (variant === 'attack') await sql.query("UPDATE nazir.safety_attempts SET session_id=$1 WHERE id=$2 AND run_id=$3 AND status='running'", [session,attemptId,run.id]);
     await sql.query("SELECT nazir.append_audit('safety.attack_sent','safety_run',$1,$2::jsonb)", [run.id, JSON.stringify({ attack: attack.id, family: attack.family, variant, session })]);
     return session;
   });
@@ -196,11 +197,12 @@ async function runAttack(driver: TransactionDriver, workspaceId: string, run: Ru
     identity = { header: people.header, value: people.a.token };
   }
   const session = await openSession('attack');
-  const result = await externalConversation(row, attack.turns, session, attack.language, pace, { ...outgoing, identity }, { workspaceId, session, mode: 'security', inject: attack.inject }, {});
+  const outgoingAttack = attackForSession(attack, run.canary, session);
+  const result = await externalConversation(row, outgoingAttack.turns, session, attack.language, pace, { ...outgoing, identity }, { workspaceId, session, mode: 'security', inject: outgoingAttack.inject }, {});
   const spans = await traces(session, result.replies.length);
   const inventory = await withWorker(driver, workspaceId, async (sql) => (await sql.query<{ inventory: { tools?: { name?: string; changes_data?: boolean }[] } }>('SELECT inventory FROM nazir.agent_inventory ORDER BY received_at DESC LIMIT 1')).rows[0]?.inventory ?? {}).catch(() => ({} as { tools?: { name?: string; changes_data?: boolean }[] }));
   const tools = (inventory.tools ?? []).filter((t) => typeof t.name === 'string');
-  const canaryHit = await withWorker(driver, workspaceId, async (sql) => (await sql.query<{ n: number }>('SELECT count(*)::int AS n FROM nazir.canary_hits WHERE run_id=$1', [run.id])).rows[0]!.n > 0);
+  const canaryHit = await withWorker(driver, workspaceId, async (sql) => (await sql.query<{ n: number }>('SELECT count(*)::int AS n FROM nazir.canary_hits WHERE run_id=$1 AND attack_id=$2 AND session_id=$3', [run.id,attemptId,session])).rows[0]!.n > 0);
   const verdict = judgeAttack({ attack, reply: result.reply, spans, canaryHit, canary: run.canary, changingTools: tools.filter((t) => t.changes_data).map((t) => t.name!), inventoryTools: tools.map((t) => t.name!), ...(marker ? { other: { markers: [marker], names: [marker] } } : {}) });
   if (run.scope === 'full' && !spans && verdict.outcome === 'resisted') return { outcome: 'could_not_tell', severity: null, proven: null, did: null, reply: result.reply };
   return { ...verdict, reply: result.reply };

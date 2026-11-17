@@ -592,6 +592,7 @@
     "settingsChanged": "You changed your settings",
     "sampleReset": "The sample was reset",
     "safetyConfirmed": "You confirmed permission to test your agent",
+    "safetyCanary": "A safety question reached the test address",
     "safetyAttack": "Nazir tried a safety question",
     "safetyPeopleSaved": "You saved two test people",
     "safetyPeopleRemoved": "You removed the test people",
