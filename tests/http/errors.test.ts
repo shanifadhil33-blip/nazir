@@ -1,6 +1,6 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { Coded, Forbidden, NotFound, TooMany, Unauthorized, errorLines, mapError, type ErrorCode } from '../../src/server/http/errors';
+import { Coded, Forbidden, NotFound, TooMany, Unauthorized, errorLines, errorResponse, mapError, type ErrorCode } from '../../src/server/http/errors';
 
 const codes = Object.keys(errorLines) as ErrorCode[];
 
@@ -27,4 +27,13 @@ it('maps the shared refusals in the caller language', () => {
   expect(impersonation.message).toBe('You cannot act as another member.');
   expect(mapError(impersonation, 'ar').body.error).toEqual({ code: 'impersonation', message: errorLines.impersonation.ar });
   expect(mapError(new Coded(409, 'custom_thing', 'secret detail'), 'en').body.error).toEqual({ code: 'failed', message: errorLines.failed.en });
+});
+
+it('sends the next UTC day for real daily caps, without a false reset for a temporary refusal', () => {
+  vi.useFakeTimers();
+  try {
+    vi.setSystemTime(new Date('2026-11-16T23:59:40Z'));
+    expect(errorResponse(new Coded(429, 'daily_run_cap', 'x')).headers.get('x-nazir-limit-reset')).toBe('2026-11-17T00:00:00.000Z');
+    expect(errorResponse(new Coded(429, 'too_many', 'x')).headers.has('x-nazir-limit-reset')).toBe(false);
+  } finally { vi.useRealTimers(); }
 });

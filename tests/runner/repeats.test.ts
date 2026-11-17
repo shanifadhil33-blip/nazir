@@ -115,8 +115,8 @@ it('scores cases strictly, marks mixed results flaky, and shows outcomes in Engl
   expect(body.cases?.[0]).toMatchObject({ passed: 2, total: 3, flaky: true, outcome: { en: 'passed 2 of 3', ar: 'نجح 2 من 3' } });
   for (const lang of ['en', 'ar'] as const) {
     const sections = clientReportSections(body, { lang, agentName: '', focusPack: '', runDate: '', fontBytes: new Uint8Array() });
-    expect(JSON.stringify(sections)).toContain(lang === 'en' ? 'passed 2 of 3' : 'نجح 2 من 3');
-    expect(JSON.stringify(sections)).toContain(lang === 'en' ? 'Flaky' : 'متقلب');
+    expect(JSON.stringify(sections)).toContain(lang === 'en' ? '2 of 3 right' : '2 من 3 صحيحة');
+    expect(JSON.stringify(sections)).toContain(lang === 'en' ? 'Answers differed when asked again' : 'اختلفت الإجابات عند تكرار السؤال');
   }
   expect(projectReport(body, 'development').counts).toEqual(body.counts);
   expect(caseResults(conversations.map((c) => ({ ...c, status: 'passed' })))[0]?.status).toBe('passed');

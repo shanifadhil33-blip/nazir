@@ -74,7 +74,7 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
       <div className="nz-connect-result" aria-live="polite" aria-busy={busy}>
         {result?.card ? <p dir="auto"><ConnectionLine template={c.cardFound} values={{ name: { text: result.card.name, dir: 'auto' }, n: { text: String(result.card.skills.length), dir: 'ltr' } }} /></p> : null}
         {result?.reply ? <><p dir="auto"><ConnectionLine template={c.success} values={{ reply: { text: result.reply, dir: 'auto' } }} /></p>
-          {result.sdk?.seen ? <><p><ConnectionLine template={c.sdkSeen} values={{ n: { text: String(result.sdk.toolCalls), dir: 'ltr' } }} /></p><span className="nz-connect-chip">{copy.agentStatus.fullCheck}</span></>
+          {result.sdk?.seen ? <><p><ConnectionLine template={result.sdk.toolCalls === 1 ? c.sdkSeenOne : c.sdkSeen} values={{ n: { text: String(result.sdk.toolCalls), dir: 'ltr' } }} /></p><span className="nz-connect-chip">{copy.agentStatus.fullCheck}</span></>
             : <>{mode === 'full' ? <p>{sdkStatus?.key_last4 ? c.sdkSilent : c.sdkNeedsKey}</p> : null}<span className="nz-connect-chip">{copy.agentStatus.repliesOnly}</span></>}</> : null}
         {result?.error ? <p role="alert">{result.error}</p> : null}
       </div>
@@ -95,7 +95,12 @@ function connectionError(body: unknown, copy: ReturnType<typeof messagesFor>): s
 
 export function AgentStatus({ lang, connection, home, now = new Date() }: { lang: Lang; connection?: ExternalView | null; home: string; now?: Date }) {
   const copy = messagesFor(lang); const c = copy.agentStatus;
-  const stamp = (value: string) => new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  const stamp = (value: string) => {
+    const minutes = Math.max(0, Math.round((now.getTime() - new Date(value).getTime()) / 60_000));
+    const unit = minutes < 60 ? 'minute' : minutes < 1440 ? 'hour' : 'day';
+    const amount = unit === 'minute' ? minutes : unit === 'hour' ? Math.floor(minutes / 60) : Math.floor(minutes / 1440);
+    return new Intl.RelativeTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { numeric: 'auto' }).format(-amount, unit);
+  };
   const sdk = connection?.connection_kind === 'sdk' && connection.sdk_seen_at ? connection.sdk_seen_at : null;
   const fresh = sdk ? now.getTime() - new Date(sdk).getTime() < 24 * 3600_000 : false;
   return <section className="nz-agent-status" aria-label={copy.settingsScreen.assistant}>

@@ -35,11 +35,11 @@ it('gives cards a 24px radius and a shadow, and pills a full radius, without a c
   expect(css).toMatch(/\.nz-card \{[^}]*border: 0;[^}]*border-radius: var\(--radius-card\);[^}]*box-shadow: var\(--shadow\);/);
 });
 
-it('self hosts Plus Jakarta Sans and IBM Plex Sans Arabic at 300, 400 and 700', () => {
+it('self hosts Plus Jakarta Sans and IBM Plex Sans Arabic at every weight used by the shell', () => {
   expect(layout).toContain("from 'next/font/google'");
   expect(layout).toContain('Plus_Jakarta_Sans');
   expect(layout).toContain('IBM_Plex_Sans_Arabic');
-  expect(layout).toContain("weight: ['300', '400', '700']");
+  expect(layout).toContain("weight: ['300', '400', '500', '600', '700']");
   expect(layout).not.toContain('Fraunces');
   expect(layout).not.toContain('Inter');
 });

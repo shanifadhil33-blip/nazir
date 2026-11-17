@@ -18,7 +18,7 @@ import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
 
-export type ChecksNote = 'limit' | 'unreachable' | 'startFailed' | 'stopFailed' | 'suggested' | 'suggestFailed' | null;
+export type ChecksNote = 'limit' | 'busy' | 'unreachable' | 'startFailed' | 'stopFailed' | 'suggested' | 'suggestFailed' | null;
 
 export type ChecksViewProps = {
   lang: Lang;
@@ -39,6 +39,7 @@ export type ChecksViewProps = {
   activeStatus?: 'loading' | 'ready' | 'error';
   busy: 'starting' | 'stopping' | 'suggesting' | null;
   note: ChecksNote;
+  limitReset?: string;
   onOpenCheck?: (id: string) => void;
   onBack?: () => void;
   onOpenQuestion?: (id: string) => void;
@@ -65,7 +66,7 @@ export type ChecksViewProps = {
   reportHref?: (checkId: string) => string;
 };
 
-const noteKey = { startFailed: 'startFailed', stopFailed: 'stopFailed', suggested: 'suggested', suggestFailed: 'suggestFailed' } as const;
+const noteKey = { busy: 'busy', startFailed: 'startFailed', stopFailed: 'stopFailed', suggested: 'suggested', suggestFailed: 'suggestFailed' } as const;
 
 /** The checks screen. Plain props in, markup out, so the same view renders signed in and in tests. */
 export function ChecksView(props: ChecksViewProps) {
@@ -97,7 +98,7 @@ export function ChecksView(props: ChecksViewProps) {
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
           </> : <>
             <div className="nz-checks-head">
-              <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
+              <div><Heading light={text.light} bold={text.bold} lang={lang} flow="inline" explain={text.explain} /></div>
               {props.onTab ? <div className="nz-tabs" role="tablist" aria-label={copy.shell.checks}>
                 {(['answers', 'safety'] as const).map((id) => <button key={id} type="button" role="tab" className="nz-tab" aria-selected={tab === id} data-tab={id} onClick={() => props.onTab?.(id)}>{id === 'answers' ? safetyText.answers : safetyText.safety}</button>)}
               </div> : null}
@@ -116,24 +117,25 @@ export function ChecksView(props: ChecksViewProps) {
               </button>
               <button type="button" className="nz-quiet-btn" onClick={() => props.onChoose?.(null)}>{copy.fixesScreen.notNow}</button>
             </section> : null}
-            {note === 'limit' ? <StateCard kind="limit" title={copy.shell.limitTitle} /> : null}
-            {note === 'unreachable' ? <StateCard kind="offline" title={copy.shell.offlineTitle} action={access.start ? { label: copy.shell.retry, onClick: props.onStart } : null} /> : null}
+            {note === 'limit' ? <StateCard kind="limit" title={props.limitReset && Number.isFinite(Date.parse(props.limitReset)) ? fill(text.limitAt, { time: new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(props.limitReset)) }) : copy.shell.limitTitle} /> : null}
+            {note === 'unreachable' ? <StateCard kind="offline" title={copy.shell.offlineTitle} action={{ label: text.checkConnection, href: `${links.home}?connect=quick&lang=${lang}` }} /> : null}
             {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
             {note && note !== 'limit' && note !== 'unreachable' ? <p className="nz-note-line" role="status" data-note={note}>{text[noteKey[note]]}</p> : null}
             {tab === 'safety' ? props.safety : <div className="nz-checks-body">
               <div className="nz-checks-list">
                 {active.map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
                 {props.activeStatus && props.activeStatus !== 'ready' ? <PhaseCard phase={props.activeStatus} copy={copy} onRetry={props.onRetry} fallback={links.home} /> : null}
-                {checks.length === 0 && active.length === 0 && (props.activeStatus ?? 'ready') === 'ready' ? <StateCard kind="empty" title={copy.shell.emptyTitle} action={canStart ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
+                {checks.length === 0 && active.length === 0 && (props.activeStatus ?? 'ready') === 'ready' ? <StateCard kind="empty" title={text.empty} action={canStart ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
                 {checks.map((item) => {
-                  const clean = !item.stopped && item.toFix === 0;
+                  const clean = !item.stopped && item.questions.length > 0 && item.questions.every((q) => q.mark === 'right');
+                  const tone = clean ? 'right' : item.toFix > 0 ? 'wrong' : 'unsure';
                   return (
                     <button key={item.id} type="button" className="nz-check-card" data-check={item.kind} data-clean={clean} aria-pressed={showCheck?.id === item.id} onClick={() => props.onOpenCheck?.(item.id)}>
-                      <span className={clean ? 'nz-check-mark nz-check-mark-right' : 'nz-check-mark nz-check-mark-wrong'}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
+                      <span className={`nz-check-mark nz-check-mark-${tone}`}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
                       <span className="nz-check-text">
                         <strong>{fill(text.checkTitle, { when: dateTimeLabel(item.at, lang) })}</strong>
                         {item.sample ? <small>{copy.shell.sample}</small> : null}
-                        <small className={clean ? 'nz-check-right' : 'nz-check-wrong'}>{checkResultLabel(item, copy)}</small>
+                        <small className={`nz-check-${tone}`}>{checkResultLabel(item, copy)}</small>
                       </span>
                       <span className="nz-check-go"><ShellIcon name="play" directional /></span>
                     </button>
@@ -189,7 +191,7 @@ function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, o
   return (
     <section className="nz-check-page" aria-label={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })}>
       <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
-      <Heading as="h2" light={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })} bold={countsLine(check, copy)} lang={lang} flow="stack" />
+      <Heading as="h2" light={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })} bold={countsLine(check, copy)} lang={lang} flow="stack" explain={text.detailExplain} />
       {check.sample ? <p className="nz-check-sub">{copy.shell.sample}</p> : null}
       <div className="nz-tabs nz-check-filter" role="group" aria-label={text.filterAll}>
         {(['all', 'wrong', 'right', ...(check.questions.some((q) => q.mark === 'unsure') ? ['unsure' as const] : [])] as const).map((id) => <button key={id} type="button" className="nz-tab" data-filter={id} aria-pressed={filter === id} onClick={() => onFilter?.(id)}>{id === 'all' ? text.filterAll : id === 'wrong' ? text.filterWrong : id === 'right' ? text.filterRight : text.unsure}</button>)}
@@ -207,6 +209,9 @@ function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, o
               {isOpen ? <div className="nz-question-body">
                 <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.said}</p><p dir="auto">{item.said}</p></div>
                 {item.record ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.record}</p><p dir="auto">{item.record}</p></div> : null}
+                {item.mark === 'wrong' && item.why ? <div className="nz-quote"><p className="nz-quote-label">{text.whyWrong}</p><p dir="auto">{item.why}</p></div> : null}
+                {item.mark === 'unsure' ? <p className="nz-check-sub">{check.repliesOnly ? text.unknownReply : text.unknownReason}</p> : null}
+                {item.mark === 'unsure' && check.repliesOnly ? <Link className="nz-text-link" href={`${links.home}?connect=full&lang=${lang}`}>{copy.agentStatus.addSdk}</Link> : null}
                 {item.mark === 'wrong' && item.findingId && fixFor[item.findingId]
                   ? <PillButton icon="wrench" className="nz-suggest nz-suggested" label={text.fixSuggested} href={`${links.fixes}&fix=${fixFor[item.findingId]}`} />
                   : access.suggest && item.mark === 'wrong' && item.findingId ? <PillButton variant="ink" icon="wrench" className="nz-suggest" label={busy === 'suggesting' ? text.suggesting : text.suggest} disabled={busy === 'suggesting'} onClick={() => onSuggest?.(item.findingId!)} /> : null}

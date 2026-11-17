@@ -1,5 +1,15 @@
 import { expect, it } from 'vitest';
 import { visibleCopy, visibleStrings } from './helpers/source';
+import en from '../messages/en.json';
+
+// These are product labels. Transport payloads and the explicit legacy preview
+// retain their technical vocabulary without making it public shell copy.
+export const shellJargon = /\b(record|recheck|suite|judge|inconclusive|pack|findings|tries|runs?|fixer|supplier|reviewer|owner|viewer)\b/i;
+it('keeps shell labels free of internal words and role names', () => {
+  for (const group of ['shell', 'checksScreen', 'fixesScreen', 'afterScreen', 'historyScreen', 'reportScreen', 'settingsScreen', 'signin', 'demo'] as const) {
+    for (const [key, value] of Object.entries(en[group])) expect(value.replace(/\{\w+\}/g, ''), `${group}.${key}`).not.toMatch(shellJargon);
+  }
+});
 
 export const bannedWords = [
   'dispatch', 'synergy', 'leverage', 'orchestrate', 'orchestration', 'seamless',

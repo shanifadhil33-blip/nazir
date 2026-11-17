@@ -36,7 +36,7 @@ it('shows the running card with progress and a quiet stop to someone who may sto
   expect(html).toContain('aria-valuenow="56"');
   // Each check is named by when it ran, in Dubai time.
   expect(html).toMatch(/[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}, \d{2}:\d{2}/);
-  expect(html).toContain('3 to fix');
+  expect(html).toContain('3 wrong');
   expect(html).toContain('all right');
 });
 
@@ -54,7 +54,7 @@ it('shows Suggest a fix only on a wrong question for the role the server allows'
   const supplier = render('en', 'supplier', open);
   expect(supplier).toContain('Suggest a fix');
   expect(supplier).toContain('Your agent said');
-  expect(supplier).toContain('What your agent did');
+  expect(supplier).toContain('What really happened');
   for (const seat of ['owner', 'editor', 'viewer'] as Seat[]) expect(render('en', seat, open), seat).not.toContain('Suggest a fix');
   expect(render('en', 'supplier', { openId: 'quick', openQuestion: 'q4' })).not.toContain('Suggest a fix');
 });
@@ -71,6 +71,15 @@ it('gives one chip per question and a way on for roles that cannot suggest', () 
   expect(html).toContain('Could not tell');
 });
 
+it('shows unknown answers honestly in the list and explains why the inside view is needed', () => {
+  const checks = previewChecks('en', now).slice(0, 1).map((c) => ({ ...c, repliesOnly: true, toFix: 0, questions: [{ ...c.questions[0]!, mark: 'unsure' as const }] }));
+  const html = render('en', 'owner', { checks, openId: checks[0]!.id, openQuestion: checks[0]!.questions[0]!.id });
+  expect(html).toContain('0 right, 0 wrong, 1 could not tell');
+  expect(html).not.toContain('all right');
+  expect(html).toContain('Nazir saw the reply but could not see what your agent did.');
+  expect(html).toContain('connect=full');
+});
+
 it('uses one currency, AED, in the sample answers', () => {
   const all = JSON.stringify([previewChecks('en', now), previewChecks('ar', now)]);
   expect(all).not.toMatch(/\$|dollar|USD|EUR/i);
@@ -82,7 +91,7 @@ it('renders Arabic right to left with Arabic words', () => {
   expect(render('ar', 'editor', { running: { runId: 'r', done: 9, total: 16 } })).toContain('إيقاف');
   expect(html).toContain('dir="rtl"');
   expect(html).toContain('lang="ar"');
-  for (const word of ['نفحص الآن', 'نفحص الآن 9 من 16', 'قال وكيلك', 'ما فعله وكيلك', 'اقترح إصلاحاً', 'خطأ']) expect(html, word).toContain(word);
+  for (const word of ['نفحص الآن', 'نفحص الآن 9 من 16', 'قال وكيلك', 'ما حدث فعلا', 'اقترح إصلاحاً', 'خطأ']) expect(html, word).toContain(word);
   expect(html).not.toContain('Checking now');
 });
 
@@ -92,7 +101,7 @@ it('shows the loading, error and empty states with a way on', () => {
   expect(error).toContain('Something went wrong');
   expect(error).toContain('Try again');
   const empty = render('en', 'owner', { checks: [] });
-  expect(empty).toContain('Nothing here yet');
+  expect(empty).toContain('No checks yet. Start one to see how your agent answers.');
   expect(empty).toContain('Start a check');
   expect(render('en', 'viewer', { checks: [] })).not.toContain('Start a check</');
 });
@@ -111,14 +120,14 @@ it('keeps every new string free of dashes, caps, emoji and long lines in both la
   expect(messagesFor('ar').checksScreen.stopCheck).toBe(ar.checksScreen.stopCheck);
 });
 
-it('keeps the list and the check page under 25 words of copy', () => {
+it('keeps check labels concise while showing every verdict', () => {
   const text = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
   const column = (html: string, start: string, end: string) => text(html.slice(html.indexOf(start), html.indexOf(end)));
   const list = render('en', 'owner', { running: { runId: 'r', done: 9, total: 16 } });
   const listText = column(list, 'class="nz-checks-list"', 'class="nz-check-page"');
-  expect(words(listText)).toBeLessThan(25);
+  expect(words(listText)).toBeLessThan(35);
   const page = render('en', 'supplier', { openId: 'quick', checks: previewChecks('en', now).map((item) => ({ ...item, questions: item.questions.map((q) => ({ ...q, question: 'Q', said: 'A', record: 'R' })) })) });
-  expect(words(column(page, 'class="nz-check-page"', '</section>'))).toBeLessThan(45);
+  expect(words(column(page, 'class="nz-check-page"', '</section>').replace(en.checksScreen.detailExplain, ''))).toBeLessThan(45);
   // Preview chrome uses the same one sample person on every screen.
   expect(list).toContain('Omar');
   expect(list).not.toMatch(/Yusuf|Ahmed/);
@@ -126,7 +135,7 @@ it('keeps the list and the check page under 25 words of copy', () => {
 
 it('words the check lines from real counts and days', () => {
   const copy = messagesFor('en');
-  expect(resultLabel(3, copy)).toBe('3 to fix');
+  expect(resultLabel(3, copy)).toBe('3 wrong');
   expect(resultLabel(0, copy)).toBe('all right');
   expect(progressLine(9, 16, copy)).toBe('Checking now 9 of 16');
   expect(progressPercent(9, 16)).toBe(56);

@@ -14,7 +14,7 @@ import { navIcon } from '../../src/components/shell/nav';
 import { can, type Role } from '../../src/server/auth/roles';
 import type { ReportBody } from '../../src/server/reports/build';
 
-const sampleCompare = { title: 'Said submitted, but no case was saved (Arabic)', change: { before: 5, after: 6, fixed: 1, stillWrong: 0, newlyWrong: 0, english: 100, arabic: 75 }, before: { right: 5, total: 8, at: 'Thu 09:04' }, after: { right: 6, total: 8, at: 'Thu 11:20' }, sample: false };
+const sampleCompare = { title: 'Said submitted, but no case was saved (Arabic)', change: { before: 5, after: 6, fixed: 1, stillWrong: 0, newlyWrong: 0, english: 3, arabic: 3, englishTotal: 4, arabicTotal: 4, unsure: 0, total: 8 }, before: { right: 5, total: 8, at: 'Thu 09:04' }, after: { right: 6, total: 8, at: 'Thu 11:20' }, sample: false };
 const words = (value: string) => value.trim().split(/\s+/).filter(Boolean).length;
 const plain = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 const render = (lang: Lang, seat: Seat, extra: Partial<FixesViewProps> = {}) => renderToStaticMarkup(
@@ -63,12 +63,22 @@ it('works out before and after from two saved checks', () => {
   const before = report([['a', 'failed', 'en'], ['b', 'failed', 'ar'], ['c', 'failed', 'en'], ['d', 'passed', 'en'], ['e', 'passed', 'ar']]);
   const now = report([['a', 'passed', 'en'], ['b', 'passed', 'ar'], ['c', 'failed', 'en'], ['d', 'passed', 'en'], ['e', 'failed', 'ar']]);
   const change = changeBetween(before, now);
-  expect(change).toMatchObject({ before: 2, after: 3, fixed: 2, stillWrong: 1, newlyWrong: 1, english: 67, arabic: 50 });
+  expect(change).toMatchObject({ before: 2, after: 3, fixed: 2, stillWrong: 1, newlyWrong: 1, english: 2, arabic: 1, englishTotal: 3, arabicTotal: 2, unsure: 0, total: 5 });
   expect(betterLine(change, messagesFor('en'))).toBe('1 better');
   expect(betterLine({ ...change, after: 1 }, messagesFor('en'))).toBe('1 worse');
   expect(betterLine({ ...change, after: 2 }, messagesFor('en'))).toBe('No change');
-  expect(languageLine(change, messagesFor('en'))).toBe('English 67, Arabic 50');
-  expect(languageLine(change, messagesFor('ar'))).toBe('الإنجليزية 67، العربية 50');
+  expect(languageLine(change, messagesFor('en'))).toBe('English 2 of 3 right, Arabic 1 of 2 right');
+  expect(languageLine(change, messagesFor('ar'))).toBe('الإنجليزية 2 من 3 صحيحة، العربية 1 من 2 صحيحة');
+});
+
+it('keeps unknown answers in language totals and never claims they were fixed', () => {
+  const before = report([['a', 'failed', 'en'], ['b', 'passed', 'en']]);
+  const now = report([['a', 'inconclusive', 'en'], ['b', 'passed', 'en']]);
+  const change = changeBetween(before, now);
+  expect(change).toMatchObject({ fixed: 0, unsure: 1, total: 2, english: 1, englishTotal: 2 });
+  expect(languageLine(change, messagesFor('en'))).toBe('English 1 of 2 right');
+  const html = after('en', 'owner', { sample: { ...sampleCompare, change } });
+  expect(html).toContain('Could not tell for 1 of 2 answers.');
 });
 
 it('keeps both screens under 25 words, with male names only and no tech words', () => {
@@ -77,7 +87,7 @@ it('keeps both screens under 25 words, with male names only and no tech words', 
   const labels = copy(render('en', 'editor')).replace("Don't confirm rumours", '').replace('Assistant repeats transit rumours as facts.', '').replace('Send people to the official city page.', '').replace('Quote fees from the record', '');
   expect(words(labels)).toBeLessThanOrEqual(45);
   // Numbers are not words, so only letters count toward the limit.
-  expect(words(copy(after('en', 'owner')).replace(sampleCompare.title, '').replace(/\b\d+\b/g, ''))).toBeLessThan(40);
+  expect(words(copy(after('en', 'owner')).replace(sampleCompare.title, '').replace(languageLine(sampleCompare.change, messagesFor('en')), '').replace(/\b\d+\b/g, ''))).toBeLessThan(40);
   for (const html of [render('en', 'editor'), after('en', 'owner')]) expect(html).not.toMatch(/Sara|Fatima|Aisha|Maryam|Layla|Noura/);
 });
 
@@ -149,10 +159,10 @@ it('renders Arabic right to left with Arabic words and no English leftovers', ()
 
 it('names the fix and both check times on Before and after, with three rows', () => {
   const html = after('en', 'owner');
-  for (const part of ['Said submitted, but no case was saved (Arabic)', 'Before the fix', '5 of 8 right', 'Thu 09:04', 'After the fix', '6 of 8 right', 'Thu 11:20', 'Fixed 1', 'Still wrong 0', 'Newly wrong 0']) expect(html, part).toContain(part);
+  for (const part of ['Said submitted, but no case was saved (Arabic)', 'Before the fix', '5 of 8 right', 'Thu 09:04', 'After the fix', '6 of 8 right', 'Thu 11:20', 'Fixed 1', 'Still wrong 0', 'Wrong now, right before 0']) expect(html, part).toContain(part);
   expect(html.match(/data-row=/g)).toHaveLength(3);
   const empty = after('en', 'owner', { sample: null });
-  expect(empty).toContain('This fills in after the fix is tested again.');
+  expect(empty).toContain('This fills in after a fix is approved and tested.');
   expect(empty).toContain('href="/w/w1?screen=failures"');
 });
 

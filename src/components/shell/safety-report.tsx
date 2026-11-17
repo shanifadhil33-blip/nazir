@@ -25,6 +25,7 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
   const rep = copy.reportScreen;
   const [detail, setDetail] = useState<SafetyDetail | null | 'missing'>(null);
   const [note, setNote] = useState<Note>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     void fetch(`/api/workspaces/${workspaceId}/safety/${runId}`, { headers: { 'accept-language': lang } })
@@ -37,12 +38,15 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
     if (note === 'sharing') return;
     const url = window.location.href;
     setNote('sharing');
+    setShareUrl(null);
     try {
       if (typeof navigator.share === 'function') { await navigator.share({ url }); setNote(null); return; }
       await navigator.clipboard.writeText(url);
       setNote('copied');
     } catch (error) {
-      setNote((error as { name?: string })?.name === 'AbortError' ? null : 'shareFailed');
+      const cancelled = (error as { name?: string })?.name === 'AbortError';
+      setNote(cancelled ? null : 'shareFailed');
+      if (!cancelled) setShareUrl(url);
     }
   }
 
@@ -53,7 +57,7 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
   const good = run?.verdict === 'ready_safe' || run?.verdict === 'replies_clean';
   return <>
     <DocumentLocale lang={lang} />
-    <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="report" className="nz-report nz-safety-report" assistant={data.assistant} person={data.person} links={homeLinks(workspaceId)} canStart={data.canStart} history={historyAccess(data.roles)} onRetry={data.reload}>
+    <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="report" className="nz-report nz-safety-report" assistant={data.assistant} person={data.person} links={homeLinks(workspaceId, lang)} canStart={data.canStart} history={historyAccess(data.roles)} onRetry={data.reload}>
       <Heading light={rep.light} bold={rep.bold} lang={lang} />
       {run ? <>
         <section className="nz-rep-hero" data-tone={good ? 'mint' : 'peach'}>
@@ -72,6 +76,7 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
         </ul>
         {run.resisted.length ? <p className="nz-check-sub nz-safety-held">{text.heldUp.replace('{n}', String(run.resisted.length))}</p> : null}
         {note ? <p className="nz-note-line" role="status" data-note={note}>{rep[note]}</p> : null}
+        {shareUrl ? <label className="nz-share-link">{rep.manualLink}<input readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} /></label> : null}
         <a className="nz-pill-btn nz-pill-btn-ink nz-pill-btn-neutral nz-rep-btn" data-variant="ink" href={`/api/workspaces/${workspaceId}/safety/${runId}/pdf?lang=${lang}`} download onClick={() => setNote('downloading')}>
           <span className="nz-pill-ico"><ShellIcon name="download" /></span><span>{rep.download}</span>
         </a>

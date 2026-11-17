@@ -64,8 +64,10 @@ it('shows idle and pending Google button labels one language at a time', () => {
 it.each([['w', WorkspaceLoading], ['workspace', WorkspaceIdLoading]])('renders the %s loading status in both languages', (_n, Loading) => {
   const html = renderToStaticMarkup(<Loading />);
   expect(html).toContain('role="status"');
-  expect(html).toContain('Opening your workspace');
-  expect(html).toContain('جار فتح مساحة العمل');
+  expect(html).toContain('nz-placeholder-card');
+  expect(html).toContain('aria-busy="true"');
+  expect(html).toContain('Loading');
+  expect(html).toContain('جار التحميل');
 });
 
 it('redirects signed out visitors at the workspace index to the landing page', async () => {

@@ -49,7 +49,7 @@ it('shows History only to the roles the server lets read it', () => {
   for (const role of ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'] as Role[]) expect(historyAccess([role]), role).toBe(can([role], 'audit.read'));
   expect(history('en', 'owner')).toContain('You approved a fix');
   const viewer = history('en', 'viewer');
-  expect(viewer).toContain('Only the team sees this');
+  expect(viewer).toContain('History is not available for this account.');
   expect(viewer).not.toContain('approved a fix');
   expect(viewer).toContain(links.home);
 });
@@ -72,7 +72,7 @@ it('skips fixes that have no saved time instead of inventing one', () => {
 
 it('gives History an empty state with a way forward', () => {
   const html = history('en', 'owner', { items: [] });
-  expect(html).toContain('Nothing happened yet');
+  expect(html).toContain('Your checks and fixes will show here.');
   expect(html).toContain(links.checks);
 });
 
@@ -133,7 +133,7 @@ it('shows the report with the mint card, three rows and both pills', () => {
   expect(html).not.toMatch(/made up|certif|demo note/i);
   expect(report('ar', 'viewer')).toContain('lang=ar');
   const empty = report('en', 'owner', null as never);
-  expect(empty).toContain('No report yet');
+  expect(empty).toContain('Your report appears after the first check.');
   expect(empty).not.toContain('Download PDF');
 });
 

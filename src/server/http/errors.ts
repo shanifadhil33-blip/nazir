@@ -124,5 +124,10 @@ export function mapError(error: unknown, language: CallerLanguage = 'en') {
 }
 export function errorResponse(error: unknown, language: CallerLanguage = 'en'): Response {
   const result = mapError(error, language);
-  return Response.json(result.body, { status: result.status });
+  const daily = ['daily_cap', 'daily_run_cap', 'repeat_daily_cap'].includes(result.body.error.code);
+  // Both check and model allowances use UTC days. Send the actual reset, so the
+  // browser can show it in the person's own time zone without guessing a time.
+  const reset = new Date();
+  reset.setUTCHours(24, 0, 0, 0);
+  return Response.json(result.body, { status: result.status, headers: daily ? { 'x-nazir-limit-reset': reset.toISOString() } : undefined });
 }
