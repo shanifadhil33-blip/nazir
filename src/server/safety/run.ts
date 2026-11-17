@@ -12,9 +12,12 @@ import { demoInstructions, demoOtherPerson, demoSafetyAgent } from './demo-agent
 import { judgeAttack, type Verdict } from './evidence';
 import { readAgentMap } from './read-map';
 import { demoInventory, mapFromInventory } from './map';
+import { freshSdk, safetyOwnership, verifyDomainProof } from './ownership';
 
 const refusedCodes: Record<string, [number, string, string]> = {
   safety_confirm_needed: [409, 'safety_confirm_needed', 'Confirm you own this agent first.'],
+  safety_connection_changed: [409, 'safety_confirm_needed', 'Confirm your current agent first.'],
+  safety_sdk_needed: [409, 'safety_proof_needed', 'Connect the SDK or verify your agent website first.'],
   safety_daily_limit: [429, 'safety_daily_limit', 'You have used today\'s safety tests.'],
 };
 function refuse(error: unknown): never {
@@ -24,10 +27,18 @@ function refuse(error: unknown): never {
 }
 
 /** I own this agent or have written permission to test it. Logged with the host of the connected agent. */
-export async function confirmSafety(driver: TransactionDriver, memberId: string) {
+export async function confirmSafety(driver: TransactionDriver, memberId: string, options: ExternalTransport = {}) {
   const connection = await readExternalAgent(driver, memberId);
-  if (!connection) throw new Coded(409, 'no_agent', 'Connect your agent first.');
-  await withMember(driver, memberId, (sql) => sql.query('SELECT nazir.safety_confirm($1)', [connection.host]));
+  if (!connection?.ready || !connection.revision) throw new Coded(409, 'no_agent', 'Connect your agent first.');
+  const sdk = freshSdk(connection);
+  if (!sdk) {
+    const { proof, confirmed } = await safetyOwnership(driver, memberId, connection);
+    if (confirmed) return { confirmed: true };
+    if (proof) await verifyDomainProof(proof, options);
+    // An already verified current connection needs no additional network request.
+  }
+  try { await withMember(driver, memberId, (sql) => sql.query('SELECT nazir.safety_confirm($1,$2)', [connection.revision, sdk ? 'sdk' : 'domain'])); }
+  catch (error) { refuse(error); }
   return { confirmed: true };
 }
 
@@ -41,7 +52,7 @@ export async function startSafety(driver: TransactionDriver, memberId: string, k
     const connection = await readExternalAgent(driver, memberId);
     if (!connection?.ready) throw new Coded(409, 'no_agent', 'Connect your agent first.');
     // The full suite needs the SDK to have said hello in the last day; otherwise it is judged from replies only.
-    const fresh = connection.connection_kind === 'sdk' && connection.sdk_seen_at && Date.now() - new Date(connection.sdk_seen_at).getTime() < 86_400_000;
+    const fresh = freshSdk(connection);
     scope = fresh ? 'full' : 'replies_only'; revision = connection.revision ?? null; name = connection.name;
     attacks = attacksFor(await readAgentMap(driver, memberId, kind), canary);
   }
