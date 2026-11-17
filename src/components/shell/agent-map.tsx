@@ -1,9 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
+import { families } from '@/server/safety/attacks';
+import { ShellIcon } from './icons';
+import { PillButton } from './pill-button';
 import type { AgentMap, MapGroup } from '@/server/safety/map';
 import { DocumentLocale } from './document-locale';
 import { ScreenFrame } from './frame';
@@ -15,7 +19,7 @@ import { StateCard } from './state-card';
 const order: MapGroup[] = ['tools', 'mcp', 'services', 'data', 'permissions'];
 
 /** ?screen=map: what your agent can use, grouped, with plain risk labels and how many safety tests aim at each. */
-export function AgentMapScreen({ workspaceId, initialLang }: { workspaceId: string; initialLang: Lang }) {
+export function AgentMapScreen({ workspaceId, initialLang, itemId }: { workspaceId: string; initialLang: Lang; itemId?: string }) {
   const data = useMemberData(workspaceId, initialLang, false);
   const lang = data.lang;
   const copy = messagesFor(lang);
@@ -31,10 +35,22 @@ export function AgentMapScreen({ workspaceId, initialLang }: { workspaceId: stri
   const links = homeLinks(workspaceId, lang);
   const phase = data.phase === 'error' || map === 'error' ? 'error' : data.phase === 'ready' && map ? 'ready' : 'loading';
   const ready = map && map !== 'error' ? map : null;
+  const item = ready?.items.find((entry) => entry.id === itemId);
+  const mapHref = `${links.home}?screen=map&lang=${lang}`;
   return <>
     <DocumentLocale lang={lang} />
     <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="map" className="nz-map" assistant={data.assistant} person={data.person} links={links} canStart={data.canStart} history={historyAccess(data.roles)} onRetry={data.reload}>
-      <Heading light={text.light} bold={text.bold} lang={lang} />
+      {itemId ? <Link href={mapHref} className="nz-back"><ShellIcon name="play" directional /><span>{text.back}</span></Link> : null}
+      <Heading light={item ? text.groups[item.group] : text.light} bold={item?.name ?? text.bold} lang={lang} />
+      {ready && itemId ? (item ? <section className="nz-map-detail" data-map-detail={item.id}>
+        <h2>{text.purpose}</h2><p dir="auto">{item.purpose ?? text.noPurpose}</p>
+        <h2>{text.riskTitle}</h2>
+        {item.risks.length ? <ul>{item.risks.map((risk) => <li key={risk}>{text.risks[risk]}</li>)}</ul> : <p>{text.noRisks}</p>}
+        <h2>{fill(text.aimed, { n: String(item.tests) })}</h2>
+        {item.testFamilies?.length ? <ul>{item.testFamilies.map((family) => <li key={family}>{families[family].title[lang]}</li>)}</ul> : <p>{text.noTests}</p>}
+        <PillButton icon="play" directional href={`${links.home}?screen=checks&tab=safety&lang=${lang}`} label={text.seeTests} />
+      </section> : <StateCard kind="empty" title={text.missing} action={{ label: text.back, href: mapHref }} />) : null}
+      {!itemId ? <>
       <p className="nz-check-sub">{text.intro}</p>
       {ready && ready.scope !== 'full' ? <>
         <StateCard kind="empty" title={ready.scope === 'replies_only' ? text.empty : copy.safetyScreen.needAgent} action={{ label: ready.scope === 'replies_only' ? text.addSdk : copy.connect.title, href: ready.scope === 'replies_only' ? `${links.home}?connect=full&lang=${lang}` : `${links.home}?lang=${lang}` }} />
@@ -51,7 +67,7 @@ export function AgentMapScreen({ workspaceId, initialLang }: { workspaceId: stri
             <ul className="nz-map-items">
               {items.map((item) => (
                 <li key={item.id} className="nz-map-item" data-item={item.id}>
-                  <strong dir="auto">{item.name}</strong>
+                  <Link href={`${mapHref}&item=${encodeURIComponent(item.id)}`} className="nz-map-item-link"><strong dir="auto">{item.name}</strong><ShellIcon name="play" directional /></Link>
                   {item.purpose ? <p dir="auto">{item.purpose}</p> : null}
                   {item.risks.length ? <p className="nz-safety-chips">{item.risks.map((r) => <span key={r} className="nz-mark nz-map-risk" data-risk={r}>{text.risks[r]}</span>)}</p> : null}
                   {item.tests ? <small>{fill(text.aimed, { n: String(item.tests) })}</small> : null}
@@ -61,6 +77,7 @@ export function AgentMapScreen({ workspaceId, initialLang }: { workspaceId: stri
           </section>
         );
       }) : null}
+      </> : null}
     </ScreenFrame>
   </>;
 }

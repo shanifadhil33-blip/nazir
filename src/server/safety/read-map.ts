@@ -20,5 +20,5 @@ export async function readAgentMap(driver: TransactionDriver, memberId: string, 
 /** Tests aimed at this: how many safety attacks name this tool, server or store. */
 function withAimed(map: AgentMap): AgentMap {
   const attacks = attacksFor(map);
-  return { ...map, items: map.items.map((item) => ({ ...item, tests: attacks.filter((a) => a.target === item.id).length })) };
+  return { ...map, items: map.items.map((item) => ({ ...item, tests: attacks.filter((a) => a.target === item.id).length, testFamilies: [...new Set(attacks.filter((a) => a.target === item.id).map((a) => a.family))] })) };
 }
