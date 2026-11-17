@@ -119,7 +119,7 @@ export function retestLine(card: FixCard, copy: Messages) {
   const text = copy.fixesScreen;
   if (card.retest.state === 'running') return fill(text.testing, { done: String(card.retest.done), total: String(card.retest.total || 8) });
   if (card.retest.state === 'stopped') return text.testStopped;
-  if (card.retest.state === 'done' && card.change) return fill(text.result, { fixed: String(card.change.fixed), still: String(card.change.stillWrong), newly: String(card.change.newlyWrong) });
+  if (card.retest.state === 'done' && card.change) return `${fill(text.result, { fixed: String(card.change.fixed), still: String(card.change.stillWrong), newly: String(card.change.newlyWrong) })}${card.change.unsure ? `. ${fill(copy.afterScreen.unknown, { n: String(card.change.unsure), total: String(card.change.total) })}` : ''}`;
   if (card.retest.state === 'done') return text.tested;
   return text.notTested;
 }
@@ -136,13 +136,17 @@ export type Change = {
   newlyWrong: number;
   english: number | null;
   arabic: number | null;
+  englishTotal: number;
+  arabicTotal: number;
+  unsure: number;
+  total: number;
 };
 
 const keyOf = (row: { scenario_id?: string; id: string }) => row.scenario_id ?? row.id;
 
-function rate(body: ReportBody, language: string): number | null {
-  const rows = caseResults(body.conversations).filter((row) => row.language === language && (row.status === 'passed' || row.status === 'failed'));
-  return rows.length === 0 ? null : Math.round((rows.filter((row) => row.status === 'passed').length / rows.length) * 100);
+function rightCount(body: ReportBody, language: string): number | null {
+  const rows = caseResults(body.conversations).filter((row) => row.language === language);
+  return rows.length === 0 ? null : rows.filter((row) => row.status === 'passed').length;
 }
 
 /** Sample checks are independent examples, so they never establish a measured repair. */
@@ -161,7 +165,8 @@ export function changeBetween(before: ReportBody, after: ReportBody): Change {
     else if (earlier === 'failed' && row.status === 'failed') stillWrong++;
     else if (earlier === 'passed' && row.status === 'failed') newlyWrong++;
   }
-  return { before: before.counts.passed, after: after.counts.passed, fixed, stillWrong, newlyWrong, english: rate(after, 'en'), arabic: rate(after, 'ar') };
+  const rows = caseResults(after.conversations);
+  return { before: before.counts.passed, after: after.counts.passed, fixed, stillWrong, newlyWrong, english: rightCount(after, 'en'), arabic: rightCount(after, 'ar'), englishTotal: rows.filter((r) => r.language === 'en').length, arabicTotal: rows.filter((r) => r.language === 'ar').length, unsure: rows.filter((r) => r.status !== 'passed' && r.status !== 'failed').length, total: rows.length };
 }
 
 export function betterLine(change: Change, copy: Messages) {
@@ -173,8 +178,8 @@ export function betterLine(change: Change, copy: Messages) {
 
 export function languageLine(change: Change, copy: Messages) {
   const parts = [
-    change.english === null ? null : `${copy.afterScreen.english} ${change.english}`,
-    change.arabic === null ? null : `${copy.afterScreen.arabic} ${change.arabic}`,
+    change.english === null ? null : `${copy.afterScreen.english} ${fill(copy.afterScreen.ofRight, { n: String(change.english), total: String(change.englishTotal) })}`,
+    change.arabic === null ? null : `${copy.afterScreen.arabic} ${fill(copy.afterScreen.ofRight, { n: String(change.arabic), total: String(change.arabicTotal) })}`,
   ].filter(Boolean);
   return parts.join(copy.afterScreen.join);
 }

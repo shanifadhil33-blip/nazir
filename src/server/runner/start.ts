@@ -14,7 +14,7 @@ function idOf(data: unknown, key: 'id' | 'run_id') {
 }
 function refusal(data: unknown): never {
   const code = data && typeof data === 'object' ? (data as { error?: { code?: string } }).error?.code : undefined;
-  const status = code && ['daily_cap', 'too_many', 'provider_exhausted', 'repeat_daily_cap', 'run_cap'].includes(code) ? 429 : 409;
+  const status = code && ['daily_cap', 'daily_run_cap', 'too_many', 'provider_exhausted', 'repeat_daily_cap', 'run_cap'].includes(code) ? 429 : 409;
   throw new Coded(status, code ?? 'start_failed', 'The check could not start.');
 }
 

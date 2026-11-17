@@ -17,15 +17,16 @@ export function runIdOf(data: unknown): string | null {
 
 type Fetcher = typeof fetch;
 
-export type StartFail = 'limit' | 'unreachable' | 'failed';
-export type StartOutcome = { runId: string } | { fail: StartFail };
+export type StartFail = 'limit' | 'busy' | 'unreachable' | 'failed';
+export type StartOutcome = { runId: string } | { fail: StartFail; resetAt?: string };
 
-const limitCodes = new Set(['daily_cap', 'too_many', 'provider_exhausted', 'repeat_daily_cap']);
+const limitCodes = new Set(['daily_cap', 'daily_run_cap', 'repeat_daily_cap']);
 const unreachableCodes = new Set(['agent_unreachable']);
 
 /** Maps a refused request to the small state the person should see. No response at all means the assistant could not be reached. */
 export function failOf(status: number | null, code: string | null): StartFail {
-  if (status === 429 || (code && limitCodes.has(code))) return 'limit';
+  if (code && limitCodes.has(code)) return 'limit';
+  if (status === 429 || code === 'provider_exhausted') return 'busy';
   if (status === null || (code && unreachableCodes.has(code))) return 'unreachable';
   return 'failed';
 }
@@ -35,7 +36,8 @@ export async function startQuickCheckOutcome(workspaceId: string, lang: Lang, fe
   const response = await fetcher(`/api/workspaces/${workspaceId}/runs`, { method: 'POST', headers: { 'accept-language': lang } }).catch(() => null);
   const payload = await response?.json().catch(() => null) as { run_id?: unknown; error?: { code?: string } } | null;
   const runId = response?.ok ? runIdOf(payload) : null;
-  return runId ? { runId } : { fail: failOf(response ? response.status : null, payload?.error?.code ?? null) };
+  const resetAt = response?.headers.get('x-nazir-limit-reset');
+  return runId ? { runId } : { fail: failOf(response ? response.status : null, payload?.error?.code ?? null), ...(resetAt ? { resetAt } : {}) };
 }
 
 /** Same as the outcome version, for callers that only need the run id. */

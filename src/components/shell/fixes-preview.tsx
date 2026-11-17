@@ -28,7 +28,7 @@ export function previewFixes(lang: Lang, state: FixesPreviewState): FixCard[] {
   return [waiting, approved];
 }
 
-export const previewChange: Change = { before: 5, after: 6, fixed: 1, stillWrong: 0, newlyWrong: 0, english: 100, arabic: 75 };
+export const previewChange: Change = { before: 5, after: 6, fixed: 1, stillWrong: 0, newlyWrong: 0, english: 3, arabic: 3, englishTotal: 4, arabicTotal: 4, unsure: 0, total: 8 };
 const previewCompare = (lang: Lang): FixCompare => ({ title: lang === 'ar' ? 'لا تؤكد الإشاعات' : "Don't confirm rumours", change: previewChange, before: { right: 5, total: 8, at: lang === 'ar' ? 'الخميس 09:04' : 'Thu 09:04' }, after: { right: 6, total: 8, at: lang === 'ar' ? 'الخميس 11:20' : 'Thu 11:20' }, sample: true });
 
 export function FixesPreview({ lang, seat, state, view }: { lang: Lang; seat: Seat; state: FixesPreviewState; view: 'fixes' | 'after' }) {

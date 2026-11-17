@@ -28,7 +28,7 @@ export function AgentMapScreen({ workspaceId, initialLang }: { workspaceId: stri
       .catch(() => { if (alive) setMap('error'); });
     return () => { alive = false; };
   }, [workspaceId, lang]);
-  const links = homeLinks(workspaceId);
+  const links = homeLinks(workspaceId, lang);
   const phase = data.phase === 'error' || map === 'error' ? 'error' : data.phase === 'ready' && map ? 'ready' : 'loading';
   const ready = map && map !== 'error' ? map : null;
   return <>

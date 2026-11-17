@@ -104,6 +104,7 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
                 ))}
               </ul>
               {line ? <p className="nz-after-lang">{line}</p> : null}
+              {change.unsure ? <p className="nz-check-sub">{fill(text.unknown, { n: String(change.unsure), total: String(change.total) })}</p> : null}
             </> : <StateCard kind="empty" title={text.emptyTitle} action={{ label: text.goChecks, href: links.fixes }} />}
           </>}
         </div>

@@ -6,6 +6,7 @@ import { SettingsScreen } from '@/components/shell/settings-screen';
 import { ChecksScreen } from '@/components/shell/checks-screen';
 import { AgentMapScreen } from '@/components/shell/agent-map';
 import { WorkspaceApp } from '@/components/ocean/workspace-app';
+import { redirect } from 'next/navigation';
 import type { Lang } from '@/components/ocean/copy';
 import type { ScreenId, Seat } from '@/components/ocean/model';
 
@@ -34,5 +35,6 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   if (query.preview !== 'ocean' && query.screen === 'settings') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={false} withFixes={false}><SettingsScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} /></MemberShell>;
   if (query.preview !== 'ocean' && query.screen === 'after') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={true} withFixes={true}><FixesScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} mode="after" fixId={query.fix && /^[0-9a-f-]{36}$/i.test(query.fix) ? query.fix : null} /></MemberShell>;
   if (query.preview !== 'ocean' && query.screen === 'map') return <MemberShell workspaceId={workspaceId} lang={langOf(query.lang)} pinned={query.lang !== undefined} withReports={false} withFixes={false}><AgentMapScreen workspaceId={workspaceId} initialLang={langOf(query.lang)} /></MemberShell>;
-  return <WorkspaceApp workspaceId={workspaceId} preview={query.preview === 'ocean'} initialLang={langOf(query.lang)} initialRole={seatOf(query.role)} initialScreen={screenOf(query.screen)} initialSettingsOpen={query.settings === 'open'} />;
+  if (query.preview !== 'ocean') redirect(`/w/${workspaceId}${query.lang ? `?lang=${langOf(query.lang)}` : ''}`);
+  return <WorkspaceApp workspaceId={workspaceId} preview initialLang={langOf(query.lang)} initialRole={seatOf(query.role)} initialScreen={screenOf(query.screen)} initialSettingsOpen={query.settings === 'open'} />;
 }

@@ -62,10 +62,10 @@ export function HistoryView(props: HistoryViewProps) {
   return (
     <ScreenFrame lang={lang} seat={seat} phase={phase} name="history" assistant={props.assistant} person={props.person} links={links} canStart={props.canStart} history={props.allowed} onRetry={props.onRetry}>
       {!props.allowed ? <>
-        <Heading light={text.light} bold={text.bold} lang={lang} />
+        <Heading light={text.light} bold={text.bold} lang={lang} explain={text.explain} />
         <StateCard kind="view" title={text.noAccessTitle} action={{ label: text.goHome, href: links.home }} />
       </> : <>
-        <Heading light={text.light} bold={text.bold} lang={lang} />
+        <Heading light={text.light} bold={text.bold} lang={lang} explain={text.explain} />
         {items.length === 0 ? <StateCard kind="empty" title={text.emptyTitle} action={props.canStart ? { label: copy.shell.startCheck, href: links.start } : { label: text.goHome, href: links.home }} /> : <>
           {sections.map((section) => (
             <section key={section.id} className="nz-hist-group" data-group={section.id} aria-label={section.title}>

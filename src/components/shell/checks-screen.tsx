@@ -31,6 +31,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
   const running = active.runs;
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'suggesting' | null>(null);
   const [note, setNote] = useState<ChecksNote>(null);
+  const [limitReset, setLimitReset] = useState<string | undefined>();
   const auto = useRef(false);
   const [tab, setTab] = useState<'answers' | 'safety'>(initialTab ?? 'answers');
   const [choosing, setChoosing] = useState(false);
@@ -132,7 +133,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
     setBusy('starting');
     const outcome = await startQuickCheckOutcome(workspaceId, langRef.current);
     setBusy(null);
-    if ('fail' in outcome) { setNote(outcome.fail === 'limit' ? 'limit' : outcome.fail === 'unreachable' ? 'unreachable' : 'startFailed'); return; }
+    if ('fail' in outcome) { setLimitReset(outcome.resetAt); setNote(outcome.fail === 'limit' ? 'limit' : outcome.fail === 'busy' ? 'busy' : outcome.fail === 'unreachable' ? 'unreachable' : 'startFailed'); return; }
     setActive({ runs: [{ runId: outcome.runId, done: 0, total: 8 }], status: 'ready' });
     await refresh(true);
   }
@@ -158,7 +159,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
     // The fix lives on the server; refetch so this answer shows Fix suggested on every device.
     if (response?.ok) await data.reload();
     setBusy(null);
-    setNote(response?.ok ? 'suggested' : response?.status === 429 ? 'limit' : 'suggestFailed');
+    setNote(response?.ok ? 'suggested' : response?.status === 429 ? 'busy' : 'suggestFailed');
   }
 
   function chooseTab(next: 'answers' | 'safety') {
@@ -198,6 +199,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       activeStatus={active.status}
       busy={busy}
       note={note}
+      limitReset={limitReset}
       onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setFilter('all'); setComparison({ change: undefined, from: undefined }); setNote(null); writeUrl({ check: id, q: null, show: null, change: null, from: null }, true); }}
       onBack={() => { setOpenId(null); setNote(null); writeUrl({ check: null, q: null, show: null }, true); }}
       onOpenQuestion={(id) => { const next = openQuestion === id ? '' : id; setOpenQuestion(next); writeUrl({ q: next || null }, true); }}

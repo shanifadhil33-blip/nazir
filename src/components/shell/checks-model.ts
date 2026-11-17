@@ -6,8 +6,8 @@ import { can, type Role } from '@/server/auth/roles';
 import { daysBetween } from './home-model';
 
 export type Mark = 'right' | 'wrong' | 'unsure' | 'notChecked';
-export type QuestionRow = { id: string; question: string; mark: Mark; said: string; record: string; findingId: string | null };
-export type CheckRow = { sample?: boolean; stopped?: { done: number; total: number }; id: string; kind: 'quick' | 'full'; at: Date; toFix: number; questions: QuestionRow[] };
+export type QuestionRow = { id: string; question: string; mark: Mark; said: string; record: string; why?: string; findingId: string | null };
+export type CheckRow = { sample?: boolean; repliesOnly?: boolean; stopped?: { done: number; total: number }; id: string; kind: 'quick' | 'full'; at: Date; toFix: number; questions: QuestionRow[] };
 export type ChecksAccess = { start: boolean; stop: boolean; suggest: boolean };
 
 /** Buttons follow the server role matrix: start and stop follow plan.propose and plan.approve, suggest follows proposal.create. */
@@ -40,6 +40,7 @@ export function checkFromReport(id: string, createdAt: string, body: ReportBody,
       mark: markFor(row.status),
       said: lang === 'ar' ? said.ar : said.en,
       record: record ? (lang === 'ar' ? record.ar : record.en) : '',
+      why: finding ? (lang === 'ar' ? finding.title_ar || finding.title : finding.title) : undefined,
       findingId: finding?.id ?? null,
     };
   });
@@ -47,6 +48,7 @@ export function checkFromReport(id: string, createdAt: string, body: ReportBody,
     id,
     ...(!isCompleteReport(body) ? { stopped: { done: completionOf(body).tries_done, total: completionOf(body).tries_total } } : {}),
     sample: body.sample === true,
+    repliesOnly: body.run.connection_scope === 'replies_only',
     kind: body.run.size === 'full' ? 'full' : 'quick',
     at: checkDate(createdAt, body),
     toFix: questions.filter((item) => item.mark === 'wrong').length,
@@ -116,5 +118,6 @@ export function approvalMessage(planId: string, lang: Lang) {
 }
 
 export function checkResultLabel(check: CheckRow, copy: Messages) {
-  return check.stopped ? fill(copy.checksScreen.stopped, { done: String(check.stopped.done), total: String(check.stopped.total) }) : resultLabel(check.toFix, copy);
+  if (check.stopped) return fill(copy.checksScreen.stopped, { done: String(check.stopped.done), total: String(check.stopped.total) });
+  return countsOf(check).unsure > 0 ? countsLine(check, copy) : resultLabel(check.toFix, copy);
 }
