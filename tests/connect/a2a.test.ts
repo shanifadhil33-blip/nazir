@@ -121,3 +121,17 @@ it('refuses credentials in an advertised URL and a stalled interface DNS lookup'
   let calls = 0;
   await expect(discoverA2A(cardUrl, {}, { resolve: async () => ++calls === 1 ? [{ address: '93.184.215.14' }] : new Promise(() => {}), fetcher: json(card()), timeoutMs: 20 })).rejects.toMatchObject({ code: 'external_timeout' });
 });
+
+
+it('cancels the same guarded task when the caller stops during polling', async () => {
+  const controller = new AbortController();
+  const methods: string[] = [];
+  const fetcher = async (_url: string, init: PinnedRequestInit) => {
+    const method = JSON.parse(String(init.body)).method; methods.push(method);
+    if (method === 'GetTask') { controller.abort(); return new Promise<Response>(() => {}); }
+    if (method === 'CancelTask') expect(init.signal?.aborted).toBe(false);
+    return Response.json({ result: task('working') });
+  };
+  await expect(sendA2A(iface, cardUrl, 'Hi', 's', {}, { resolve, fetcher, signal: controller.signal })).rejects.toMatchObject({ code: 'external_timeout' });
+  expect(methods).toEqual(['SendMessage', 'GetTask', 'CancelTask']);
+});

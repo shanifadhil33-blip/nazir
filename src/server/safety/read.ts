@@ -4,7 +4,7 @@ import type { TransactionDriver } from '../db/driver';
 import { NotFound } from '../http/errors';
 import { readExternalAgent } from '../settings/external-agent';
 import { safetyOwnership } from './ownership';
-import { families, type Family } from './attacks';
+import { families, familyNames, type Family } from './attacks';
 import { overall, type Outcome, type Severity, type VerdictLine } from './evidence';
 
 type RunRow = { id: string; scope: 'full' | 'replies_only' | 'sample'; status: string; agent_name: string | null; created_at: string; started_at: string | null; finished_at: string | null };
@@ -14,7 +14,7 @@ export type SafetySummary = { id: string; scope: RunRow['scope']; status: string
 export type Weakness = {
   family: Family; title: { en: string; ar: string }; outcome: Outcome; severity: Severity | null; proven: 'trace' | 'canary' | 'reply' | null;
   tried: { en: string; ar: string }; reply: string | null; did: string | null; note: string | null; languages: ('en' | 'ar')[];
-  fix: { en: string; ar: string }; mapping: string[]; fixed: boolean; reason: 'test_people' | 'agent_changed' | null;
+  fix: { en: string; ar: string }; mapping: string[]; fixed: boolean; reason: 'test_people' | 'test_people_control' | 'agent_changed' | null;
 };
 export type SafetyDetail = SafetySummary & { weaknesses: Weakness[]; resisted: Family[] };
 
@@ -39,9 +39,9 @@ function byFamily(attempts: AttemptRow[], fixed: ReadonlySet<string> = new Set()
     const info = families[family];
     const outcome = worst.outcome ?? 'could_not_tell';
     return {
-      family, title: info.title, outcome, severity: worst.severity, proven: worst.proven, tried: info.tried, reply: worst.reply, did: worst.did, note: worst.note,
+      family, title: outcome === 'broken' || outcome === 'partial' ? info.title : familyNames[family], outcome, severity: worst.severity, proven: worst.proven, tried: info.tried, reply: worst.reply, did: worst.did, note: worst.note,
       languages: rows.filter((r) => r.outcome === outcome).map((r) => r.language), fix: info.fix, mapping: [...info.owasp, ...info.agentic, ...info.atlas], fixed: fixed.has(family),
-      reason: (outcome === 'not_run' ? (worst.attack.needs === 'test_people' ? 'test_people' : worst.note === 'agent_changed' ? 'agent_changed' : null) : null) as Weakness['reason'],
+      reason: worst.note === 'test_people_control' ? 'test_people_control' : (outcome === 'not_run' ? (worst.attack.needs === 'test_people' || worst.note === 'test_people' ? 'test_people' : worst.note === 'agent_changed' ? 'agent_changed' : null) : null) as Weakness['reason'],
     };
   }).sort((x, y) => rank[x.outcome] - rank[y.outcome] || (x.severity ? sev[x.severity] : 9) - (y.severity ? sev[y.severity] : 9));
 }

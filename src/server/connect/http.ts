@@ -47,9 +47,13 @@ export async function guardedJson(url: string, init: RequestInit, options: Trans
   catch { throw connectFailure('external_format', 502); }
 }
 
-export function plainReply(value: unknown, key?: string): string {
+export function plainReply(value: unknown, key?: string | (string | undefined)[]): string {
   if (typeof value !== 'string' || !value.trim()) throw connectFailure('external_format', 502);
-  const redact = (text: string) => key ? text.split(key).join('[redacted]').split(key.replace(/^Bearer /i, '')).join('[redacted]') : text;
+  const secrets = (Array.isArray(key) ? key : [key]).filter((value): value is string => Boolean(value));
+  const redact = (text: string) => secrets.reduce((out, value) => {
+    const bare = value.replace(/^Bearer /i, '');
+    return out.split(value).join('[redacted]').split(bare || value).join('[redacted]');
+  }, text);
   const plain = redact(redact(value).replace(/<[^>]*>/g, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim()).slice(0, 8000);
   if (!plain) throw connectFailure('external_format', 502);
   return plain;

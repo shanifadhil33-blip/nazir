@@ -6,7 +6,7 @@ import { daysBetween } from './home-model';
 import type { ActivityItem } from '@/server/shell/history';
 import type { StoredFix } from './fixes-model';
 
-export type HistoryKind = 'checkDone' | 'checkStopped' | 'suggested' | 'approved' | 'turnedDown' | 'checkStarted' | 'questionsReady' | 'testStarted' | 'testDone' | 'languageChanged' | 'settingsChanged' | 'sampleReset' | 'safetyStarted' | 'safetyStopped' | 'safetyDone' | 'safetyFixed';
+export type HistoryKind = 'checkDone' | 'checkStopped' | 'suggested' | 'approved' | 'turnedDown' | 'checkStarted' | 'questionsReady' | 'testStarted' | 'testDone' | 'languageChanged' | 'settingsChanged' | 'sampleReset' | 'safetyStarted' | 'safetyStopped' | 'safetyDone' | 'safetyFixed' | 'safetyConfirmed' | 'safetyAttack' | 'safetyPeopleSaved' | 'safetyPeopleRemoved';
 
 export type HistoryItem = {
   id: string;

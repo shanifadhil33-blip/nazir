@@ -4,13 +4,13 @@ import { Coded } from '../http/errors';
 import { checkedHttpsAddress, safeHttpsUrl } from '../settings/net-guard';
 import { connectFailure, guardedJson, plainReply, type Transport } from './http';
 
-export function safeAuthHeader(v: string) { return /^[A-Za-z][A-Za-z0-9_-]{0,99}$/.test(v) && !/^(host|content-type|content-length|connection|transfer-encoding|cookie|proxy-.*|sec-.*|accept-encoding)$/i.test(v); }
+export function safeAuthHeader(v: string) { return /^[A-Za-z][A-Za-z0-9_-]{0,99}$/.test(v) && !/^(host|content-type|content-length|connection|keep-alive|upgrade|te|trailer|expect|transfer-encoding|cookie|proxy-.*|sec-.*|accept-encoding|x-nazir-.*|traceparent|tracestate|baggage|a2a-version)$/i.test(v); }
 
 export const a2aInterface = z.object({
   url: z.string().max(2000).refine(safeHttpsUrl), transport: z.enum(['JSONRPC', 'HTTP+JSON']), version: z.enum(['1.0', '0.3']),
   headerName: z.string().max(100).refine(safeAuthHeader).optional(), authType: z.enum(['apiKey', 'bearer']).optional(),
 }).strict();
-export type A2ATransport = Transport & { a2aContexts?: Map<string, string>; testHeaders?: Record<string, string> };
+export type A2ATransport = Transport & { a2aContexts?: Map<string, string>; testHeaders?: Record<string, string>; redactSecrets?: string[] };
 export type A2AInterface = z.infer<typeof a2aInterface>;
 export type SafeCard = { name: string; skills: { id: string; name: string }[] };
 const record = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
@@ -56,7 +56,7 @@ export async function discoverA2A(cardUrl: string, auth: { header?: string; key?
   return { card, iface };
 }
 
-/** Nonstreaming bindings from the A2A 1.0 and 0.3 specifications. One deadline includes polling and cancellation. */
+/** Nonstreaming bindings. Polling reserves cancellation time; caller Stop allows one bounded cancel request. */
 export async function sendA2A(ifaceValue: unknown, cardUrl: string, message: string, sessionId: string, auth: { header?: string | null; key?: string }, options: A2ATransport = {}): Promise<string> {
   const parsed = a2aInterface.safeParse(ifaceValue);
   if (!parsed.success) throw connectFailure('external_unsupported');
@@ -81,7 +81,8 @@ export async function sendA2A(ifaceValue: unknown, cardUrl: string, message: str
       if (operation === 'get') { method = 'GET'; body = undefined; }
       if (operation === 'cancel') body = {};
     }
-    const raw = record(await guardedJson(url, { method, headers, ...(body ? { body: JSON.stringify(body) } : {}) }, { ...options, signal: operation === 'cancel' ? signal : workSignal }));
+    const cancelSignal = operation === 'cancel' ? (options.signal?.aborted ? AbortSignal.timeout(1000) : signal) : workSignal;
+    const raw = record(await guardedJson(url, { method, headers, ...(body ? { body: JSON.stringify(body) } : {}) }, { ...options, signal: cancelSignal }));
     if (raw.error) throw connectFailure('external_unreachable', 502);
     return record(iface.transport === 'JSONRPC' ? raw.result : raw);
   };
@@ -92,7 +93,7 @@ export async function sendA2A(ifaceValue: unknown, cardUrl: string, message: str
       const received = record(result.task ?? result.message ?? result);
       if (typeof received.contextId === 'string' && received.contextId.length <= 200) options.a2aContexts?.set(sessionId, received.contextId);
       const task = record(result.task ?? (result.status ? result : null));
-      if (!Object.keys(task).length) return plainReply(partsText(record(result.message ?? result).parts), auth.key);
+      if (!Object.keys(task).length) return plainReply(partsText(record(result.message ?? result).parts), [auth.key, ...(options.redactSecrets ?? [])]);
       const id = text(task.id);
       if (!id || id === '.' || id === '..' || /[\u0000-\u001f\u007f]/.test(id) || id.length > 200 || (taskId && taskId !== id)) throw connectFailure('external_format');
       taskId = id;
@@ -103,7 +104,7 @@ export async function sendA2A(ifaceValue: unknown, cardUrl: string, message: str
       if (state === 'completed') {
         const artifacts = Array.isArray(task.artifacts) ? task.artifacts.map((a) => partsText(record(a).parts)).filter(Boolean).join('\n') : '';
         const history = Array.isArray(task.history) ? task.history.map(record).filter((m) => m.role === 'agent' || m.role === 'ROLE_AGENT').at(-1) : null;
-        return plainReply(artifacts || partsText(record(task.status).message && record(record(task.status).message).parts) || partsText(history?.parts), auth.key);
+        return plainReply(artifacts || partsText(record(task.status).message && record(record(task.status).message).parts) || partsText(history?.parts), [auth.key, ...(options.redactSecrets ?? [])]);
       }
       if (terminal || !['submitted', 'working'].includes(state)) throw connectFailure('external_unreachable', 502);
       if (poll === 12) throw connectFailure('external_timeout', 504);
@@ -118,7 +119,7 @@ export async function sendA2A(ifaceValue: unknown, cardUrl: string, message: str
     }
     throw connectFailure('external_timeout', 504);
   } catch (error) { if (error instanceof Coded) throw error; throw connectFailure(workSignal.aborted ? 'external_timeout' : 'external_unreachable', 502); } finally {
-    if (taskId && !terminal && !signal.aborted) { try { await invoke('cancel', { id: taskId }); } catch { /* safe best effort within the same deadline */ } }
+    if (taskId && !terminal && (!signal.aborted || options.signal?.aborted)) { try { await invoke('cancel', { id: taskId }); } catch { /* safe best effort within the same deadline */ } }
   }
 }
 function partsText(parts: unknown): string { return Array.isArray(parts) ? parts.map((p) => text(record(p).text)).filter(Boolean).join('\n') : ''; }
