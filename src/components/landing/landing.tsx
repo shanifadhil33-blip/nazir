@@ -21,7 +21,7 @@ export function HeroPhone({ lang }: { lang: Lang }) {
     <div className="nz-hero-phone">
       {/* A real capture of the built home screen on demo data. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={heroSrc(lang)} alt={copy.landing.heroAlt} width={390} height={820} />
+      <img src={heroSrc(lang)} alt={copy.landing.heroAlt} width={390} height={844} />
     </div>
   );
 }
