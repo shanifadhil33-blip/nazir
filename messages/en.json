@@ -487,7 +487,8 @@
     "unknownReply": "Nazir saw the reply but could not see what your agent did. Connect the inside view to check its actions.",
     "limitAt": "Today's free checks are used. More open on {time}.",
     "busy": "Checks are unavailable right now. Try again shortly.",
-    "checkConnection": "Check the connection"
+    "checkConnection": "Check the connection",
+    "emptyConnect": "Connect your agent on Home to start your first check."
   },
   "fixesScreen": {
     "light": "Fixes",

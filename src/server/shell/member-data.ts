@@ -17,15 +17,15 @@ import { readHistory } from './history';
 import { activeRuns } from '@/server/runner/runs';
 
 /** Request-local data only. Use the same RLS services as the member APIs. */
-export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned: boolean, withReports: boolean, withFixes = false, withActive = false, withHistory = false, reportIds: string[] = []): Promise<MemberSnapshot> {
+export async function loadMemberSnapshot(workspaceId: string, lang: Lang, pinned: boolean, withReports: boolean, withFixes = false, withActive = false, withHistory = false, reportIds: string[] = [], reportFix?: string): Promise<MemberSnapshot> {
   const session = await requireUser();
   const member = session.memberships.find((item) => item.workspaceId === workspaceId);
   if (!member) throw new Forbidden();
   const driver = runtimeDriver();
   const [settings, list, shared, active, connection, mine, history, demoProgress] = await Promise.all([
     readAgentSettings(driver, member.memberId, false).catch(() => null),
-    withReports ? listReports(driver, member.memberId, reportIds) : null,
-    withFixes ? listProposals(driver, member.memberId).catch(() => null) : null,
+    withReports ? listReports(driver, member.memberId, reportIds, reportFix) : null,
+    withFixes ? listProposals(driver, member.memberId, reportFix).catch(() => null) : null,
     withActive ? activeRuns(driver, member.memberId).catch(() => null) : null,
     readExternalAgent(driver, member.memberId).catch(() => null),
     pinned ? null : readMyLanguage(driver, member.memberId).catch(() => null),

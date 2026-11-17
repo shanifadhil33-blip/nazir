@@ -79,6 +79,7 @@ it('keeps unknown answers in language totals and never claims they were fixed', 
   expect(languageLine(change, messagesFor('en'))).toBe('English 1 of 2 right');
   const html = after('en', 'owner', { sample: { ...sampleCompare, change } });
   expect(html).toContain('Could not tell for 1 of 2 answers.');
+  expect(html.indexOf('Could not tell for 1 of 2 answers.')).toBeLessThan(html.indexOf('nz-after-sides'));
 });
 
 it('keeps both screens under 25 words, with male names only and no tech words', () => {

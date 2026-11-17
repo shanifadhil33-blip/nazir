@@ -106,6 +106,13 @@ it('shows the loading, error and empty states with a way on', () => {
   expect(render('en', 'viewer', { checks: [] })).not.toContain('Start a check</');
 });
 
+it('offers the connection step when an empty account cannot start yet', () => {
+  const html = render('en', 'owner', { checks: [], connectionReady: false, access: { start: false, stop: true, suggest: true } });
+  expect(html).toContain('Connect your agent on Home to start your first check.');
+  expect(html).toContain('href="/w/w1?connect=quick&amp;lang=en"');
+  expect(html).not.toContain('Start a check');
+});
+
 it('keeps every new string free of dashes, caps, emoji and long lines in both languages', () => {
   for (const [lang, table] of [['en', en.checksScreen], ['ar', ar.checksScreen]] as const) {
     expect(Object.keys(table).sort(), lang).toEqual(Object.keys(en.checksScreen).sort());

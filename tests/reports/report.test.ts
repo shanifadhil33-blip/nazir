@@ -6,6 +6,7 @@ import * as build from '../../src/server/reports/build';
 import { assembleReport, projectReport, scopeLine, type ReportBody } from '../../src/server/reports/build';
 import * as reports from '../../src/server/reports/read';
 import { createReport, listReports, readFullReport } from '../../src/server/reports/read';
+import { listProposals } from '../../src/server/repair/list';
 
 const sample = (): ReportBody => assembleReport({
   run: { id: 'run', status: 'failed', calls_used: 2, calls_budget: 8 },
@@ -156,4 +157,41 @@ it('keeps an explicitly linked old report available beyond the newest twenty wit
   expect(linked.reports).toHaveLength(21);
   expect(linked.reports.some((r) => r.id === old.ids.reports)).toBe(true);
   expect((await listReports(db.driver, owner, [old.ids.reports!])).reports.some((r) => r.id === old.ids.reports)).toBe(false);
+  const viewer = await db.createMember(old.workspace_id, ['viewer']);
+  expect((await listReports(db.driver, viewer, [old.ids.reports!])).reports.some((r) => r.id === old.ids.reports)).toBe(true);
+});
+
+it('loads an older exact fix and only its two reports for every role, with no cross-workspace links', async () => {
+  const old = await seed(db, 'OldFixComparison');
+  const beforeId = old.ids.reports!, fixId = old.ids.proposals!;
+  const afterRun = await old.insert('runs', { plan_id: old.ids.plans, agent_version_id: old.ids.agent_versions, rule_pack_version_id: old.ids.rule_pack_versions, frozen_manifest: {}, runner_version: '1', status: 'passed', finished_at: new Date().toISOString() });
+  const snapshot = (await db.owner.query<{ body: ReportBody }>('SELECT body FROM nazir.reports WHERE id=$1', [beforeId])).rows[0]!.body;
+  const afterBody = { ...snapshot, run: { ...snapshot.run, id: afterRun, status: 'passed' } };
+  const afterId = await old.insert('reports', { run_id: afterRun, created_by: old.member_id, body: afterBody, supplier_body: afterBody, viewer_body: afterBody });
+  await db.owner.query("UPDATE nazir.proposals SET title='Old fix',title_ar='إصلاح قديم',status='approved',retest_run_id=$2 WHERE id=$1", [fixId, afterRun]);
+  // Genuine newer records, so neither comparison side remains in the recent twenty.
+  for (let i = 0; i < 21; i++) {
+    const run = await old.insert('runs', { plan_id: old.ids.plans, agent_version_id: old.ids.agent_versions, rule_pack_version_id: old.ids.rule_pack_versions, frozen_manifest: {}, runner_version: '1' });
+    const body = { ...snapshot, run: { ...snapshot.run, id: run } };
+    await old.insert('reports', { run_id: run, created_by: old.member_id, body, supplier_body: body, viewer_body: body });
+  }
+  await db.owner.query(`INSERT INTO nazir.proposals(workspace_id,finding_id,proposed_by_type,proposed_by,evidence,title,title_ar,status)
+    SELECT workspace_id,finding_id,'member',proposed_by,evidence,'Newer fix',NULL,'rejected' FROM nazir.proposals CROSS JOIN generate_series(1,101) WHERE id=$1`, [fixId]);
+  await db.owner.query("UPDATE nazir.proposals SET title_ar='إصلاح أحدث' WHERE workspace_id=$1 AND title='Newer fix'", [old.workspace_id]);
+  expect((await listProposals(db.driver, old.member_id)).proposals.some((p) => p.id === fixId)).toBe(false);
+  const viewer = await db.createMember(old.workspace_id, ['viewer']);
+  const supplier = await db.createMember(old.workspace_id, ['supplier_maintainer']);
+  for (const member of [old.member_id, viewer, supplier]) {
+    const fixes = (await listProposals(db.driver, member, fixId)).proposals;
+    expect(fixes).toHaveLength(101);
+    expect(fixes.some((p) => p.id === fixId)).toBe(true);
+    const recent = await listReports(db.driver, member);
+    expect(recent.reports.some((r) => r.id === beforeId || r.id === afterId)).toBe(false);
+    const exact = await listReports(db.driver, member, [], fixId);
+    expect(exact.reports).toHaveLength(22);
+    expect(exact.reports.some((r) => r.id === beforeId)).toBe(true);
+    expect(exact.reports.some((r) => r.id === afterId)).toBe(true);
+  }
+  expect((await listProposals(db.driver, owner, fixId)).proposals.some((p) => p.id === fixId)).toBe(false);
+  expect((await listReports(db.driver, owner, [], fixId)).reports.some((r) => r.id === beforeId || r.id === afterId)).toBe(false);
 });

@@ -64,8 +64,9 @@ export async function readFullReport(driver: TransactionDriver, memberId: string
   });
 }
 
-export async function listReports(driver: TransactionDriver, memberId: string, include: readonly string[] = []) {
+export async function listReports(driver: TransactionDriver, memberId: string, include: readonly string[] = [], forFix?: string) {
   z.array(z.uuid()).max(3).parse(include);
+  z.uuid().optional().parse(forFix);
   return withMember(driver, memberId, async (sql) => {
     const roles = await rolesOf(sql);
     if (!can(roles, 'report.read') && !can(roles, 'report.viewer')) throw new Forbidden();
@@ -73,7 +74,7 @@ export async function listReports(driver: TransactionDriver, memberId: string, i
     // Keep the security-definer projection for each role, evaluated in one SQL
     // statement rather than one network round trip per report.
     const reports = (await sql.query<{ id: string; created_at: string; run_id: string; body: ReportBody }>(
-      `SELECT r.id, r.created_at, r.run_id, nazir.${fn}(r.id) AS body FROM (SELECT * FROM nazir.list_reports() UNION SELECT id,created_at,run_id FROM nazir.reports WHERE id=ANY($1::uuid[])) r ORDER BY r.created_at DESC, r.id DESC`, [include],
+      `SELECT r.id,r.created_at,r.run_id,nazir.${fn}(r.id) AS body FROM nazir.list_reports($1,$2) r ORDER BY r.created_at DESC,r.id DESC`, [include, forFix ?? null],
     )).rows;
     if (reports.some((row) => !row.body)) throw new NotFound();
     // Enrich only the projected response. These run reads stay under member RLS;

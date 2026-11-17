@@ -200,6 +200,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       busy={busy}
       note={note}
       limitReset={limitReset}
+      connectionReady={data.kind === 'demo' || data.connection?.ready === true}
       onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setFilter('all'); setComparison({ change: undefined, from: undefined }); setNote(null); writeUrl({ check: id, q: null, show: null, change: null, from: null }, true); }}
       onBack={() => { setOpenId(null); setNote(null); writeUrl({ check: null, q: null, show: null }, true); }}
       onOpenQuestion={(id) => { const next = openQuestion === id ? '' : id; setOpenQuestion(next); writeUrl({ q: next || null }, true); }}

@@ -90,6 +90,7 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
             {compared && change ? <>
               <p className="nz-after-title"><strong dir="auto">{compared.title}</strong></p>
               <p className="nz-check-sub">{text.intro}</p>
+              {change.unsure ? <p className="nz-check-sub">{fill(text.unknown, { n: String(change.unsure), total: String(change.total) })}</p> : null}
               {compared.sample ? <p className="nz-check-sub">{text.sample}</p> : null}
               <ul className="nz-after-sides">
                 <li className="nz-after-side" data-side="before"><Link href={compared.beforeId ? checkHref(compared.beforeId) : links.checks}><span>{text.beforeAt}</span><strong>{fill(text.ofRight, { n: String(compared.before.right), total: String(compared.before.total) })}</strong><small>{compared.before.at}</small></Link></li>
@@ -104,7 +105,6 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
                 ))}
               </ul>
               {line ? <p className="nz-after-lang">{line}</p> : null}
-              {change.unsure ? <p className="nz-check-sub">{fill(text.unknown, { n: String(change.unsure), total: String(change.total) })}</p> : null}
             </> : <StateCard kind="empty" title={text.emptyTitle} action={{ label: text.goChecks, href: links.fixes }} />}
           </>}
         </div>
