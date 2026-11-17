@@ -13,7 +13,8 @@ export class AiChainExhausted extends Error {
 }
 class TimeLimit extends Error {}
 // A shared clock identifies a process scheduler. Tests inject independent clocks.
-type Queue = { tail: Promise<void>; starts: Map<string, number> };
+type Lane = { tail: Promise<void>; pending: number };
+type Queue = { lanes: Lane[]; starts: Map<string, number> };
 const schedulers = new WeakMap<() => number, { queues: Map<string, Queue>; cooldowns: Map<string, Cooldown> }>();
 function timed<T>(work: Promise<T>, ms: number): Promise<T> {
   if (ms <= 0) return Promise.reject(new TimeLimit());
@@ -100,10 +101,12 @@ export function createAiChain({ fetch: fetcher = globalThis.fetch, store, now = 
           else if (cooling()) reason = 'cooling';
           else {
             let queue = queues.get(provider.id);
-            if (!queue) { queue = { tail: Promise.resolve(), starts: new Map() }; queues.set(provider.id,queue); }
-            const previous = queue.tail;
+            if (!queue) { queue = { lanes: Array.from({ length: provider.maxInFlight }, () => ({ tail: Promise.resolve(), pending: 0 })), starts: new Map() }; queues.set(provider.id,queue); }
+            const lane = queue.lanes.reduce((a, b) => a.pending <= b.pending ? a : b);
+            const previous = lane.tail;
+            lane.pending++;
             let release!: () => void;
-            queue.tail = new Promise<void>((resolve) => { release = resolve; });
+            lane.tail = new Promise<void>((resolve) => { release = () => { lane.pending--; resolve(); }; });
             let acquired = false;
             // A judge never spends its whole deadline in one provider's queue: after a short wait it tries the next one.
             const queueEnd = now() + Math.min(request.purpose === 'judge' ? maxQueueWaitMs : Infinity, remaining());

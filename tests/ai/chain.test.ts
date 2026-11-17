@@ -158,6 +158,24 @@ it('serializes Requesty across chain instances and spaces starts by twelve secon
   await vi.advanceTimersByTimeAsync(30000); await results;
   expect(maxActive).toBe(1); expect(starts).toHaveLength(3); expect(starts[1]! - starts[0]!).toBeGreaterThanOrEqual(12000); expect(starts[2]! - starts[1]!).toBeGreaterThanOrEqual(12000);
 });
+it('shares four Kilo slots across chains, queues the fifth, and releases slots for later calls', async () => {
+  vi.useFakeTimers(); const now = () => Date.now(); let active = 0, peak = 0;
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => {
+    active++; peak = Math.max(peak, active);
+    await new Promise((r) => setTimeout(r, 1000));
+    active--; return ok();
+  });
+  const store = memoryAiStore(now);
+  const a = createAiChain({ fetch, store, now, env }), b = createAiChain({ fetch, store, now, env });
+  const replies = Promise.all([a.chat(input), b.chat(input), a.chat(input), b.chat(input), a.chat(input)]);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(fetch).toHaveBeenCalledTimes(4); expect(active).toBe(4);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect((await replies).every((r) => r.meta.provider === 'kilo')).toBe(true);
+  expect(fetch).toHaveBeenCalledTimes(5); expect(peak).toBe(4); expect(active).toBe(0);
+  const next = a.chat(input); await vi.advanceTimersByTimeAsync(1001); await next;
+  expect(fetch).toHaveBeenCalledTimes(6);
+});
 it('spaces OVH per model, allowing a different OVH model immediately', async () => {
   const s = setup([ok(),ok(),ok()],{},new Set(['requesty','kilo','openrouter']));
   const first = await s.chain.chat(input); const t = s.now(); await s.chain.chat(input); expect(s.now() - t).toBe(30000); expect(first.meta.provider).toBe('ovh');
