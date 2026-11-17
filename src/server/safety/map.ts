@@ -1,7 +1,7 @@
 /** The agent map: what your agent can use, with plain risk labels. Built from the SDK inventory (or the demo sample). */
 export type RiskLabel = 'changes_data' | 'outside_content' | 'sends_out' | 'personal_data' | 'wide_access';
 export type MapGroup = 'tools' | 'mcp' | 'services' | 'data' | 'permissions';
-export type MapItem = { id: string; group: MapGroup; name: string; purpose: string | null; risks: RiskLabel[]; tests: number };
+export type MapItem = { id: string; group: MapGroup; name: string; purpose: string | null; risks: RiskLabel[]; tests: number; testFamilies?: import('./attacks').Family[] };
 export type AgentMap = { scope: 'full' | 'replies_only' | 'none'; items: MapItem[]; dangerMix: boolean; skills: string[]; seenAt: string | null };
 
 type Tool = { name?: unknown; description?: unknown; changes_data?: unknown; outside_content?: unknown; sends_out?: unknown; source?: unknown; mcp_server?: unknown; annotations?: { readOnlyHint?: unknown } };

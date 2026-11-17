@@ -1496,3 +1496,12 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 @media (min-width: 900px) { .nz-loading-nav { inset-inline-start: 28px; inset-block: 170px auto; transform: none; flex-direction: column; } .nz-shell-loading .nz-shell-stack { max-inline-size: 640px; margin-inline: auto; } }
 .nz-check-mark-unsure { color: var(--ink-muted); background: var(--sky); }
 .nz-check-unsure { color: var(--ink-muted); }
+
+.nz-map-item-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: inherit; text-decoration: none; min-height: 44px; }
+.nz-map-item-link svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.nz-map-detail { display: grid; gap: 12px; max-width: 640px; }
+.nz-map-detail h2 { margin: 14px 0 0; font-size: 18px; }
+.nz-map-detail p, .nz-map-detail ul { margin: 0; overflow-wrap: anywhere; }
+.nz-map-detail ul { padding-inline-start: 22px; }
+.nz-map-detail .nz-pill-btn { justify-self: start; margin-block-start: 12px; }
+@media (max-width: 1023px) { .nz-safety-start { scroll-margin-block-end: calc(112px + env(safe-area-inset-bottom)); } }

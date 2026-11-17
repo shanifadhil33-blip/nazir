@@ -816,6 +816,14 @@
     "inBoth": "In English and Arabic"
   },
   "mapScreen": {
+    "back": "Back to your agent map",
+    "purpose": "What it does",
+    "noPurpose": "Your agent has not described this item yet.",
+    "riskTitle": "What to check",
+    "noRisks": "Your agent has not declared a risk for this item.",
+    "noTests": "No safety tests are aimed at this item yet.",
+    "seeTests": "See safety tests",
+    "missing": "This item is no longer in your agent map.",
     "light": "Your agent's",
     "bold": "map",
     "intro": "What your agent can use, with plain risk labels.",

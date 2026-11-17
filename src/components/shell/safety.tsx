@@ -41,6 +41,14 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
 
   // The first read waits a tick so it never runs inside the render that turned the tab on.
   useEffect(() => { if (!enabled) return; const t = setTimeout(() => { void load(); if (openRef.current) void loadDetail(openRef.current); }, 0); return () => clearTimeout(t); }, [enabled, load, loadDetail]);
+  // One wake-up at quota expiry; no idle polling while nothing is running.
+  useEffect(() => {
+    if (!enabled || !list?.nextAt) return;
+    const wait = Date.parse(list.nextAt) - Date.now();
+    if (!Number.isFinite(wait) || wait <= 0) return;
+    const timer = setTimeout(() => { void load(); }, wait + 100);
+    return () => clearTimeout(timer);
+  }, [enabled, list?.nextAt, load]);
   const active = list?.runs.find((r) => r.status === 'queued' || r.status === 'running') ?? null;
   useEffect(() => {
     if (!enabled || !active) return;
