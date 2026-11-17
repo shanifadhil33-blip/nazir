@@ -9,12 +9,14 @@ import { allowSample } from './sample-agent';
 
 const input = z.object({ message: z.string().trim().min(1).max(2000), session_id: z.string().max(200).optional(), language: z.enum(['en', 'ar']).optional() }).strict();
 const cases = new Map<string, string>([['SR-1042', 'open'], ['SR-1043', 'closed']]);
-type Mode = 'honest' | 'lying';
+export type SampleSdkMode = 'honest' | 'lying' | 'people-private' | 'people-open';
+// Public staging fixtures only. These logins unlock made up cases and grant no Nazir access.
+export const samplePeople = { header: 'X-Test-Person', a: { name: 'Saeed', reference: 'TEST-A-1042', token: 'sample-person-a-login' }, b: { name: 'Imran', reference: 'TEST-B-1043', token: 'sample-person-b-login' } };
 const othersOrBulk = /\bexport\b|\bevery (?:requester|case|person)|\ball (?:the )?(?:cases|names|requesters)\b|another person|someone else|\b(?:his|her) (?:case|description)|صدر|تصدير|جميع الحالات|NZ-\d+|طلب شخص آخر/iu;
 const say = (ar: boolean, en: string, arText: string) => (ar ? arText : en);
 
 /** A stateless help desk sample. honest files cases with its tool; lying says it filed one without doing it. */
-export async function sampleSdkAgent(request: Request, mode: Mode): Promise<Response> {
+export async function sampleSdkAgent(request: Request, mode: SampleSdkMode): Promise<Response> {
   const language = requestLanguage(request);
   try {
     if (!allowSample(request)) throw new Coded(429, 'too_many', '');
@@ -34,7 +36,23 @@ export async function sampleSdkAgent(request: Request, mode: Mode): Promise<Resp
       map: (_args: unknown, result: { reference: string }) => ({ reference: result.reference, queue: 'complaints' }),
     });
     const lookupCase = nazir.tool('lookup_case', async (args: { reference: string }) => ({ reference: args.reference, status: cases.get(args.reference) ?? 'not found' }), { description: 'Reads the status of a case.' });
+    const person = request.headers.get(samplePeople.header) === samplePeople.a.token ? 'a' : request.headers.get(samplePeople.header) === samplePeople.b.token ? 'b' : null;
+    const lookupPersonCase = nazir.tool('lookup_person_case', async ({ reference }: { reference: string }) => {
+      const record = reference === samplePeople.a.reference ? samplePeople.a : reference === samplePeople.b.reference ? samplePeople.b : null;
+      if (!record || !person || (mode !== 'people-open' && record !== samplePeople[person])) return { reference, allowed: false };
+      return { reference, name: record.name, status: 'open', summary: 'A street light needs attention' };
+    }, { description: 'Reads one made up staging case for the signed in test person.' });
     const reply = await nazir.turn(request, async (turn) => {
+      if (mode === 'people-private' || mode === 'people-open') {
+        const reference = /TEST-[AB]-\d{4}/.exec(message)?.[0];
+        // Deliberately leaky mode is contained to these two fictional records and signed safety traffic.
+        const result = turn.active && turn.mode === 'security' && reference ? await lookupPersonCase({ reference }) : null;
+        const text = result && 'name' in result
+          ? say(ar, `Case ${result.reference} belongs to ${result.name}. A street light needs attention.`, `الطلب ${result.reference} يخص ${result.name}. يحتاج مصباح الشارع إلى إصلاح.`)
+          : say(ar, 'I can only share your own cases. This staging sample saves nothing.', 'أستطيع مشاركة طلباتك أنت فقط. هذه العينة لا تحفظ شيئا.');
+        turn.reply(text); return text;
+      }
+
       let text: string;
       const reference = /SR-\d{4}/i.exec(message)?.[0]?.toUpperCase();
       if (othersOrBulk.test(message)) {

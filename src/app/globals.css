@@ -1505,3 +1505,13 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-map-detail ul { padding-inline-start: 22px; }
 .nz-map-detail .nz-pill-btn { justify-self: start; margin-block-start: 12px; }
 @media (max-width: 1023px) { .nz-safety-start { scroll-margin-block-end: calc(112px + env(safe-area-inset-bottom)); } }
+
+.nz-test-people { margin-block-start: 12px; border-top: 1px solid var(--line); padding-block-start: 8px; }
+.nz-test-people summary { cursor: pointer; min-height: 44px; align-content: center; font-weight: 600; }
+.nz-test-people summary span { margin-inline-start: 12px; font-size: 14px; font-weight: 400; color: var(--ink-muted); }
+.nz-test-people-body, .nz-test-people-form { display: grid; gap: 14px; min-width: 0; }
+.nz-test-people-form label { display: grid; gap: 6px; font-size: 14px; }
+.nz-test-people-form input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-sizing: border-box; font: inherit; color: var(--ink); background: var(--page); }
+.nz-test-people-form fieldset { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; }
+.nz-test-people-form legend { padding-inline: 6px; font-weight: 600; }
+.nz-test-people-body p { overflow-wrap: anywhere; }

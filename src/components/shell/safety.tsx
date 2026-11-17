@@ -144,7 +144,7 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
         ))}
         {list.agent && list.runs.length > 0 && !active && !needConfirm && canStart ? <PillButton className="nz-checks-start nz-safety-start" icon="play" directional label={startLabel} disabled={busy === 'starting' || limited} onClick={() => void safety.start(false)} /> : null}
       </div>
-      {safety.openId ? (open ? <SafetyDetailView lang={lang} now={now} run={open} demo={list.demo} busy={busy} canStart={canStart && !active && !limited && !needConfirm} onBack={() => open_(null)} onApprove={(f) => void safety.approve(f)} onAgain={() => void safety.start(false)} reportHref={reportHref(open.id)} />
+      {safety.openId ? (open ? <SafetyDetailView lang={lang} now={now} run={open} demo={list.demo} busy={busy} canStart={canStart && !active && !limited && !needConfirm} onBack={() => open_(null)} onApprove={(f) => void safety.approve(f)} onAgain={() => void safety.start(false)} reportHref={reportHref(open.id)} settingsHref={settingsHref} />
         : <section className="nz-check-page"><PhaseCard phase="loading" copy={copy} /></section>) : null}
     </div>
   );
@@ -173,9 +173,9 @@ function SafetyRunning({ lang, run, stopping, onStop }: { lang: Lang; run: Safet
   );
 }
 
-function SafetyDetailView({ lang, now, run, demo, busy, canStart, onBack, onApprove, onAgain, reportHref }: {
+function SafetyDetailView({ lang, now, run, demo, busy, canStart, onBack, onApprove, onAgain, reportHref, settingsHref }: {
   lang: Lang; now: Date; run: SafetyDetail; demo: boolean; busy: string | null; canStart: boolean;
-  onBack: () => void; onApprove: (family: string) => void; onAgain: () => void; reportHref: string;
+  onBack: () => void; onApprove: (family: string) => void; onAgain: () => void; reportHref: string; settingsHref: string;
 }) {
   const copy = messagesFor(lang);
   const text = copy.safetyScreen;
@@ -196,7 +196,7 @@ function SafetyDetailView({ lang, now, run, demo, busy, canStart, onBack, onAppr
         <ul className="nz-questions">
           {found.map((w) => <WeaknessRow key={w.family} lang={lang} weakness={w} open={firstOpen === w.family} demo={demo} busy={busy} canStart={canStart} onToggle={() => setOpenFamily(firstOpen === w.family ? '' : w.family)} onApprove={() => onApprove(w.family)} onAgain={onAgain} />)}
         </ul>
-        {other.length ? <ul className="nz-safety-other">{other.map((w) => <li key={w.family} data-outcome={w.outcome}><strong>{w.title[lang]}</strong><span>{w.reason ? text.reason[w.reason] : text.outcome[w.outcome]}</span></li>)}</ul> : null}
+        {other.length ? <ul className="nz-safety-other">{other.map((w) => <li key={w.family} data-outcome={w.outcome}><strong>{w.title[lang]}</strong><span>{w.reason === 'test_people' || w.reason === 'test_people_control' ? <a href={`${settingsHref}&setup=people`}>{text.reason[w.reason]}</a> : w.reason ? text.reason[w.reason] : text.outcome[w.outcome]}</span></li>)}</ul> : null}
         {run.resisted.length ? <p className="nz-check-sub nz-safety-held">{fill(text.heldUp, { n: String(run.resisted.length) })}</p> : null}
         <div className="nz-safety-actions">
           <PillButton icon="pencil" label={text.report} href={reportHref} />

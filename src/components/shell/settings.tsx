@@ -25,6 +25,7 @@ export type SettingsViewProps = {
   links: HomeLinks;
   reset: ResetState;
   /** The language being saved, and whether the last save failed. */
+  testPeople?: ReactNode;
   languageBusy?: Lang | null;
   languageFailed?: boolean;
   onLanguage?: (lang: Lang) => void;
@@ -63,6 +64,7 @@ export function SettingsViewScreen(props: SettingsViewProps) {
             {view.kind !== 'sdk' ? <PillButton label={status.addSdk} href={connectHref(links.home, 'full', lang)} /> : null}
             {view.connected ? <PillButton label={copy.mapScreen.open} href={map} /> : null}
           </div> : null}
+          {props.testPeople}
         </>}
       </Card>
       <section className="nz-set-card nz-set-with-content" data-card="language">

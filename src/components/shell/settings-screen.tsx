@@ -10,10 +10,11 @@ import { historyAccess } from './history-model';
 import { homeLinks } from './home-model';
 import { useMemberData } from './member-data';
 import { SettingsViewScreen, type ResetState } from './settings';
+import { TestPeopleSetup } from './test-people';
 import { settingsAccess } from './settings-model';
 
 /** The signed in Settings. Language is saved for this person only; the page then shows in it. */
-export function SettingsScreen({ workspaceId, initialLang }: { workspaceId: string; initialLang: Lang }) {
+export function SettingsScreen({ workspaceId, initialLang, setupPeople = false }: { workspaceId: string; initialLang: Lang; setupPeople?: boolean }) {
   const data = useMemberData(workspaceId, initialLang, false);
   const router = useRouter();
   const [reset, setReset] = useState<ResetState>('idle');
@@ -50,6 +51,7 @@ export function SettingsScreen({ workspaceId, initialLang }: { workspaceId: stri
       view={{ demo: data.kind === 'demo', connected: connection?.ready, agentName: connection?.name, kind: connection?.connection_kind, host, assistant: data.assistant, topic: data.settings?.focus_pack ?? 'government', language: data.lang }}
       access={{ ...settingsAccess(data.roles), reset: data.kind === 'demo' && settingsAccess(data.roles).reset }} history={historyAccess(data.roles)} canStart={data.canStart}
       person={data.person} links={homeLinks(workspaceId, data.lang)} reset={reset} languageBusy={languageBusy} languageFailed={languageFailed}
+      testPeople={data.kind === 'real' && connection?.ready && connection.revision && settingsAccess(data.roles).edit ? <TestPeopleSetup key={`${workspaceId}:${connection.revision}:${setupPeople}`} workspaceId={workspaceId} revision={connection.revision} lang={data.lang} initialOpen={setupPeople} /> : null}
       onLanguage={(next) => void language(next)} onAsk={() => setReset('ask')} onCancel={() => setReset('idle')} onConfirm={() => void confirm()} onRetry={data.reload}
       signOut={signOutAction}
     />

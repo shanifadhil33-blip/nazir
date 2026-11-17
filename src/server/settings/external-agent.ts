@@ -64,7 +64,7 @@ export function externalAgentForWorker(driver: TransactionDriver, workspaceId: s
   return withWorker(driver, workspaceId, async (db) => (await db.query<ExternalRow>('SELECT * FROM nazir.external_agent_worker()')).rows[0] ?? null);
 }
 export type ExternalMessage = { role: 'user' | 'assistant'; content: string };
-export type ExternalTransport = A2ATransport & { secret?: string; sdkWaitMs?: number; test?: { workspaceId: string; session: string; turn: number; mode: TestMode; inject?: string } };
+export type ExternalTransport = A2ATransport & { secret?: string; sdkWaitMs?: number; identity?: { header: string; value: string }; test?: { workspaceId: string; session: string; turn: number; mode: TestMode; inject?: string } };
 /** The shared adapter keeps secrets and raw transport errors out of saved replies. */
 export async function callExternalAgent(row: ExternalRow, messages: ExternalMessage[], sessionId: string, language: 'en' | 'ar', options: ExternalTransport = {}): Promise<string> {
   let key: string | undefined;
@@ -73,12 +73,16 @@ export async function callExternalAgent(row: ExternalRow, messages: ExternalMess
   catch { throw failure('external_unreachable', 502); }
   // Every adapter carries the signed test headers. Without the SDK the agent simply ignores them.
   const signed = options.test ? testHeaders(options.test) : {};
-  if (row.format === 'a2a') return sendA2A(row.a2a_interface, row.card_url ?? row.endpoint, messages.at(-1)?.content ?? '', options.test?.session ?? sessionId, { header: row.header_name, key }, { ...options, testHeaders: signed });
+  const identity = options.identity;
+  if (identity && (!options.test || options.test.mode !== 'security' || !safeAuthHeader(identity.header) || !/^[\x20-\x7e]{8,2000}$/.test(identity.value))) throw failure('external_safety');
+  const sameHeader = Boolean(identity && row.header_name?.toLowerCase() === identity.header.toLowerCase());
+  if (identity && !sameHeader) signed[identity.header] = identity.value;
+  if (row.format === 'a2a') return sendA2A(row.a2a_interface, row.card_url ?? row.endpoint, messages.at(-1)?.content ?? '', options.test?.session ?? sessionId, { header: row.header_name, key: sameHeader ? identity!.value : key }, { ...options, testHeaders: signed, redactSecrets: [key, identity?.value].filter((value): value is string => Boolean(value)) });
   const headers: Record<string, string> = { ...signed, 'content-type': 'application/json' };
-  if (row.header_name && key) headers[row.header_name] = key;
+  if (row.header_name && (key || sameHeader)) headers[row.header_name] = sameHeader ? identity!.value : key!;
   const body = row.format === 'openai_chat' ? { messages } : { message: messages.at(-1)?.content ?? '', session_id: options.test?.session ?? sessionId, language };
   const parsed = await guardedJson(row.endpoint, { method: 'POST', headers, body: JSON.stringify(body) }, options) as { choices?: { message?: { content?: unknown } }[]; reply?: unknown } | null;
-  return plainReply(row.format === 'openai_chat' ? parsed?.choices?.[0]?.message?.content : parsed?.reply, key);
+  return plainReply(row.format === 'openai_chat' ? parsed?.choices?.[0]?.message?.content : parsed?.reply, [key, identity?.value]);
 }
 /** Trusted database context, including legacy callers. Runs before DNS, key parsing or outbound calls. */
 async function assertConnectionWrite(driver: TransactionDriver, id: string) {

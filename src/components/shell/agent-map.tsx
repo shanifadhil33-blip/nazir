@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import { seatFromRoles } from '@/components/ocean/model';
-import { families } from '@/server/safety/attacks';
+import { familyNames } from '@/server/safety/attacks';
 import { ShellIcon } from './icons';
 import { PillButton } from './pill-button';
 import type { AgentMap, MapGroup } from '@/server/safety/map';
@@ -47,7 +47,7 @@ export function AgentMapScreen({ workspaceId, initialLang, itemId }: { workspace
         <h2>{text.riskTitle}</h2>
         {item.risks.length ? <ul>{item.risks.map((risk) => <li key={risk}>{text.risks[risk]}</li>)}</ul> : <p>{text.noRisks}</p>}
         <h2>{fill(text.aimed, { n: String(item.tests) })}</h2>
-        {item.testFamilies?.length ? <ul>{item.testFamilies.map((family) => <li key={family}>{families[family].title[lang]}</li>)}</ul> : <p>{text.noTests}</p>}
+        {item.testFamilies?.length ? <ul>{item.testFamilies.map((family) => <li key={family}>{familyNames[family][lang]}</li>)}</ul> : <p>{text.noTests}</p>}
         <PillButton icon="play" directional href={`${links.home}?screen=checks&tab=safety&lang=${lang}`} label={text.seeTests} />
       </section> : <StateCard kind="empty" title={text.missing} action={{ label: text.back, href: mapHref }} />) : null}
       {!itemId ? <>
