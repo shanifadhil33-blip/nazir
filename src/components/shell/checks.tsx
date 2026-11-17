@@ -40,6 +40,7 @@ export type ChecksViewProps = {
   busy: 'starting' | 'stopping' | 'suggesting' | null;
   note: ChecksNote;
   limitReset?: string;
+  connectionReady?: boolean;
   onOpenCheck?: (id: string) => void;
   onBack?: () => void;
   onOpenQuestion?: (id: string) => void;
@@ -125,7 +126,7 @@ export function ChecksView(props: ChecksViewProps) {
               <div className="nz-checks-list">
                 {active.map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
                 {props.activeStatus && props.activeStatus !== 'ready' ? <PhaseCard phase={props.activeStatus} copy={copy} onRetry={props.onRetry} fallback={links.home} /> : null}
-                {checks.length === 0 && active.length === 0 && (props.activeStatus ?? 'ready') === 'ready' ? <StateCard kind="empty" title={text.empty} action={canStart ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
+                {checks.length === 0 && active.length === 0 && (props.activeStatus ?? 'ready') === 'ready' ? <StateCard kind="empty" title={props.connectionReady === false ? text.emptyConnect : text.empty} action={props.connectionReady === false ? { label: copy.connect.title, href: `${links.home}?connect=quick&lang=${lang}` } : canStart ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
                 {checks.map((item) => {
                   const clean = !item.stopped && item.questions.length > 0 && item.questions.every((q) => q.mark === 'right');
                   const tone = clean ? 'right' : item.toFix > 0 ? 'wrong' : 'unsure';

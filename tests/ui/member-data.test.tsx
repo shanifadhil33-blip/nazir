@@ -41,6 +41,20 @@ it('starts all member requests before any has resolved and keeps every request n
   expect(await loaded).toMatchObject({ lang: 'ar', roles: ['viewer'], assistant: 'Agent · متصل', reports: [], fixes: [] });
 });
 
+it('keeps the exact old fix and comparison reports on client refresh', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  vi.stubGlobal('window', { location: { search: `?screen=after&fix=${id}` } });
+  const fetch = vi.fn(async (path: string) => path === '/api/me'
+    ? Response.json({ user: { name: 'Omar' }, memberships: [{ workspaceId: 'workspace', roles: ['service_owner'], kind: 'real' }] })
+    : path.includes('/reports') ? Response.json({ reports: [] })
+    : path.includes('/proposals') ? Response.json({ proposals: [{ id }] }) : Response.json({}));
+  vi.stubGlobal('fetch', fetch);
+  expect((await fetchMemberSnapshot('workspace', 'en', true, true, true))).toMatchObject({ fixes: [{ id }] });
+  const urls = fetch.mock.calls.map(([url]) => url);
+  expect(urls).toContain(`/api/workspaces/workspace/reports?fix=${id}`);
+  expect(urls).toContain(`/api/workspaces/workspace/proposals?include=${id}`);
+});
+
 it('preserves the sign-in result on 401, including expired membership requests', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 401 })));
   expect(await fetchMemberSnapshot('workspace', 'en', true, true, true)).toBe('unauthorized');

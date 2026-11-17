@@ -6,7 +6,7 @@ import { memberRoute, requestLanguage } from '@/server/http/route';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request, context: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await context.params;
-  return memberRoute(workspaceId, (memberId) => listProposals(runtimeDriver(), memberId), 200, requestLanguage(request));
+  return memberRoute(workspaceId, (memberId) => listProposals(runtimeDriver(), memberId, new URL(request.url).searchParams.get('include') ?? undefined), 200, requestLanguage(request));
 }
 
 /** Suggest a fix for one wrong answer. A second tap returns the same open fix. */

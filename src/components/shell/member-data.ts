@@ -21,11 +21,13 @@ export type MemberData = MemberSnapshot & {
 /** Each API enforces membership itself, so all requests can start together. */
 export async function fetchMemberSnapshot(workspaceId: string, lang: Lang, pinned: boolean, withReports: boolean, withFixes: boolean): Promise<MemberSnapshot | 'unauthorized'> {
   const options = { headers: { 'accept-language': lang }, cache: 'no-store' as const };
+  const requestedFix = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('fix');
+  const exactFix = withFixes && requestedFix && /^[0-9a-f-]{36}$/i.test(requestedFix) ? requestedFix : null;
   const [me, settingsResponse, reportsResponse, fixesResponse, connectionResponse] = await Promise.all([
     fetch('/api/me', options),
     fetch(`/api/workspaces/${workspaceId}/settings`, options).catch(() => null),
-    withReports ? fetch(`/api/workspaces/${workspaceId}/reports`, options).catch(() => null) : null,
-    withFixes ? fetch(`/api/workspaces/${workspaceId}/proposals`, options).catch(() => null) : null,
+    withReports ? fetch(`/api/workspaces/${workspaceId}/reports${exactFix ? `?fix=${exactFix}` : ''}`, options).catch(() => null) : null,
+    withFixes ? fetch(`/api/workspaces/${workspaceId}/proposals${exactFix ? `?include=${exactFix}` : ''}`, options).catch(() => null) : null,
     fetch(`/api/workspaces/${workspaceId}/settings/connection`, options).catch(() => null),
   ]);
   if ([me, settingsResponse, reportsResponse, fixesResponse, connectionResponse].some((r) => r?.status === 401)) return 'unauthorized';
