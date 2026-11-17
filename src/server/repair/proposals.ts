@@ -131,14 +131,17 @@ export async function decideRepair(driver: TransactionDriver, memberId: string, 
 }
 type PlanRow = { id: string; agent_version_id: string; repeat_count: number; stop_rules: { set: 'retest' | 'suite'; scenario_ids: string[]; retest_of_proposal: string } };
 /** Owner or reviewer starts the retest and then the frozen suite. Calling again returns the same runs. */
-export async function startRetest(driver: TransactionDriver, memberId: string, input: { proposalId: string; sets?: ('retest' | 'suite')[]; recordsOnly?: boolean; repeat_count?: number }) {
+export async function startRetest(driver: TransactionDriver, memberId: string, input: { proposalId: string; sets?: ('retest' | 'suite')[]; recordsOnly?: boolean; repeat_count?: number; retryOf?: string }) {
   uuid.parse(input.proposalId);
+  const retryOf = uuid.optional().parse(input.retryOf);
   const repeatCount = z.number().int().min(1).max(3).optional().parse(input.repeat_count);
   const { wid, plans } = await withMember(driver, memberId, async (sql) => {
     await requireRole(sql, 'plan.approve');
     const p = (await sql.query<{ status: string; resulting_agent_version_id: string | null }>('SELECT status,resulting_agent_version_id FROM nazir.proposals WHERE id=$1', [input.proposalId])).rows[0];
     if (!p) throw new NotFound();
     if (p.status !== 'approved' || !p.resulting_agent_version_id) throw new Coded(409, 'proposal_not_approved', errorLines.proposal_not_approved.en);
+    if (retryOf && !(await sql.query(`SELECT r.id FROM nazir.runs r JOIN nazir.plans p ON p.id=r.plan_id
+      WHERE r.id=$1 AND r.status IN ('passed','failed','inconclusive','cancelled') AND p.stop_rules->>'retest_of_proposal'=$2`, [retryOf, input.proposalId])).rows.length) throw new NotFound();
     const wid = (await sql.query<{ id: string }>('SELECT nazir.current_workspace_id() AS id')).rows[0]!.id;
     const plans = (await sql.query<PlanRow>("SELECT id,agent_version_id,repeat_count,stop_rules FROM nazir.plans WHERE status='approved' AND stop_rules->>'retest_of_proposal'=$1", [input.proposalId])).rows;
     return { wid, plans };
@@ -148,7 +151,7 @@ export async function startRetest(driver: TransactionDriver, memberId: string, i
   for (const set of input.sets ?? ['retest', 'suite']) {
     const plan = plans.find((x) => x.stop_rules.set === set);
     if (!plan) throw new NotFound();
-    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, maxAttempts: repeatCount === 1 ? 1 : undefined, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids, startedBy });
+    const run = await enqueueRun(driver, { workspaceId: wid, planId: plan.id, agentVersionId: plan.agent_version_id, scenarioIds: plan.stop_rules.scenario_ids, repeats: repeatCount ?? plan.repeat_count, maxAttempts: repeatCount === 1 ? 1 : undefined, idempotencyKey: `repair:${input.proposalId}:${set}:${repeatCount ?? plan.repeat_count}${input.recordsOnly ? ':records' : ''}${retryOf ? `:after:${retryOf}` : ''}`, recordsOnly: input.recordsOnly, order: plan.stop_rules.scenario_ids, startedBy });
     out[set] = run.id;
     // One audit row per run; a retry or double tap of the same rerun finds its row and adds none.
     await withMember(driver, memberId, async (sql) => {

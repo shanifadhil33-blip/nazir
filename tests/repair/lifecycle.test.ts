@@ -10,6 +10,7 @@ import { createLibraryFixture } from '../../src/server/runner/library-fixture';
 import { createReport } from '../../src/server/reports/read';
 import { semantic } from '../judge/helpers';
 import { fixAction, suggestFix } from '../../src/server/repair/lifecycle';
+import { cancelRunAsMember } from '../../src/server/runner/cancel';
 
 let db: TestDatabase;
 let lib: Awaited<ReturnType<typeof createLibraryFixture>>;
@@ -48,6 +49,23 @@ it('keeps one open fix per wrong answer, then approve and test is tracked on the
   expect(row.retest_report_id).toBeTruthy();
   expect(row.retest_done).toBe(row.retest_total);
   expect(['passed', 'failed', 'inconclusive']).toContain(row.retest_run_status);
+  // Repeating approval never starts a second test. Explicit Test again does,
+  // including after Stop, and simultaneous taps share the new generation.
+  expect((await fixAction(db.driver, lib.members.reviewer, first.id, 'approve')).retest_run_id).toBe(approved.retest_run_id);
+  const [retry, duplicate] = await Promise.all([
+    fixAction(db.driver, lib.members.reviewer, first.id, 'retest'),
+    fixAction(db.driver, lib.members.reviewer, first.id, 'retest'),
+  ]);
+  expect(retry.retest_run_id).not.toBe(approved.retest_run_id);
+  expect(duplicate.retest_run_id).toBe(retry.retest_run_id);
+  expect((await db.owner.query<{ n: number }>("SELECT count(*)::int AS n FROM nazir.audit_events WHERE action='proposal.retest' AND payload->>'run_id'=$1", [retry.retest_run_id])).rows[0]!.n).toBe(1);
+  await cancelRunAsMember(db.driver, lib.members.reviewer, retry.retest_run_id);
+  const restarted = await fixAction(db.driver, lib.members.reviewer, first.id, 'retest');
+  expect(restarted.retest_run_id).not.toBe(retry.retest_run_id);
+  expect((await fixAction(db.driver, lib.members.reviewer, first.id, 'retest')).retest_run_id).toBe(restarted.retest_run_id);
+  expect((await db.owner.query<{ max_attempts: number }>('SELECT max_attempts FROM nazir.conversations WHERE run_id=$1', [restarted.retest_run_id])).rows.every((c) => c.max_attempts === 1)).toBe(true);
+  await cancelRunAsMember(db.driver, lib.members.reviewer, restarted.retest_run_id);
+  expect((await fixAction(db.driver, lib.members.reviewer, first.id, 'approve')).retest_run_id).toBe(restarted.retest_run_id);
   // Approval metadata stays immutable, and the run link cannot be moved to another check.
   await expect(db.member(lib.members.reviewer, (sql) => sql.query('UPDATE nazir.proposals SET retest_run_id=NULL WHERE id=$1', [first.id]))).rejects.toThrow();
 }, 180000);
