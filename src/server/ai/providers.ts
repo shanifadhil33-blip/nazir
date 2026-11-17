@@ -12,7 +12,7 @@ export function providerRegistry(env: Env = process.env): Provider[] {
     make('requesty', 'https://router.requesty.ai/v1/chat/completions', 'REQUESTY_API_KEY', 150, [{ model: 'nvidia/nemotron-3-ultra-550b-a55b', family: nemotron }, { model: 'google/gemma-4-31b-it', family: 'google_gemma' }], { timeoutMs: 12000, judgeTimeoutMs: 45000, minSpacingMs: 12000 }),
     make('cloudflare', `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID ?? ''}/ai/v1/chat/completions`, 'CLOUDFLARE_AI_TOKEN', 100, [{ model: '@cf/openai/gpt-oss-120b', family: 'openai_gpt_oss' }], { needsEnv: 'CLOUDFLARE_ACCOUNT_ID' }),
     make('zai', 'https://api.z.ai/api/paas/v4/chat/completions', 'ZAI_API_KEY', 200, [{ model: 'glm-4.7-flash', family: 'zhipu_glm' }], { timeoutMs: 45000 }),
-    make('kilo', 'https://ai-gateway.kilo.ai/api/v1/chat/completions', undefined, 400, [{ model: 'nvidia/nemotron-3-ultra-550b-a55b:free', family: nemotron }, { model: 'kilo-auto/free', family: 'unknown' }]),
+    make('kilo', 'https://ai-gateway.kilo.ai/api/v1/chat/completions', undefined, 400, [{ model: 'nvidia/nemotron-3-ultra-550b-a55b:free', family: nemotron }, { model: 'kilo-auto/free', family: 'unknown' }], { maxInFlight: 4 }),
     make('ovh', 'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions', undefined, 400, [{ model: 'gpt-oss-120b', family: 'openai_gpt_oss' }, { model: 'Qwen3.5-397B-A17B', family: 'alibaba_qwen' }], { minSpacingMs: 30000, perModelSpacing: true }),
   ];
   for (const provider of registry) {
