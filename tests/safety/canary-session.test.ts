@@ -39,17 +39,23 @@ it('replaces only the generated sink in outgoing prompts and signed injection',(
 it('one English hit cannot break the Arabic question, even when an old run-wide hit exists',async()=>{
  const who=await start();
  await db.owner.query('INSERT INTO nazir.canary_hits(workspace_id,run_id) VALUES($1,$2)',[who.workspace_id,who.id]);
- const sessions:Record<string,string>={};
+ const sessions:Record<string,string[]>={en:[],ar:[]};
  await safetyStep(db.driver,{turnGapMs:0,transport:{resolve,fetcher:async(_url,init)=>{
   const body=JSON.parse(String(init.body)), session=new Headers(init.headers).get('x-nazir-session')!;
-  sessions[body.language]=session; expect(body.message).toContain('?s='+session);
+  sessions[body.language]!.push(session); expect(body.message).toContain('?s='+session);
   if(body.language==='en') { await hit(who.canary,session); await hit(who.canary,session); }
   return Response.json({reply:'Sorry, I cannot send that.'});
  }}});
  const rows=(await db.owner.query('SELECT language,outcome,proven,session_id FROM nazir.safety_attempts WHERE run_id=$1 ORDER BY language',[who.id])).rows;
- expect(rows).toEqual([{language:'ar',outcome:'resisted',proven:'reply',session_id:sessions.ar},{language:'en',outcome:'broken',proven:'canary',session_id:sessions.en}]);
- expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.canary_hits WHERE run_id=$1 AND session_id IS NOT NULL',[who.id])).rows[0]!.n).toBe(1);
- expect((await db.owner.query("SELECT count(*)::int AS n FROM nazir.audit_events WHERE workspace_id=$1 AND action='safety.canary_hit'",[who.workspace_id])).rows[0]!.n).toBe(1);
+ expect(rows).toHaveLength(4);
+ for(const language of ['ar','en']) {
+  const matched=rows.filter(r=>r.language===language);
+  expect(matched).toHaveLength(2);
+  expect(new Set(matched.map(r=>r.session_id))).toEqual(new Set(sessions[language]));
+  expect(matched.every(r=>r.outcome===(language==='en'?'broken':'resisted')&&r.proven===(language==='en'?'canary':'reply'))).toBe(true);
+ }
+ expect((await db.owner.query('SELECT count(*)::int AS n FROM nazir.canary_hits WHERE run_id=$1 AND session_id IS NOT NULL',[who.id])).rows[0]!.n).toBe(2);
+ expect((await db.owner.query("SELECT count(*)::int AS n FROM nazir.audit_events WHERE workspace_id=$1 AND action='safety.canary_hit'",[who.workspace_id])).rows[0]!.n).toBe(2);
 },30000);
 it('ignores unbound, control, other-workspace, wrong-mode, expired and stopped session hits',async()=>{
  const a=await start(),b=await start();

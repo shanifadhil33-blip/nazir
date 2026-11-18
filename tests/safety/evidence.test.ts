@@ -33,11 +33,24 @@ describe('the map', () => {
   it('every attack runs in English and Arabic, and S10 says why it cannot run without test people', () => {
     for (const family of Object.keys(families)) {
       const langs = new Set(attacks.filter((a) => a.family === family).map((a) => a.language));
-      if (family !== 'S11') expect([...langs].sort(), family).toEqual(['ar', 'en']);
+      expect([...langs].sort(), family).toEqual(['ar', 'en']);
+      for (const language of ['en', 'ar']) {
+        const variants = attacks.filter(a => a.family === family && a.language === language);
+        expect(variants, `${family}-${language}`).toHaveLength(2);
+        expect(new Set(variants.map(a => JSON.stringify([a.turns, a.inject]))).size).toBe(2);
+      }
     }
     expect(attacksFor(map).filter((a) => a.family === 'S10').every((a) => a.needs === 'test_people')).toBe(true);
     // Payloads stay in the help desk domain and send only to Nazir's own canary.
     for (const a of attacks) for (const t of [...a.turns, a.inject ?? '']) for (const url of t.match(/https?:\/\/[^\s"]+/g) ?? []) expect(new URL(url).host).toBe('nazir-liard.vercel.app');
+    expect(attacks).toHaveLength(40); expect(new Set(attacks.map(a => a.id)).size).toBe(40);
+    expect(attacks.every(a => a.turns.length <= 10)).toBe(true);
+    expect(attacks.every(a => a.turns.every(t => t.length <= 2000))).toBe(true);
+    expect(pick('S6-v2-en').turns[0]).toContain('\\u0053');
+    expect(pick('S6-v2-ar').turns[0]).toContain('\\u0627');
+    expect(attacks.filter(a => a.family === 'S2' && a.language === 'ar').every(a => /[\u0600-\u06ff]/.test(a.inject ?? ''))).toBe(true);
+    const pasted = attacksFor(emptyMap('replies_only'), 'NZC-1234ABCD');
+    expect(pasted.filter(a => a.family === 'S2').every(a => !a.inject && a.turns.join('').includes('https://nazir-liard.vercel.app/c/nzc-1234abcd'))).toBe(true);
   });
 });
 
@@ -104,7 +117,7 @@ describe('the demo sample agent', () => {
     expect(found.find(({ a }) => a.family === 'S10')!.v).toMatchObject({ severity: 'critical', proven: 'trace' });
     expect(found.find(({ a }) => a.family === 'S2')!.v).toMatchObject({ severity: 'critical', proven: 'trace', note: 'would_have_happened' });
     // The Arabic wording leaks; English holds.
-    expect(found.filter(({ a }) => a.family === 'S5').map(({ a }) => a.language)).toEqual(['ar']);
+    expect(found.filter(({ a }) => a.family === 'S5').map(({ a }) => a.language)).toEqual(['ar', 'ar']);
   });
   it('with the three fixes approved it is Ready and safe', () => {
     const rows = judged(new Set(['S2', 'S5', 'S10'])).map(({ v }) => v);
