@@ -58,12 +58,12 @@ it.each(['people-private', 'people-open'] as const)('actual SDK %s: proves both 
   expect(result).toMatchObject({ status: 'done', scope: 'full' });
   if (mode === 'people-open') expect(result.weaknesses).toEqual([expect.objectContaining({ family: 'S10', outcome: 'broken', severity: 'critical', proven: 'trace', languages: ['en', 'ar'] })]);
   else { expect(result.resisted).toEqual(['S10']); expect(result.weaknesses).toEqual([]); }
-  expect(who.requests).toHaveLength(6);
-  expect(new Set(who.requests.map(r => r.session)).size).toBe(6);
+  expect(who.requests).toHaveLength(12);
+  expect(new Set(who.requests.map(r => r.session)).size).toBe(12);
   expect(who.requests.every(r => !r.message.includes('Imran'))).toBe(true);
-  expect(who.requests.filter(r => r.person === samplePeople.b.token)).toHaveLength(2);
+  expect(who.requests.filter(r => r.person === samplePeople.b.token)).toHaveLength(4);
   const sent = (await db.owner.query<{ payload: Record<string, string> }>("SELECT payload FROM nazir.audit_events WHERE target_id=$1 AND action='safety.attack_sent'", [id])).rows;
-  expect(sent).toHaveLength(6);
+  expect(sent).toHaveLength(12);
   expect(new Set(sent.map(r => r.payload.variant))).toEqual(new Set(['own_a', 'own_b', 'attack']));
   const persisted = JSON.stringify(result) + JSON.stringify(sent) + JSON.stringify(collector);
   for (const token of [samplePeople.a.token, samplePeople.b.token, who.key]) expect(persisted).not.toContain(token);
@@ -76,7 +76,7 @@ it('bad positive controls remain unknown and never send the cross-person attack'
   const id = await startPeople(who);
   await safetyStep(db.driver, { transport: who.transport });
   expect((await readSafety(db.driver, who.member_id, id)).weaknesses).toEqual([expect.objectContaining({ family: 'S10', outcome: 'could_not_tell', reason: 'test_people_control' })]);
-  expect(who.requests).toHaveLength(4);
+  expect(who.requests).toHaveLength(8);
 }, 60000);
 it('actual SDK login echo is scrubbed by the collector and still proves an exposure', async () => {
   const who = await setup('people-echo'), id = await startPeople(who);
@@ -88,7 +88,7 @@ it('actual SDK login echo is scrubbed by the collector and still proves an expos
   expect(pdf).toContain('أخفاها ناظر من الدليل.'); expect(pdf).not.toContain('Nazir hid it from the proof.');
   const rows = (await db.owner.query<{ attributes: Record<string, unknown> }>('SELECT attributes FROM nazir.trace_spans WHERE workspace_id=$1', [who.workspace_id])).rows;
   for (const token of [samplePeople.a.token, samplePeople.b.token, who.key]) expect(JSON.stringify(rows)).not.toContain(token);
-  expect(rows.filter(r => r.attributes['nazir.credentials_redacted'] === true)).toHaveLength(6);
+  expect(rows.filter(r => r.attributes['nazir.credentials_redacted'] === true)).toHaveLength(12);
   expect(await testPeopleForRun(db.driver, who.workspace_id, id)).toBeNull();
 }, 30000);
 it('Stop during a control aborts the in-flight request and sends no next turn', async () => {
@@ -101,7 +101,7 @@ it('Stop during a control aborts the in-flight request and sends no next turn', 
     return new Promise<Response>(() => {});
   } } });
   await work;
-  expect(calls.length).toBeGreaterThan(0); expect(calls.length).toBeLessThanOrEqual(2);
+  expect(calls.length).toBeGreaterThan(0); expect(calls.length).toBeLessThanOrEqual(4);
   expect(calls.every(signal => signal.aborted)).toBe(true);
   expect((await readSafety(db.driver, who.member_id, id)).status).toBe('stopped');
   expect(await testPeopleForRun(db.driver, who.workspace_id, id)).toBeNull();
@@ -122,7 +122,7 @@ it('removing test logins aborts an active control and prevents the next authenti
     calls.push(init.signal!); await removeTestPeople(db.driver, who.member_id);
     return new Promise<Response>(() => {});
   } } });
-  expect(calls.length).toBeGreaterThan(0); expect(calls.length).toBeLessThanOrEqual(2);
+  expect(calls.length).toBeGreaterThan(0); expect(calls.length).toBeLessThanOrEqual(4);
   expect(calls.every(signal => signal.aborted)).toBe(true);
   expect(await testPeopleForRun(db.driver, who.workspace_id, id)).toBeNull();
 }, 30000);
