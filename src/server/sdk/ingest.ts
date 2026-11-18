@@ -5,6 +5,7 @@ import type { TransactionDriver } from '../db/driver';
 import { Coded } from '../http/errors';
 import { keyHash, keyPattern } from './keys';
 import { redactText, secretName } from './redact';
+import { credentialsFor, credentialScrubber, type CredentialContext } from './credentials';
 
 const KINDS = ['invoke_agent', 'execute_tool', 'chat', 'nazir.action', 'nazir.turn.end', 'nazir.hello', 'nazir.blocked'] as const;
 export const MAX_TRACE_BYTES = 65536;
@@ -44,6 +45,7 @@ function kindOf(item: Span): (typeof KINDS)[number] | null {
 /** Flat values only. Secret named fields are dropped. Long values are cut and marked. Personal data is masked. */
 export function cleanAttributes(attributes: Record<string, unknown> = {}, keep: readonly string[] = []) {
   const out: Record<string, string | number | boolean | null> = {};
+  if (attributes['nazir.credentials_redacted'] === true) out['nazir.credentials_redacted'] = true;
   let truncated = false;
   for (const [name, raw] of Object.entries(attributes).slice(0, 64)) {
     if (secretName.test(name)) continue;
@@ -82,13 +84,16 @@ export function allowKey(hash: string, now = Date.now()) {
   list.push(now); if (recent.size > 5000) recent.clear(); recent.set(hash, list);
   return true;
 }
+function ingestError(error: unknown): never {
+  const message = String((error as Error)?.message);
+  for (const code of ['sdk_key', 'sdk_session', 'sdk_limit'] as const) if (message.includes(code)) throw new Coded(code === 'sdk_key' ? 401 : code === 'sdk_session' ? 403 : 429, code, code);
+  throw error;
+}
 async function call<T extends Record<string, unknown>>(driver: TransactionDriver, sql: string, params: unknown[]) {
   try {
     return await driver.transaction(async (db) => { await db.query('SET LOCAL ROLE nazir_ingest'); return (await db.query<T>(sql, params)).rows; });
   } catch (error) {
-    const message = String((error as Error)?.message);
-    for (const code of ['sdk_key', 'sdk_session', 'sdk_limit'] as const) if (message.includes(code)) throw new Coded(code === 'sdk_key' ? 401 : code === 'sdk_session' ? 403 : 429, code, code);
-    throw error;
+    ingestError(error);
   }
 }
 async function readBody(request: Request, max: number) {
@@ -99,11 +104,24 @@ async function readBody(request: Request, max: number) {
   try { return JSON.parse(text) as unknown; } catch { throw new Coded(400, 'validation', 'Check the details and try again.'); }
 }
 export async function ingestTraces(driver: TransactionDriver, request: Request) {
-  const hash = keyHash(bearerKey(request.headers.get('authorization')));
+  const key = bearerKey(request.headers.get('authorization')), hash = keyHash(key);
   if (!allowKey(hash)) throw new Coded(429, 'sdk_limit', 'Too much was sent.');
-  const prepared = prepareSpans(await readBody(request, MAX_TRACE_BYTES));
-  const rows = await call<{ n: number }>(driver, 'SELECT nazir.ingest_spans($1,$2,$3::jsonb,$4) AS n', [hash, prepared.session, JSON.stringify(prepared.spans), prepared.version]);
-  return { accepted: rows[0]?.n ?? 0 };
+  const body = traceBody.parse(await readBody(request, MAX_TRACE_BYTES));
+  try {
+    return await driver.transaction(async db => {
+      await db.query('SET LOCAL ROLE nazir_ingest');
+      const context = (await db.query<{ context: CredentialContext }>('SELECT nazir.sdk_trace_context($1,$2) AS context', [hash, body.session])).rows[0]!.context;
+      let scrub: ReturnType<typeof credentialScrubber>;
+      try { scrub = credentialScrubber(credentialsFor(context, key)); } catch { throw new Coded(403, 'sdk_session', 'sdk_session'); }
+      const spans = body.spans.map(item => {
+        const cleaned = scrub(item), span = cleaned.value as Span;
+        return { ...span, attributes: { ...span.attributes, ...(cleaned.found ? { 'nazir.credentials_redacted': true } : {}) } };
+      });
+      const prepared = prepareSpans({ ...body, sdk: scrub(body.sdk).value, spans });
+      const rows = await db.query<{ n: number }>('SELECT nazir.ingest_spans($1,$2,$3::jsonb,$4) AS n', [hash, prepared.session, JSON.stringify(prepared.spans), prepared.version]);
+      return { accepted: rows.rows[0]?.n ?? 0 };
+    });
+  } catch (error) { ingestError(error); }
 }
 
 const inventoryBody = z.object({ sdk: z.object({ version: z.string().max(40) }).passthrough(), agent: z.unknown().optional(), inventory: z.record(z.string(), z.unknown()) });
@@ -116,10 +134,10 @@ export function cleanInventory(value: unknown, depth = 0): unknown {
   return typeof value === 'number' || typeof value === 'boolean' || value === null ? value : null;
 }
 export async function ingestInventory(driver: TransactionDriver, request: Request) {
-  const hash = keyHash(bearerKey(request.headers.get('authorization')));
+  const key = bearerKey(request.headers.get('authorization')), hash = keyHash(key);
   if (!allowKey(hash)) throw new Coded(429, 'sdk_limit', 'Too much was sent.');
   const body = inventoryBody.parse(await readBody(request, MAX_INVENTORY_BYTES));
-  const inventory = cleanInventory(body.inventory) as Record<string, unknown>;
+  const inventory = cleanInventory(credentialScrubber([key])(body.inventory).value) as Record<string, unknown>;
   const text = JSON.stringify(inventory);
   const rows = await call<{ changed: boolean }>(driver, 'SELECT nazir.ingest_inventory($1,$2,$3::jsonb) AS changed', [hash, createHash('sha256').update(text).digest('hex'), text]);
   return { changed: rows[0]?.changed ?? false };

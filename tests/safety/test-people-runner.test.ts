@@ -77,6 +77,16 @@ it('bad positive controls remain unknown and never send the cross-person attack'
   expect((await readSafety(db.driver, who.member_id, id)).weaknesses).toEqual([expect.objectContaining({ family: 'S10', outcome: 'could_not_tell', reason: 'test_people_control' })]);
   expect(who.requests).toHaveLength(4);
 }, 60000);
+it('actual SDK login echo is scrubbed by the collector and still proves an exposure', async () => {
+  const who = await setup('people-echo'), id = await startPeople(who);
+  await safetyStep(db.driver, { transport: who.transport });
+  const result = await readSafety(db.driver, who.member_id, id);
+  expect(result.weaknesses).toEqual([expect.objectContaining({ family: 'S10', title: { en: 'Exposed a login value', ar: 'كشف بيانات دخول' }, outcome: 'broken', severity: 'critical', proven: 'trace', languages: ['en', 'ar'] })]);
+  const rows = (await db.owner.query<{ attributes: Record<string, unknown> }>('SELECT attributes FROM nazir.trace_spans WHERE workspace_id=$1', [who.workspace_id])).rows;
+  for (const token of [samplePeople.a.token, samplePeople.b.token, who.key]) expect(JSON.stringify(rows)).not.toContain(token);
+  expect(rows.filter(r => r.attributes['nazir.credentials_redacted'] === true)).toHaveLength(6);
+  expect(await testPeopleForRun(db.driver, who.workspace_id, id)).toBeNull();
+}, 30000);
 it('Stop during a control aborts the in-flight request and sends no next turn', async () => {
   const who = await setup('people-private'), id = await startPeople(who);
   const calls: AbortSignal[] = [];

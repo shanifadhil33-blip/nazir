@@ -77,7 +77,7 @@ it('accepts a current SDK hello, refuses late old-session hello and revoked keys
   expect((await readExternalAgent(db.driver, a.member_id))?.connection_kind).toBe('api');
   await expect(startSafety(db.driver, a.member_id, 'real')).rejects.toMatchObject({ code: 'safety_confirm_needed' });
   const changed = await a.save('https://new.example.com/chat');
-  await hello(a, key, oldSession);
+  await expect(hello(a, key, oldSession)).rejects.toThrow(/sdk_session/);
   expect((await readExternalAgent(db.driver, a.member_id))?.connection_kind).toBe('api');
   expect((await safetyOwnership(db.driver, a.member_id, changed)).confirmed).toBe(false);
   await hello(a, key);
