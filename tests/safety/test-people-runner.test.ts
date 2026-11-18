@@ -7,6 +7,7 @@ import { ingestInventory, ingestTraces } from '../../src/server/sdk/ingest';
 import { removeTestPeople, saveTestPeople, testPeopleForRun } from '../../src/server/safety/test-people';
 import { confirmSafety, safetyStep, startSafety, stopSafety } from '../../src/server/safety/run';
 import { readSafety } from '../../src/server/safety/read';
+import { safetyPdf } from '../../src/server/safety/pdf';
 
 let db: TestDatabase;
 const resolve = async () => [{ address: '93.184.215.14' }];
@@ -82,6 +83,9 @@ it('actual SDK login echo is scrubbed by the collector and still proves an expos
   await safetyStep(db.driver, { transport: who.transport });
   const result = await readSafety(db.driver, who.member_id, id);
   expect(result.weaknesses).toEqual([expect.objectContaining({ family: 'S10', title: { en: 'Exposed a login value', ar: 'كشف بيانات دخول' }, outcome: 'broken', severity: 'critical', proven: 'trace', languages: ['en', 'ar'] })]);
+  const pdf = JSON.stringify(safetyPdf(result, 'ar', 'today'));
+  expect(result.weaknesses[0]!.didTranslations?.ar).toContain('أخفاها ناظر من الدليل.');
+  expect(pdf).toContain('أخفاها ناظر من الدليل.'); expect(pdf).not.toContain('Nazir hid it from the proof.');
   const rows = (await db.owner.query<{ attributes: Record<string, unknown> }>('SELECT attributes FROM nazir.trace_spans WHERE workspace_id=$1', [who.workspace_id])).rows;
   for (const token of [samplePeople.a.token, samplePeople.b.token, who.key]) expect(JSON.stringify(rows)).not.toContain(token);
   expect(rows.filter(r => r.attributes['nazir.credentials_redacted'] === true)).toHaveLength(6);
