@@ -26,7 +26,7 @@ it('uses the same chat address form for both choices, and only the full check ad
     if (mode === 'quick') expect(page).not.toMatch(/NAZIR_KEY|nazir\.mjs|SHA256/);
     else {
       for (const step of [en.connect.stepKey, en.connect.stepFile, en.connect.stepLines, 'Make a key', 'Download nazir.mjs', 'SHA256', 'nazir.turn(req']) expect(page, step).toContain(step);
-      expect(page).toContain('href="/sdk/1.0.0/nazir.mjs"');
+      expect(page).toContain('href="/sdk/1.0.1/nazir.mjs"');
     }
   }
 });

@@ -2,6 +2,7 @@ import 'server-only';
 import { randomBytes } from 'node:crypto';
 import { withMember, withWorker } from '../db/context';
 import type { TransactionDriver } from '../db/driver';
+import { supportsMcpSafety } from '../sdk/files';
 import { Coded } from '../http/errors';
 import type { TraceSpan } from '../checks/trace-checks';
 import { externalConversation } from '../runner/external-agent';
@@ -58,9 +59,11 @@ export async function startSafety(driver: TransactionDriver, memberId: string, k
     // The full suite needs the SDK to have said hello in the last day; otherwise it is judged from replies only.
     const fresh = freshSdk(connection);
     scope = fresh ? 'full' : 'replies_only'; revision = connection.revision ?? null; name = connection.name;
+    const map = await readAgentMap(driver, memberId, kind);
+    if (map.items.some(item => item.group === 'mcp') && !supportsMcpSafety(connection.sdk_version)) throw new Coded(409, 'safety_sdk_update', 'Add the latest SDK file and send a test message before testing connected tools.');
     const people = await readTestPeople(driver, memberId);
     peopleId = people?.id ?? null;
-    attacks = attacksFor(await readAgentMap(driver, memberId, kind), canary, { testPeople: Boolean(people), otherReference: people?.b.reference });
+    attacks = attacksFor(map, canary, { testPeople: Boolean(people), otherReference: people?.b.reference });
   }
   const id = await withMember(driver, memberId, async (sql) => {
     try { return (await sql.query<{ id: string }>('SELECT nazir.safety_start($1,$2,$3,$4,$5::jsonb,$6::uuid) AS id', [scope, canary, revision, name, JSON.stringify(attacks), peopleId])).rows[0]!.id; }
@@ -147,8 +150,8 @@ async function runAttack(driver: TransactionDriver, workspaceId: string, run: Ru
   const controller = new AbortController();
   const outgoing = { ...transport, signal: AbortSignal.any([controller.signal, ...(transport?.signal ? [transport.signal] : [])]) };
   const active = async () => {
-    const state = await withWorker(driver, workspaceId, async sql => (await sql.query<{ status: string; revision: string | null }>("SELECT status,(SELECT revision::text FROM nazir.external_agent_worker()) AS revision FROM nazir.safety_runs WHERE id=$1", [run.id])).rows[0]);
-    return Boolean(state && ['queued', 'running'].includes(state.status) && state.revision === run.connection_revision);
+    const state = await withWorker(driver, workspaceId, async sql => (await sql.query<{ status: string; revision: string | null; people: boolean }>("SELECT status,EXISTS(SELECT 1 FROM nazir.safety_run_people WHERE run_id=$1) AS people,(SELECT revision::text FROM nazir.external_agent_worker()) AS revision FROM nazir.safety_runs WHERE id=$1", [run.id])).rows[0]);
+    return Boolean(state && ['queued', 'running'].includes(state.status) && state.revision === run.connection_revision && (attack.family !== 'S10' || state.people));
   };
   // Only active safety work is watched. A distributed Stop aborts its socket and A2A sends CancelTask.
   let checking = false;

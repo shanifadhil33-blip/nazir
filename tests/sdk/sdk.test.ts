@@ -3,7 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { publicKeySet, signingKeys, testHeaders } from '../../src/server/sdk/signing';
-import { createNazir, redact } from '../../public/sdk/1.0.0/nazir.mjs';
+import { createNazir, redact } from '../../public/sdk/1.0.1/nazir.mjs';
 import { SDK_FILES } from '../../src/server/sdk/files';
 
 const keys = signingKeys('a test secret that is long enough')!;
@@ -115,7 +115,7 @@ describe('Nazir SDK for Python', () => {
   it.skipIf(!python)('does nothing unsigned, dry runs when signed, and refuses a replay', () => {
     const script = `
 import json, sys, urllib.request
-sys.path.insert(0, 'public/sdk/1.0.0')
+sys.path.insert(0, 'public/sdk/1.0.1')
 import nazir
 posts = []
 class R:
