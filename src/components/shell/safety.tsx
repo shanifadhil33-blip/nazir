@@ -114,7 +114,7 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
   return (
     <div className="nz-checks-body">
       <div className="nz-checks-list">
-        {note ? <p className="nz-note-line" role="status" data-note={note}>{note === 'sdk' ? <a className="nz-back" href={sdkUrl.pathname + sdkUrl.search}>{text.sdkUpdate}</a> : note === 'limit' ? text.limit : note === 'fixApproved' ? text.fixApproved : note === 'proof' ? text.proofFailed : text.failed}</p> : null}
+        {note ? <p className="nz-note-line" role="status" data-note={note}>{note === 'sdk' ? <a className="nz-quiet-btn nz-sdk-update" href={sdkUrl.pathname + sdkUrl.search}>{text.sdkUpdate}</a> : note === 'limit' ? text.limit : note === 'fixApproved' ? text.fixApproved : note === 'proof' ? text.proofFailed : text.failed}</p> : null}
         {limited && !active ? <p className="nz-note-line" role="status">{fill(text.availableAt, { time: availableAt })}</p> : null}
         {active ? <SafetyRunning lang={lang} run={active} stopping={busy === 'stopping'} onStop={() => void safety.stop(active.id)} /> : null}
         {!list.agent ? <StateCard kind="empty" title={text.needAgent} action={{ label: copy.connect.title, href: settingsHref }} /> : null}

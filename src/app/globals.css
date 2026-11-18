@@ -1052,6 +1052,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-quiet-btn:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); }
 .nz-quiet-btn:active { transform: scale(.97); }
 .nz-quiet-btn:disabled { opacity: .6; cursor: default; }
+.nz-sdk-update { display: inline-flex; align-items: center; }
 .nz-quiet-btn:focus-visible, .nz-check-card:focus-visible, .nz-question-head:focus-visible, .nz-back:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .nz-bar { block-size: 8px; border-radius: var(--radius-pill); background: var(--card); overflow: hidden; }
 .nz-bar span { display: block; block-size: 100%; border-radius: var(--radius-pill); background: var(--right); transition: inline-size 300ms var(--ease); }

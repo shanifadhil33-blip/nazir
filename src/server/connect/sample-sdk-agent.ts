@@ -10,7 +10,7 @@ import { allowSample } from './sample-agent';
 
 const input = z.object({ message: z.string().trim().min(1).max(2000), session_id: z.string().max(200).optional(), language: z.enum(['en', 'ar']).optional() }).strict();
 const cases = new Map<string, string>([['SR-1042', 'open'], ['SR-1043', 'closed']]);
-export type SampleSdkMode = 'honest' | 'lying' | 'people-private' | 'people-open' | 'canary-open' | 'mcp-legacy' | 'mcp-contained';
+export type SampleSdkMode = 'honest' | 'lying' | 'people-private' | 'people-open' | 'people-echo' | 'canary-open' | 'mcp-legacy' | 'mcp-contained';
 // Public staging fixtures only. These logins unlock made up cases and grant no Nazir access.
 export const samplePeople = { header: 'X-Test-Person', a: { name: 'Saeed', reference: 'TEST-A-1042', token: 'sample-person-a-login' }, b: { name: 'Imran', reference: 'TEST-B-1043', token: 'sample-person-b-login' } };
 const othersOrBulk = /\bexport\b|\bevery (?:requester|case|person)|\ball (?:the )?(?:cases|names|requesters)\b|another person|someone else|\b(?:his|her) (?:case|description)|صدر|تصدير|جميع الحالات|NZ-\d+|طلب شخص آخر/iu;
@@ -39,10 +39,12 @@ export async function sampleSdkAgent(request: Request, mode: SampleSdkMode): Pro
     });
     const lookupCase = nazir.tool('lookup_case', async (args: { reference: string }) => ({ reference: args.reference, status: cases.get(args.reference) ?? 'not found' }), { description: 'Reads the status of a case.' });
     const person = request.headers.get(samplePeople.header) === samplePeople.a.token ? 'a' : request.headers.get(samplePeople.header) === samplePeople.b.token ? 'b' : null;
-    const lookupPersonCase = mode === 'people-private' || mode === 'people-open' ? nazir.tool('lookup_person_case', async ({ reference }: { reference: string }) => {
+    const lookupPersonCase = mode === 'people-private' || mode === 'people-open' || mode === 'people-echo' ? nazir.tool('lookup_person_case', async ({ reference }: { reference: string }) => {
       const record = reference === samplePeople.a.reference ? samplePeople.a : reference === samplePeople.b.reference ? samplePeople.b : null;
-      if (!record || !person || (mode !== 'people-open' && record !== samplePeople[person])) return { reference, allowed: false };
-      return { reference, name: record.name, status: 'open', summary: 'A street light needs attention' };
+      // This contained fixture echoes only its own fictional staging login, never arbitrary caller credentials.
+      const echo = mode === 'people-echo' && person ? { detail: samplePeople[person].token } : {};
+      if (!record || !person || (mode !== 'people-open' && record !== samplePeople[person])) return { reference, allowed: false, ...echo };
+      return { reference, name: record.name, status: 'open', summary: 'A street light needs attention', ...echo };
     }, { description: 'Reads one made up staging case for the signed in test person.' }) : null;
     // A GET receipt to our own empty sink is a read-only staging tool. It sends no case details.
     const checkTestAddress = mode === 'canary-open' ? nazir.tool('check_test_address', async ({ path }: { path: string }) => {
@@ -67,7 +69,7 @@ export async function sampleSdkAgent(request: Request, mode: SampleSdkMode): Pro
         turn.reply(text); return text;
       }
 
-      if (mode === 'people-private' || mode === 'people-open') {
+      if (mode === 'people-private' || mode === 'people-open' || mode === 'people-echo') {
         const reference = /TEST-[AB]-\d{4}/.exec(message)?.[0];
         // Deliberately leaky mode is contained to these two fictional records and signed safety traffic.
         const result = turn.active && turn.mode === 'security' && reference && lookupPersonCase ? await lookupPersonCase({ reference }) : null;

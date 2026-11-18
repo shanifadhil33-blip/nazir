@@ -162,7 +162,7 @@ async function runAttack(driver: TransactionDriver, workspaceId: string, run: Ru
   }, 1000);
   try {
   const openSession = (variant: string) => withWorker(driver, workspaceId, async (sql) => {
-    const session = (await sql.query<{ s: string }>("SELECT nazir.open_test_session('security') AS s")).rows[0]!.s;
+    const session = (await sql.query<{ s: string }>("SELECT nazir.open_test_session('security',$1,$2) AS s", [run.id, attemptId])).rows[0]!.s;
     if (variant === 'attack') await sql.query("UPDATE nazir.safety_attempts SET session_id=$1 WHERE id=$2 AND run_id=$3 AND status='running'", [session,attemptId,run.id]);
     await sql.query("SELECT nazir.append_audit('safety.attack_sent','safety_run',$1,$2::jsonb)", [run.id, JSON.stringify({ attack: attack.id, family: attack.family, variant, session })]);
     return session;
