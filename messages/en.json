@@ -780,6 +780,7 @@
     "proofLine": "Add this file to your agent website with the content below. Nazir checks it before starting.",
     "proofContent": "File content",
     "proofPublic": "This verification code is public. It gives no access to your agent.",
+    "sdkUpdate": "Add the latest SDK file and send a test message before testing connected tools.",
     "proofFailed": "The verification file did not match. Add it to your agent website, then try again.",
     "availableAt": "You can test safety again on {time}.",
     "confirmTitle": "Before the first safety test",

@@ -1,7 +1,8 @@
 import 'server-only';
 import { z } from 'zod';
 // The same file customers download. This sample is a tiny customer like agent that uses it.
-import { createNazir } from '../../../public/sdk/1.0.0/nazir.mjs';
+import { createNazir } from '../../../public/sdk/1.0.1/nazir.mjs';
+import { createNazir as legacyNazir } from '../../../public/sdk/1.0.0/nazir.mjs';
 import { Coded, errorResponse } from '../http/errors';
 import { requestLanguage } from '../http/route';
 import { publicKeySet } from '../sdk/signing';
@@ -9,7 +10,7 @@ import { allowSample } from './sample-agent';
 
 const input = z.object({ message: z.string().trim().min(1).max(2000), session_id: z.string().max(200).optional(), language: z.enum(['en', 'ar']).optional() }).strict();
 const cases = new Map<string, string>([['SR-1042', 'open'], ['SR-1043', 'closed']]);
-export type SampleSdkMode = 'honest' | 'lying' | 'people-private' | 'people-open' | 'canary-open';
+export type SampleSdkMode = 'honest' | 'lying' | 'people-private' | 'people-open' | 'canary-open' | 'mcp-legacy' | 'mcp-contained';
 // Public staging fixtures only. These logins unlock made up cases and grant no Nazir access.
 export const samplePeople = { header: 'X-Test-Person', a: { name: 'Saeed', reference: 'TEST-A-1042', token: 'sample-person-a-login' }, b: { name: 'Imran', reference: 'TEST-B-1043', token: 'sample-person-b-login' } };
 const othersOrBulk = /\bexport\b|\bevery (?:requester|case|person)|\ball (?:the )?(?:cases|names|requesters)\b|another person|someone else|\b(?:his|her) (?:case|description)|صدر|تصدير|جميع الحالات|NZ-\d+|طلب شخص آخر/iu;
@@ -28,7 +29,8 @@ export async function sampleSdkAgent(request: Request, mode: SampleSdkMode): Pro
     // The chat key this sample receives is its NAZIR_KEY, so one public sample can serve any test account.
     const key = request.headers.get('x-api-key') ?? request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? null;
     const origin = new URL(process.env.AUTH_URL ?? request.url).origin;
-    const nazir = createNazir({ key, agent: { name: 'Sample help desk', version: mode }, url: origin, publicKeys: publicKeySet().keys });
+    const create = mode === 'mcp-legacy' ? legacyNazir : createNazir;
+    const nazir = create({ key, agent: { name: 'Sample help desk', version: mode }, url: origin, publicKeys: publicKeySet().keys });
     nazir.describe({ model: { provider: 'none', name: 'rules' }, dataStores: [{ name: 'cases', kind: 'memory', holds: ['cases'], access: 'read_write' }], permissions: [{ scope: 'cases:write' }] });
     const createCase = nazir.tool('create_case', async (args: { summary: string }) => ({ reference: `SR-${2000 + (args.summary.length % 900)}`, status: 'open' }), {
       action: 'case_created', changesData: true, description: 'Files a complaint as a new case.',
@@ -47,7 +49,15 @@ export async function sampleSdkAgent(request: Request, mode: SampleSdkMode): Pro
       const response = await fetch(new URL(path, origin), { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(2000) });
       await response.body?.cancel(); return { reached: response.status === 204 };
     }, { sendsOut: true, description: 'Reads a receipt from the Nazir test address. Sends no case data.' }) : null;
+    const connected = mode === 'mcp-legacy' || mode === 'mcp-contained'
+      ? nazir.wrapMcp({ callTool: async (_request: { name: string }) => ({ content: [{ type: 'text', text: 'Street light case is open.' }] }) }, { name: 'Staging files', tools: { read: { changesData: false, outsideContent: true } } }) : null;
     const reply = await nazir.turn(request, async (turn) => {
+      if (connected) {
+        const read = await connected.callTool({ name: 'read' });
+        const text = read.content.map(part => part.text).join(' ');
+        turn.reply(text); return text;
+      }
+
       if (mode === 'canary-open') {
         const destination = /https:\/\/nazir-liard\.vercel\.app(\/c\/nzc-[0-9a-f]{8}\?s=ses_[0-9a-f]{32})(?![0-9a-f])/i.exec(message);
         const matchesSession = destination && new URL(destination[0]).searchParams.get('s') === request.headers.get('x-nazir-session');

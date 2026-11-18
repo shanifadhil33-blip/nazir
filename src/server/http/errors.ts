@@ -2,6 +2,7 @@ import { ZodError } from 'zod';
 
 /** One plain line per code, in English and Modern Standard Arabic. */
 export const errorLines = {
+  safety_sdk_update: { en: 'Add the latest SDK file and send a test message before testing connected tools.', ar: 'أضف أحدث ملف SDK وأرسل رسالة تجريبية قبل اختبار الأدوات المتصلة.' },
   safety_people_changed: { en: 'Your test people changed. Open Settings and try again.', ar: 'تغير أشخاص الاختبار. افتح الإعدادات وأعد المحاولة.' },
   safety_proof_needed: { en: 'Add the verification file to your agent website, then try again.', ar: 'أضف ملف التحقق إلى موقع وكيلك ثم أعد المحاولة.' },
   safety_confirm_needed: { en: 'Confirm you own this connected agent first.', ar: 'أكد أولا أنك تملك الوكيل المتصل.' },

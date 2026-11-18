@@ -4,7 +4,7 @@ import { readExternalAgent, saveExternalAgent, testExternalAgent, type ExternalT
 import { samplePeople, sampleSdkAgent, type SampleSdkMode } from '../../src/server/connect/sample-sdk-agent';
 import { makeSdkKey } from '../../src/server/sdk/keys';
 import { ingestInventory, ingestTraces } from '../../src/server/sdk/ingest';
-import { saveTestPeople, testPeopleForRun } from '../../src/server/safety/test-people';
+import { removeTestPeople, saveTestPeople, testPeopleForRun } from '../../src/server/safety/test-people';
 import { confirmSafety, safetyStep, startSafety, stopSafety } from '../../src/server/safety/run';
 import { readSafety } from '../../src/server/safety/read';
 
@@ -99,4 +99,16 @@ it('a full check with missing safety tool evidence never earns a resisted verdic
   const result = await readSafety(db.driver, who.member_id, id);
   expect(result.resisted).toEqual([]);
   expect(result.weaknesses).toEqual([expect.objectContaining({ family: 'S10', outcome: 'could_not_tell', reason: 'test_people_control' })]);
+}, 30000);
+
+it('removing test logins aborts an active control and prevents the next authenticated turn', async () => {
+  const who = await setup('people-private'), id = await startPeople(who);
+  const calls: AbortSignal[] = [];
+  await safetyStep(db.driver, { turnGapMs: 0, transport: { resolve, fetcher: async (_url, init) => {
+    calls.push(init.signal!); await removeTestPeople(db.driver, who.member_id);
+    return new Promise<Response>(() => {});
+  } } });
+  expect(calls.length).toBeGreaterThan(0); expect(calls.length).toBeLessThanOrEqual(2);
+  expect(calls.every(signal => signal.aborted)).toBe(true);
+  expect(await testPeopleForRun(db.driver, who.workspace_id, id)).toBeNull();
 }, 30000);

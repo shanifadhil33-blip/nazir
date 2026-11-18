@@ -19,11 +19,11 @@ async function agent(label: string) {
   };
   return { ...who, save, connection: await save() };
 }
-async function hello(who: { member_id: string }, key: string, session?: string) {
+async function hello(who: { member_id: string }, key: string, session?: string, version = '1.0.0') {
   const sid = session ?? (await db.member(who.member_id, sql => sql.query<{ id: string }>("SELECT nazir.open_test_session('connect') AS id"))).rows[0]!.id;
   await db.driver.transaction(async sql => {
     await sql.query('SET LOCAL ROLE nazir_ingest');
-    await sql.query('SELECT nazir.ingest_spans($1,$2,$3::jsonb,$4)', [keyHash(key), sid, JSON.stringify([{ kind: 'nazir.hello', name: 'hello', turn: 1, attributes: {} }]), '1.0.0']);
+    await sql.query('SELECT nazir.ingest_spans($1,$2,$3::jsonb,$4)', [keyHash(key), sid, JSON.stringify([{ kind: 'nazir.hello', name: 'hello', turn: 1, attributes: {} }]), version]);
   });
   return sid;
 }
@@ -85,4 +85,17 @@ it('accepts a current SDK hello, refuses late old-session hello and revoked keys
   await db.member(a.member_id, sql => sql.query('SELECT nazir.revoke_sdk_key()'));
   expect((await readExternalAgent(db.driver, a.member_id))?.sdk_seen_at).toBeNull();
   await expect(startSafety(db.driver, a.member_id, 'real')).rejects.toMatchObject({ code: 'safety_confirm_needed' });
+});
+
+it('requires the contained SDK before full safety can target observed connected tools', async () => {
+  const a = await agent('MCP SDK upgrade'); const key = 'nzk_' + 'd'.repeat(32) + '_' + 'D'.repeat(40);
+  await db.member(a.member_id, sql => sql.query('SELECT nazir.issue_sdk_key($1,$2)', [keyHash(key), 'DDDD']));
+  await hello(a, key);
+  const inventory = { tools: [{ name: 'files.delete', source: 'mcp', mcp_server: 'files', changes_data: false }] };
+  await db.driver.transaction(async sql => { await sql.query('SET LOCAL ROLE nazir_ingest'); await sql.query('SELECT nazir.ingest_inventory($1,$2,$3::jsonb)', [keyHash(key), 'd'.repeat(64), JSON.stringify(inventory)]); });
+  await confirmSafety(db.driver, a.member_id);
+  await expect(startSafety(db.driver, a.member_id, 'real')).rejects.toMatchObject({ code: 'safety_sdk_update', status: 409 });
+  await hello(a, key, undefined, '1.0.1');
+  const run = await startSafety(db.driver, a.member_id, 'real');
+  await stopSafety(db.driver, a.member_id, run.id);
 });

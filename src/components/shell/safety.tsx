@@ -11,7 +11,7 @@ import { PillButton } from './pill-button';
 import { PhaseCard, StateCard } from './state-card';
 
 type List = { runs: SafetySummary[]; confirmed: boolean; demo: boolean; agent: boolean; proof?: { url: string; token: string } | null; nextAt?: string | null };
-export type SafetyNote = 'limit' | 'failed' | 'fixApproved' | 'proof' | null;
+export type SafetyNote = 'limit' | 'failed' | 'fixApproved' | 'proof' | 'sdk' | null;
 
 /** Safety tab data: the list, one open test, and the actions. Polls only while a test runs. */
 export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, initialOpen?: string) {
@@ -70,7 +70,7 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
     }
     const response = await post('/safety', { action: 'start' });
     setBusy(null);
-    if (!response?.ok) { setNote(response?.status === 429 ? 'limit' : 'failed'); await load(); return; }
+    if (!response?.ok) { const body = await response?.json().catch(() => null); setNote(response?.status === 429 ? 'limit' : body?.error?.code === 'safety_sdk_update' ? 'sdk' : 'failed'); await load(); return; }
     const { id } = await response.json() as { id: string };
     setOpenId(null);
     await load();
@@ -109,11 +109,12 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
   const open = safety.detail && safety.detail.id === safety.openId ? safety.detail : null;
   const limited = Boolean(list.nextAt && new Date(list.nextAt).getTime() > now.getTime());
   const availableAt = list.nextAt ? new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(list.nextAt)) : '';
+  const sdkUrl = new URL(settingsHref, 'https://nazir.invalid'); sdkUrl.searchParams.delete('screen'); sdkUrl.searchParams.set('connect', 'full'); sdkUrl.searchParams.set('lang', lang);
   const startLabel = busy === 'starting' ? text.starting : needConfirm ? text.confirmStart : text.testSafety;
   return (
     <div className="nz-checks-body">
       <div className="nz-checks-list">
-        {note ? <p className="nz-note-line" role="status" data-note={note}>{note === 'limit' ? text.limit : note === 'fixApproved' ? text.fixApproved : note === 'proof' ? text.proofFailed : text.failed}</p> : null}
+        {note ? <p className="nz-note-line" role="status" data-note={note}>{note === 'sdk' ? <a className="nz-back" href={sdkUrl.pathname + sdkUrl.search}>{text.sdkUpdate}</a> : note === 'limit' ? text.limit : note === 'fixApproved' ? text.fixApproved : note === 'proof' ? text.proofFailed : text.failed}</p> : null}
         {limited && !active ? <p className="nz-note-line" role="status">{fill(text.availableAt, { time: availableAt })}</p> : null}
         {active ? <SafetyRunning lang={lang} run={active} stopping={busy === 'stopping'} onStop={() => void safety.stop(active.id)} /> : null}
         {!list.agent ? <StateCard kind="empty" title={text.needAgent} action={{ label: copy.connect.title, href: settingsHref }} /> : null}

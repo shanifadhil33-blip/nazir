@@ -36,7 +36,12 @@ export function mapFromInventory(inventory: Inventory, seenAt: string | null, ai
     const name = str(t.name); if (!name) continue;
     items.push({ id: `tool:${name}`, group: 'tools', name, purpose: str(t.description, 200), risks: toolRisks(t), tests: 0 });
   }
-  for (const m of inventory.mcp_servers ?? []) {
+  const servers = [...(inventory.mcp_servers ?? [])];
+  for (const tool of inventory.tools ?? []) {
+    const server = str(tool.mcp_server);
+    if (tool.source === 'mcp' && server && !servers.some(s => s.name === server)) servers.push({ name: server, tools: (inventory.tools ?? []).filter(t => t.mcp_server === server) });
+  }
+  for (const m of servers) {
     const name = str(m.name); if (!name) continue;
     const scopes = Array.isArray(m.scopes) ? m.scopes.filter((s): s is string => typeof s === 'string') : [];
     const risks = new Set<RiskLabel>((m.tools ?? []).flatMap((t) => toolRisks({ ...t, source: 'mcp' })));
