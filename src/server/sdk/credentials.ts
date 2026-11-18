@@ -23,7 +23,7 @@ export function credentialScrubber(values: readonly string[]) {
     for (let depth = 0; depth < 3; depth++) { variants.add(escaped); variants.add(escaped.replaceAll('/', '\\/')); escaped = JSON.stringify(escaped).slice(1, -1); }
   }
   const exact = [...variants].sort((a, b) => b.length - a.length).map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  const pattern = new RegExp(`${exact ? `(?:${exact})|` : ''}\\bnzk_[0-9a-f]{32}_[A-Za-z0-9]{40}\\b|\\bBearer\\s+[A-Za-z0-9._~-]{8,}`, 'g');
+  const pattern = new RegExp(`${exact ? `(?:${exact})|` : ''}\\bnzk_[0-9a-f]{32}_[A-Za-z0-9]{40}\\b|\\bBearer\\s+[A-Za-z0-9._~-]{8,}|\\bsk-[A-Za-z0-9_-]{16,}`, 'gi');
   return (value: unknown): { value: unknown; found: boolean } => {
     let found = false;
     const text = (s: string) => s.replace(pattern, () => { found = true; return '[credential]'; });

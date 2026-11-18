@@ -223,7 +223,7 @@ function WeaknessRow({ lang, weakness: w, open, demo, busy, canStart, onToggle, 
         <p className="nz-safety-chips">{w.proven ? <span className="nz-mark nz-mark-unsure" data-proven={w.proven}>{text.proven[w.proven]}</span> : null}<span className="nz-mark nz-mark-unsure">{where}</span></p>
         <div className="nz-quote nz-quote-plain"><p className="nz-quote-label">{text.tried}</p><p>{w.tried[lang]}</p></div>
         {w.reply ? <div className="nz-quote nz-quote-said"><p className="nz-quote-label">{text.replyLabel}</p><p dir="auto">{w.reply}</p></div> : null}
-        {w.did ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.didLabel}</p><p dir="auto">{w.did}</p>{w.note === 'would_have_happened' ? <p>{text.wouldHave}</p> : null}</div> : null}
+        {w.did ? <div className="nz-quote nz-quote-record"><p className="nz-quote-label">{text.didLabel}</p><p dir="auto">{w.didTranslations?.[lang] ?? w.did}</p>{w.note === 'would_have_happened' ? <p>{text.wouldHave}</p> : null}</div> : null}
         <div className="nz-quote nz-quote-plain"><p className="nz-quote-label">{text.fix}</p><p>{w.fix[lang]}</p></div>
         <div className="nz-safety-map"><p className="nz-quote-label">{text.mapping}</p>
           <p className="nz-safety-chips">{w.mapping.map((m) => <span key={m} className="nz-mark nz-mark-unsure" title={mappingMeaning[m]?.[lang] ?? m} tabIndex={0}>{m}</span>)}</p>

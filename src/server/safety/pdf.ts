@@ -18,7 +18,7 @@ export function safetyPdf(detail: SafetyDetail, lang: 'en' | 'ar', date: string)
       ...(w.proven ? [t.proven[w.proven]] : []),
       `${t.tried}: ${w.tried[lang]}`,
       ...(w.reply ? [`${t.replyLabel}: ${w.reply.slice(0, 600)}`] : []),
-      ...(w.did ? [`${t.didLabel}: ${w.did}`] : []),
+      ...(w.did ? [`${t.didLabel}: ${w.didTranslations?.[lang] ?? w.did}`] : []),
       `${t.fix}: ${w.fix[lang]}`,
       `${t.mapping}: ${w.mapping.join(', ')}`,
     ],

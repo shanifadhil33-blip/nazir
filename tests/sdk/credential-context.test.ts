@@ -38,7 +38,7 @@ it('scrubs frozen, bare and JSON-escaped login echoes everywhere before saving w
   const who = await setup();
   // A setup edit must not replace the values needed to scrub this run's already issued logins.
   await saveTestPeople(db.driver, who.member_id, { ...people, revision: who.revision, a: { ...people.a, token: 'replacement-login-0123456789' } });
-  const values = [who.key, globalLogin, globalLogin.slice(7), people.a.token, people.a.token.slice(7), people.b.token];
+  const values = [who.key, globalLogin, globalLogin.slice(7), people.a.token, people.a.token.slice(7), people.b.token, 'sk-proj_1234567890_ABCDEFGHIJKLMNOP'];
   const attributes = { arbitrary: values, 'gen_ai.tool.call.result': JSON.stringify({ detail: people.a.token, nested: JSON.stringify({ value: globalLogin }) }), ['echo-' + people.b.token]: people.b.token };
   expect(await ingestTraces(db.driver, request(who, [rawSpan(attributes)]))).toEqual({ accepted: 1 });
   const rows = await saved(who.session), stored = JSON.stringify(rows);

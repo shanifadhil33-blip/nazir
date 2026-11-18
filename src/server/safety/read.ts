@@ -5,7 +5,7 @@ import { NotFound } from '../http/errors';
 import { readExternalAgent } from '../settings/external-agent';
 import { safetyOwnership } from './ownership';
 import { families, familyNames, type Family } from './attacks';
-import { overall, type Outcome, type Severity, type VerdictLine } from './evidence';
+import { overall, credentialExposure, type Outcome, type Severity, type VerdictLine } from './evidence';
 
 type RunRow = { id: string; scope: 'full' | 'replies_only' | 'sample'; status: string; agent_name: string | null; created_at: string; started_at: string | null; finished_at: string | null };
 type AttemptRow = { run_id: string; position: number; family: Family; language: 'en' | 'ar'; status: string; outcome: Outcome | null; severity: Severity | null; proven: 'trace' | 'canary' | 'reply' | null; reply: string | null; did: string | null; note: string | null; attack: { needs?: string; turns?: string[] } };
@@ -13,7 +13,7 @@ type AttemptRow = { run_id: string; position: number; family: Family; language: 
 export type SafetySummary = { id: string; scope: RunRow['scope']; status: string; agent: string | null; at: string; finishedAt: string | null; done: number; total: number; verdict: VerdictLine | null; open: number };
 export type Weakness = {
   family: Family; title: { en: string; ar: string }; outcome: Outcome; severity: Severity | null; proven: 'trace' | 'canary' | 'reply' | null;
-  tried: { en: string; ar: string }; reply: string | null; did: string | null; note: string | null; languages: ('en' | 'ar')[];
+  tried: { en: string; ar: string }; reply: string | null; did: string | null; didTranslations?: { en: string; ar: string }; note: string | null; languages: ('en' | 'ar')[];
   fix: { en: string; ar: string }; mapping: string[]; fixed: boolean; reason: 'test_people' | 'test_people_control' | 'agent_changed' | null;
 };
 export type SafetyDetail = SafetySummary & { weaknesses: Weakness[]; resisted: Family[] };
@@ -41,6 +41,7 @@ function byFamily(attempts: AttemptRow[], fixed: ReadonlySet<string> = new Set()
     const exposed = worst.note === 'credential_exposure';
     return {
       family, title: exposed ? { en: 'Exposed a login value', ar: 'كشف بيانات دخول' } : outcome === 'broken' || outcome === 'partial' ? info.title : familyNames[family], outcome, severity: worst.severity, proven: worst.proven, tried: info.tried, reply: worst.reply, did: worst.did, note: worst.note,
+      ...(exposed ? { didTranslations: credentialExposure } : {}),
       languages: rows.filter((r) => r.outcome === outcome).map((r) => r.language), fix: exposed ? { en: 'Keep login values in server authentication. Do not put them in text sent to the model or shown in replies.', ar: 'احتفظ ببيانات الدخول في مصادقة الخادم. لا تضعها في نص يرسل إلى النموذج أو يظهر في الردود.' } : info.fix, mapping: exposed ? ['LLM02', 'ASI03'] : [...info.owasp, ...info.agentic, ...info.atlas], fixed: fixed.has(family),
       reason: worst.note === 'test_people_control' ? 'test_people_control' : (outcome === 'not_run' ? (worst.attack.needs === 'test_people' || worst.note === 'test_people' ? 'test_people' : worst.note === 'agent_changed' ? 'agent_changed' : null) : null) as Weakness['reason'],
     };
