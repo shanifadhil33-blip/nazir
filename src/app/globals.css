@@ -32,6 +32,7 @@ body {
   font-weight: 400;
   line-height: 1.5;
   font-size-adjust: from-font;
+  font-synthesis: none;
   text-align: start;
 }
 
@@ -48,14 +49,16 @@ p { text-wrap: pretty; }
   color: var(--ink);
   font-size: 32px;
   line-height: 1.15;
-  font-weight: 300;
+  font-weight: 400;
   text-wrap: balance;
 }
 .nz-heading-light, .nz-heading-bold { display: block; }
 .nz-heading-inline .nz-heading-light, .nz-heading-inline .nz-heading-bold { display: inline; }
-.nz-heading-light { font-weight: 300; }
-.nz-heading-bold { font-weight: 700; }
+.nz-heading-light { font-weight: 400; }
+.nz-heading-bold { font-weight: 600; }
 .nz-heading:lang(ar) { font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif; }
+
+strong, b { font-weight: 600; }
 
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -65,7 +68,7 @@ a { color: var(--accent); }
 .nz-app { min-height: 100vh; }
 .nz-title, .nz-score-num, .nz-case, .nz-counters strong, .nz-agent, .nz-log h2, .nz-report h2, .nz-failure h3, h1, h2, h3 {
   font-family: inherit;
-  font-weight: 700;
+  font-weight: 600;
   text-wrap: balance;
 }
 .nz-score-num, .nz-counters strong, .nz-bar-value, .nz-table td, .nz-num-bubble { font-variant-numeric: tabular-nums; }
@@ -98,7 +101,7 @@ a { color: var(--accent); }
   color: var(--on-accent);
   font-family: inherit;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   flex: none;
 }
 .nz-title { margin: 0; font-size: 28px; line-height: 1; }
@@ -110,13 +113,13 @@ a { color: var(--accent); }
   border-radius: var(--radius-pill);
   padding: 6px 12px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .nz-pill { background: var(--peach); color: var(--ink); }
 .nz-viewer { background: var(--mint); color: var(--right); }
 .nz-chip { background: var(--wrong); color: var(--on-accent); }
 .nz-lang { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-muted); }
-.nz-lang button { border: 0; background: transparent; min-width: 44px; min-height: 44px; border-radius: var(--radius-pill); font-weight: 700; }
+.nz-lang button { border: 0; background: transparent; min-width: 44px; min-height: 44px; border-radius: var(--radius-pill); font-weight: 600; }
 .nz-lang button[aria-pressed="true"] { color: var(--accent); }
 .nz-menu { position: relative; display: flex; align-items: center; gap: 8px; }
 .nz-menu-pop {
@@ -232,7 +235,7 @@ a { color: var(--accent); }
 .nz-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
 .nz-bar-name { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nz-bar-name svg { flex: none; color: var(--right); }
-.nz-bar-value { font-weight: 700; }
+.nz-bar-value { font-weight: 600; }
 .nz-bar-track { grid-column: 1 / -1; height: 6px; background: var(--mint); border-radius: var(--radius-pill); overflow: hidden; }
 .nz-bar-fill {
   display: block;
@@ -267,7 +270,7 @@ a { color: var(--accent); }
   background: transparent;
   min-height: 44px;
   border-radius: var(--radius-pill);
-  font-weight: 700;
+  font-weight: 600;
 }
 .nz-seg-btn[aria-selected="true"] { color: #fff; }
 .nz-case { margin: 0; font-size: 22px; }
@@ -316,12 +319,12 @@ a { color: var(--accent); }
 .nz-table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; }
 .nz-table th, .nz-table td { text-align: start; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .nz-table td:last-child, .nz-table th:last-child { text-align: end; }
-.nz-table .is-better { color: var(--right); font-weight: 700; }
+.nz-table .is-better { color: var(--right); font-weight: 600; }
 .nz-fixes { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
 .nz-fixes li { background: var(--card); border: 0; border-radius: var(--radius-card); box-shadow: var(--shadow); padding: 12px; display: grid; gap: 4px; }
 .nz-fixes span { color: var(--ink-muted); font-size: 12px; }
 .nz-raw { margin-top: 8px; }
-.nz-raw summary { cursor: pointer; width: fit-content; color: var(--accent); font-size: 12px; font-weight: 700; }
+.nz-raw summary { cursor: pointer; width: fit-content; color: var(--accent); font-size: 12px; font-weight: 600; }
 .nz-raw p { margin: 8px 0 0; color: var(--ink-muted); font-size: 12px; }
 .nz-recheck { display: grid; gap: 12px; justify-items: start; margin: 16px 0 20px; padding: 16px; background: var(--card); border: 0; border-radius: var(--radius-card); box-shadow: var(--shadow); }
 .nz-recheck p { margin: 0; }
@@ -354,7 +357,7 @@ a { color: var(--accent); }
   display: flex; align-items: center; justify-content: center; gap: 12px;
   inline-size: 100%; min-block-size: 56px; padding: 0 22px; border: 0;
   border-radius: var(--radius-pill); background: var(--card); color: var(--ink);
-  box-shadow: var(--shadow); font: inherit; font-weight: 700; cursor: pointer;
+  box-shadow: var(--shadow); font: inherit; font-weight: 600; cursor: pointer;
   transition: transform 150ms var(--ease), background-color 150ms var(--ease);
 }
 .nz-signin:hover:not(:disabled) { transform: translateY(-1px); }
@@ -437,7 +440,7 @@ a { color: var(--accent); }
   .nz-nav-btn { transition: color 150ms var(--ease), background 150ms var(--ease), transform 150ms var(--ease); }
   .nz-nav-btn:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
   .nz-nav-btn:active { transform: scale(.97); }
-  .nz-nav-btn[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  .nz-nav-btn[aria-current="page"] { color: var(--accent); font-weight: 600; }
   .nz-failure {
     position: fixed;
     z-index: 30;
@@ -497,7 +500,7 @@ a { color: var(--accent); }
     min-height: 36px;
     padding: 6px 14px;
     border-radius: var(--radius-pill);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--ink);
     transition: background 150ms var(--ease), color 150ms var(--ease), transform 150ms var(--ease);
   }
@@ -553,7 +556,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 .nz-settings-who p { margin: 2px 0 0; color: var(--ink-muted); }
 .nz-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .nz-settings-card { margin: 0; min-width: 0; padding: 16px; border-radius: var(--radius-card); background: var(--card); border: 0; box-shadow: var(--shadow); display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; overflow: hidden; }
-.nz-settings-card legend { float: left; width: 100%; padding: 0; font-weight: 700; margin-bottom: 4px; }
+.nz-settings-card legend { float: left; width: 100%; padding: 0; font-weight: 600; margin-bottom: 4px; }
 .nz-settings-card h3 { margin: 6px 0 0; font-size: 15px; }
 .nz-settings-card label { display: grid; gap: 6px; font-size: 14px; color: var(--ink-muted); }
 .nz-settings-card input:not([type=checkbox]):not([type=file]), .nz-settings-card textarea, .nz-settings-card select { font: inherit; color: var(--ink); background: var(--page); border: 0; border-radius: 16px; padding: 10px 12px; }
@@ -643,7 +646,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--ink) 8%, var(--card));
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
   flex: none;
 }
@@ -726,11 +729,11 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 .nz-pastel-sky { background: var(--sky); }
 .nz-pastel-peach { background: var(--peach); }
 .nz-pastel-top { display: flex; align-items: center; gap: 8px; }
-.nz-pastel-title { margin: 0; font-size: 14px; font-weight: 700; }
+.nz-pastel-title { margin: 0; font-size: 14px; font-weight: 600; }
 .nz-pastel-compact.nz-pastel-mint .nz-pastel-title, .nz-pastel-mint .nz-pastel-mark { color: var(--right); }
 .nz-pastel-compact.nz-pastel-peach .nz-pastel-title, .nz-pastel-peach .nz-pastel-mark { color: var(--wrong); }
 .nz-pastel-sky .nz-pastel-mark { color: #4f6f90; }
-.nz-pastel-value { margin: 0; font-size: 40px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.nz-pastel-value { margin: 0; font-size: 40px; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .nz-pastel-caption { margin: 0; color: var(--ink-muted); font-size: 13px; }
 .nz-pastel-stat { align-content: space-between; min-block-size: 168px; }
 .nz-pastel-stat .nz-pastel-title { color: var(--ink-muted); font-weight: 500; }
@@ -782,7 +785,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
   padding-inline: 10px;
   border-radius: var(--radius-pill);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .nz-mark-right { background: var(--mint); color: var(--right); }
 .nz-mark-wrong { background: var(--peach); color: var(--wrong); }
@@ -888,7 +891,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
   color: var(--ink);
   text-align: start;
 }
-.nz-side-item[aria-current="page"] { background: var(--page); font-weight: 700; }
+.nz-side-item[aria-current="page"] { background: var(--page); font-weight: 600; }
 .nz-side-start {
   justify-content: center;
   min-block-size: 52px;
@@ -989,7 +992,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-site { min-block-size: 100vh; display: flex; flex-direction: column; background: var(--page); color: var(--ink); }
 .nz-site[dir="rtl"] { font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif; line-height: 1.7; }
 .nz-site-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 20px; padding-inline: 20px; }
-.nz-wordmark { color: var(--ink); font-size: 22px; font-weight: 700; text-decoration: none; letter-spacing: -.01em; }
+.nz-wordmark { color: var(--ink); font-size: 22px; font-weight: 600; text-decoration: none; letter-spacing: -.01em; }
 .nz-site-links { display: flex; align-items: center; gap: 8px; }
 .nz-site-link { display: inline-flex; align-items: center; min-block-size: 44px; padding-inline: 12px; border-radius: var(--radius-pill); color: var(--ink-muted); font-size: 15px; text-decoration: none; transition: background-color 150ms var(--ease), color 150ms var(--ease); }
 .nz-site-link:hover { background: var(--card); color: var(--ink); }
@@ -1004,13 +1007,13 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-hero-copy { display: grid; justify-items: center; gap: 20px; max-inline-size: 640px; }
 .nz-landing .nz-heading { font-size: 30px; }
 .nz-hero-actions { display: grid; gap: 12px; inline-size: 100%; max-inline-size: 340px; }
-.nz-hero-btn { justify-content: center; min-block-size: 56px; border-radius: var(--radius-pill); font-weight: 700; text-decoration: none; text-align: center; }
+.nz-hero-btn { justify-content: center; min-block-size: 56px; border-radius: var(--radius-pill); font-weight: 600; text-decoration: none; text-align: center; }
 .nz-hero-btn.nz-pill-btn-ink { box-shadow: var(--shadow); }
 .nz-hero-note { margin: 0; color: var(--ink-muted); font-size: 14px; }
 .nz-hero-phone { inline-size: min(100%, 300px); padding: 8px; background: var(--card); border-radius: 40px; box-shadow: var(--shadow); }
 .nz-hero-phone img { display: block; inline-size: 100%; block-size: auto; border-radius: 32px; }
 .nz-landing-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; inline-size: 100%; max-inline-size: 340px; }
-.nz-landing-card { display: flex; align-items: center; gap: 14px; min-block-size: 64px; padding-block: 10px; padding-inline: 12px 20px; border-radius: 999px; font-weight: 700; text-align: start; }
+.nz-landing-card { display: flex; align-items: center; gap: 14px; min-block-size: 64px; padding-block: 10px; padding-inline: 12px 20px; border-radius: 999px; font-weight: 600; text-align: start; }
 .nz-landing-card-mint { background: var(--mint); }
 .nz-landing-card-sky { background: var(--sky); }
 .nz-landing-card-peach { background: var(--peach); }
@@ -1063,7 +1066,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-bar { block-size: 8px; border-radius: var(--radius-pill); background: var(--card); overflow: hidden; }
 .nz-bar span { display: block; block-size: 100%; border-radius: var(--radius-pill); background: var(--right); transition: inline-size 300ms var(--ease); }
 .nz-running-meta { margin: 0; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
-.nz-running-meta em { font-style: normal; color: var(--right); font-weight: 700; }
+.nz-running-meta em { font-style: normal; color: var(--right); font-weight: 600; }
 .nz-check-card { display: flex; align-items: center; gap: 14px; inline-size: 100%; min-block-size: 72px; padding: 14px 16px; border: 0; border-radius: 24px; background: var(--card); box-shadow: var(--shadow); font: inherit; color: var(--ink); text-align: start; cursor: pointer; transition: background-color 140ms ease; }
 .nz-check-card:active { background: color-mix(in srgb, var(--ink) 7%, var(--card)); }
 .nz-check-card[aria-pressed="true"] { background: color-mix(in srgb, var(--ink) 7%, var(--card)); }
@@ -1094,15 +1097,15 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-questions { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .nz-question { border-radius: 20px; background: var(--page); overflow: hidden; }
 .nz-question[data-open="true"] { background: color-mix(in srgb, var(--page) 60%, white); box-shadow: inset 0 0 0 1px var(--line); }
-.nz-question-head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; inline-size: 100%; padding: 14px 16px; border: 0; background: transparent; font: inherit; font-weight: 700; color: var(--ink); text-align: start; cursor: pointer; transition: background-color 140ms ease; }
+.nz-question-head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; inline-size: 100%; padding: 14px 16px; border: 0; background: transparent; font: inherit; font-weight: 600; color: var(--ink); text-align: start; cursor: pointer; transition: background-color 140ms ease; }
 .nz-question-head:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
 .nz-question-text { overflow-wrap: anywhere; }
 .nz-question-body { display: grid; gap: 10px; padding: 0 16px 16px; }
 .nz-quote { border-radius: 16px; padding: 12px 14px; }
 .nz-quote p { margin: 0; overflow-wrap: anywhere; }
-.nz-quote-label { font-size: 13px; font-weight: 700; margin-block-end: 4px !important; }
+.nz-quote-label { font-size: 13px; font-weight: 600; margin-block-end: 4px !important; }
 .nz-quote-said { background: var(--sky); }
-.nz-quote-said .nz-quote-label { color: #4f6f90; }
+.nz-quote-said .nz-quote-label { color: #405f80; }
 .nz-quote-record { background: var(--mint); }
 .nz-quote-record .nz-quote-label { color: var(--right); }
 .nz-suggest { min-block-size: 56px; border-radius: var(--radius-pill); justify-content: center; }
@@ -1122,7 +1125,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 
 /* Fixes and Before and after. Logical properties so Arabic mirrors with dir. */
 .nz-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-.nz-tab { min-block-size: 44px; padding-inline: 22px; border: 0; border-radius: var(--radius-pill); background: var(--card); color: var(--ink-muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); transition: transform 150ms var(--ease); }
+.nz-tab { min-block-size: 44px; padding-inline: 22px; border: 0; border-radius: var(--radius-pill); background: var(--card); color: var(--ink-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow); transition: transform 150ms var(--ease); }
 .nz-tab[aria-selected="true"], .nz-tab[aria-pressed="true"] { background: var(--ink); color: var(--on-accent); }
 .nz-tab:disabled { cursor: default; }
 .nz-tab:active { transform: scale(.97); }
@@ -1136,9 +1139,9 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-fix[aria-busy="true"] { opacity: .85; }
 .nz-fix-head { display: grid; gap: 8px; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: start; cursor: pointer; min-inline-size: 0; transition: background-color 140ms ease; }
 .nz-fix-head:active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
-.nz-fix-title { font-size: 20px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.nz-fix-title { font-size: 20px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .nz-fix-by { display: flex; align-items: center; gap: 8px; color: var(--ink-muted); font-size: 14px; }
-.nz-fix-ini { display: grid; place-items: center; inline-size: 24px; block-size: 24px; flex: none; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--wrong) 18%, white); color: var(--ink); font-size: 10px; font-weight: 700; line-height: 1; }
+.nz-fix-ini { display: grid; place-items: center; inline-size: 24px; block-size: 24px; flex: none; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--wrong) 18%, white); color: var(--ink); font-size: 10px; font-weight: 600; line-height: 1; }
 .nz-fix-card { display: grid; gap: 4px; padding: 16px; border-radius: 18px; background: var(--card); }
 .nz-fix-label { margin: 8px 0 0; color: var(--ink-muted); font-size: 13px; }
 .nz-fix-label:first-child { margin-block-start: 0; }
@@ -1194,7 +1197,7 @@ a.nz-pill-btn, a.nz-float-item, a.nz-float-start, a.nz-side-item, a.nz-side-star
 .nz-hist-day { margin: 8px 0 0; padding-inline: 4px; color: var(--ink-muted); font-size: 14px; font-weight: 500; }
 .nz-hist-list { list-style: none; display: grid; gap: 12px; margin: 0; padding: 0; }
 .nz-hist-row { display: flex; align-items: center; gap: 14px; min-block-size: 68px; padding: 14px 16px; border-radius: 22px; background: var(--card); box-shadow: var(--shadow); min-inline-size: 0; }
-.nz-hist-ini { display: grid; place-items: center; inline-size: 44px; block-size: 44px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #3b5f86; font-size: 14px; font-weight: 700; line-height: 1; }
+.nz-hist-ini { display: grid; place-items: center; inline-size: 44px; block-size: 44px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #3b5f86; font-size: 14px; font-weight: 600; line-height: 1; }
 .nz-hist-ini svg { inline-size: 22px; block-size: 22px; }
 .nz-hist-row[data-kind="approved"] .nz-hist-ini, .nz-hist-row[data-kind="checkDone"] .nz-hist-ini { background: var(--mint); color: var(--right); }
 .nz-hist-row[data-kind="suggested"] .nz-hist-ini { background: var(--peach); color: var(--wrong); }
@@ -1217,7 +1220,7 @@ a.nz-set-link:focus-visible, .nz-set-head:focus-visible { outline: 2px solid var
 .nz-set-ico-lilac { background: #ece6f8; color: #6e5aa8; }
 .nz-set-ico-red { background: #fbe3e0; color: var(--wrong); }
 .nz-set-text { display: grid; gap: 2px; flex: 1 1 auto; min-inline-size: 0; }
-.nz-set-text strong { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.nz-set-text strong { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
 .nz-set-text small { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--ink-muted); font-size: 13px; overflow-wrap: anywhere; }
 .nz-set-dot { inline-size: 7px; block-size: 7px; flex: none; border-radius: var(--radius-pill); background: var(--right); }
 .nz-set-go { display: grid; place-items: center; inline-size: 24px; block-size: 24px; flex: none; color: var(--ink-muted); transition: transform 150ms var(--ease); }
@@ -1227,7 +1230,7 @@ a.nz-set-link:focus-visible, .nz-set-head:focus-visible { outline: 2px solid var
 [dir="rtl"] .nz-set-go[data-open="true"] { transform: rotate(-90deg); }
 .nz-set-list { list-style: none; display: grid; gap: 4px; margin: 0; padding: 12px 0 0; border-block-start: 1px solid var(--line); }
 .nz-set-person { display: flex; align-items: center; gap: 14px; min-block-size: 48px; min-inline-size: 0; }
-.nz-set-ini { display: grid; place-items: center; inline-size: 36px; block-size: 36px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #3b5f86; font-size: 12px; font-weight: 700; line-height: 1; }
+.nz-set-ini { display: grid; place-items: center; inline-size: 36px; block-size: 36px; flex: none; border-radius: var(--radius-pill); background: var(--sky); color: #3b5f86; font-size: 12px; font-weight: 600; line-height: 1; }
 .nz-set-person[data-role="fixer"] .nz-set-ini { background: var(--peach); color: #c9631f; }
 .nz-set-person[data-role="reviewer"] .nz-set-ini { background: var(--mint); color: var(--right); }
 .nz-set-person[data-role="viewer"] .nz-set-ini { background: #ece6f8; color: #6e5aa8; }
@@ -1243,7 +1246,7 @@ a.nz-set-link:focus-visible, .nz-set-head:focus-visible { outline: 2px solid var
 .nz-set-reset .nz-note-line { box-shadow: none; background: var(--page); }
 
 .nz-rep-hero { display: grid; gap: 8px; padding: 24px; border-radius: var(--radius-card); background: var(--mint); }
-.nz-rep-headline { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.nz-rep-headline { margin: 0; font-size: 26px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .nz-rep-caption { margin: 0; color: var(--right); font-size: 14px; }
 .nz-rep-rows { list-style: none; display: grid; gap: 12px; margin: 0; padding: 0; }
 .nz-rep-row { display: flex; align-items: center; gap: 14px; min-block-size: 60px; padding: 10px 16px; border-radius: 22px; background: var(--card); box-shadow: var(--shadow); font-size: 15px; font-weight: 500; }
@@ -1313,7 +1316,6 @@ a.nz-rep-btn { text-decoration: none; }
 .nz-connect-hint { font-size: 14px; color: var(--ink-muted); margin: 0; overflow-wrap: anywhere; }
 .nz-connect-panel > .nz-connect-hint { margin-block-start: 16px; }
 .nz-connect-result { min-block-size: 48px; overflow-wrap: anywhere; }
-.nz-connect-back { display: inline-flex; align-items: center; min-block-size: 44px; color: var(--ink); }
 .nz-agent-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .nz-shell-who > a { border-radius: var(--radius-pill); text-decoration: none; }
 .nz-shell-greet small { font-size: 14px; overflow-wrap: anywhere; }
@@ -1409,7 +1411,7 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-sdk-tabs button[aria-selected="true"] { background: var(--ink); color: #fff; font-weight: 600; }
 .nz-sdk-download { justify-self: start; display: inline-flex; align-items: center; min-block-size: 44px; padding: 0 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08); color: var(--ink); font-weight: 600; text-decoration: none; }
 .nz-sdk-sha { margin: 0; font-size: 14px; color: var(--ink-muted); }
-.nz-sdk-code { margin: 0; padding: 16px; border-radius: 16px; background: #15171c; color: #f2f3f5; font-size: 13px; line-height: 1.5; overflow-x: auto; max-inline-size: 100%; }
+.nz-sdk-code { margin: 0; padding: 16px; border-radius: 16px; background: #15171c; color: #f2f3f5; font-size: 14px; line-height: 1.5; overflow-x: auto; max-inline-size: 100%; }
 .nz-copy { display: inline-grid; gap: 4px; justify-items: start; }
 @media (hover: hover) and (pointer: fine) { .nz-sdk-tabs button:hover { background: rgba(0, 0, 0, 0.06); } .nz-sdk-tabs button[aria-selected="true"]:hover { background: var(--ink); } }
 
@@ -1420,10 +1422,10 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-start-choice .nz-quiet-btn { justify-self: start; }
 .nz-safety-confirm { display: grid; gap: 10px; padding: 20px; border-radius: var(--radius-card); background: var(--peach); }
 .nz-safety-proof { display: grid; gap: 12px; min-width: 0; }
-.nz-safety-proof a { overflow-wrap: anywhere; font-size: 14px; }
+.nz-safety-proof a { display: inline-flex; align-items: center; min-block-size: 44px; overflow-wrap: anywhere; font-size: 14px; }
 .nz-safety-proof label { display: grid; gap: 6px; font-size: 14px; }
-.nz-safety-proof textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--page); color: var(--ink); font-size: 14px; overflow-wrap: anywhere; }
-.nz-safety-permission { display: flex; align-items: flex-start; gap: 8px; }
+.nz-safety-proof textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--page); color: var(--ink); font-size: 16px; overflow-wrap: anywhere; }
+.nz-safety-permission { display: flex; align-items: center; min-block-size: 44px; gap: 8px; cursor: pointer; }
 .nz-safety-permission input { flex: 0 0 auto; width: 22px; height: 22px; margin: 0; accent-color: var(--ink); }
 .nz-safety-confirm h2 { margin: 0; font-size: 20px; }
 .nz-safety-confirm p { margin: 0; }
@@ -1441,7 +1443,7 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-safety-other li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--page); font-size: 14px; }
 .nz-safety-other li span { color: var(--ink-muted); text-align: end; }
 .nz-safety-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-block-start: 6px; }
-.nz-safety-held { color: var(--right); font-weight: 700; }
+.nz-safety-held { color: var(--right); font-weight: 600; }
 .nz-safety-report .nz-rep-hero[data-tone="peach"] { background: var(--peach); }
 .nz-map-group { display: grid; gap: 10px; }
 .nz-map-group h2 { margin: 8px 0 0; font-size: 16px; }
@@ -1462,7 +1464,7 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-check-filter { margin-block: 4px; }
 .nz-see-report { justify-self: start; }
 .nz-bell { position: relative; }
-.nz-bell-count { position: absolute; inset-block-start: 2px; inset-inline-end: 2px; min-inline-size: 18px; block-size: 18px; padding-inline: 5px; border-radius: 9px; background: var(--wrong); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.nz-bell-count { position: absolute; inset-block-start: 2px; inset-inline-end: 2px; min-inline-size: 18px; block-size: 18px; padding-inline: 5px; border-radius: 9px; background: var(--wrong); color: #fff; font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
 .nz-bell-list { position: absolute; inset-block-start: calc(100% + 8px); inset-inline-end: 0; z-index: 30; inline-size: min(320px, calc(100vw - 32px)); margin: 0; padding: 6px; list-style: none; background: var(--card); border-radius: 20px; box-shadow: var(--shadow); }
 .nz-bell-list a { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; color: var(--ink); text-decoration: none; transition: background-color 150ms var(--ease); }
 @media (hover: hover) and (pointer: fine) { .nz-bell-list a:hover { background: var(--page); } }

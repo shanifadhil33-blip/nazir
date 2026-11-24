@@ -39,7 +39,7 @@ it('self hosts Plus Jakarta Sans and IBM Plex Sans Arabic at every weight used b
   expect(layout).toContain("from 'next/font/google'");
   expect(layout).toContain('Plus_Jakarta_Sans');
   expect(layout).toContain('IBM_Plex_Sans_Arabic');
-  expect(layout).toContain("weight: ['300', '400', '500', '600', '700']");
+  expect(layout).toContain("weight: ['400', '500', '600']");
   expect(layout).not.toContain('Fraunces');
   expect(layout).not.toContain('Inter');
 });
