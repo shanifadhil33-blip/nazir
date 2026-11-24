@@ -57,6 +57,12 @@ export async function activityPage(sql: SqlConnection, limit: number, before: st
     LEFT JOIN LATERAL (SELECT id FROM nazir.proposals WHERE retest_run_id=u.id LIMIT 1) tested ON true
     WHERE a.action=ANY($1::text[]) AND ($2::bigint IS NULL OR a.seq<$2::bigint)
       AND (a.target_type<>'run' OR u.id IS NOT NULL)
+      AND NOT (a.action='proposal.rerun' AND EXISTS (
+        SELECT 1 FROM nazir.audit_events paired
+        WHERE paired.workspace_id=a.workspace_id AND paired.action='proposal.retest'
+          AND paired.target_type=a.target_type AND paired.target_id=a.target_id
+          AND paired.payload->>'run_id'=a.payload->>'run_id'
+      ))
     ORDER BY a.seq DESC LIMIT $3`, [completions ? completionActions : actions, before, limit + 1]);
   const base = (await sql.query<{ id: string }>('SELECT nazir.current_workspace_id() AS id')).rows[0]!.id;
   const rows = result.rows.slice(0, limit);
