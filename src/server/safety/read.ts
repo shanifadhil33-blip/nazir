@@ -63,6 +63,8 @@ export async function listSafety(driver: TransactionDriver, memberId: string, ki
   });
 }
 
+export type SafetyList = Awaited<ReturnType<typeof listSafety>>;
+
 export async function readSafety(driver: TransactionDriver, memberId: string, runId: string): Promise<SafetyDetail> {
   return withMember(driver, memberId, async (sql) => {
     const run = (await sql.query<RunRow>('SELECT id,scope,status,agent_name,created_at,started_at,finished_at FROM nazir.safety_runs WHERE id=$1', [runId])).rows[0];

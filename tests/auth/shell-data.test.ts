@@ -100,10 +100,10 @@ it('loads the map only when requested using the same member-scoped reader and re
   const { readAgentMap } = await import('../../src/server/safety/read-map');
   const plain = await loadMemberSnapshot(workspace, 'en', true, false);
   expect(plain).not.toHaveProperty('agentMap');
-  const loaded = await loadMemberSnapshot(workspace, 'ar', true, false, false, false, false, [], undefined, true);
+  const loaded = await loadMemberSnapshot(workspace, 'ar', true, false, false, false, false, [], undefined, { map: true });
   expect(loaded.agentMap).toEqual(await readAgentMap(db.driver, memberId, 'real'));
   expect(loaded.agentMap).toMatchObject({ scope: 'none', items: [] });
-  await expect(loadMemberSnapshot(crypto.randomUUID(), 'en', true, false, false, false, false, [], undefined, true)).rejects.toBeInstanceOf(Forbidden);
+  await expect(loadMemberSnapshot(crypto.randomUUID(), 'en', true, false, false, false, false, [], undefined, { map: true })).rejects.toBeInstanceOf(Forbidden);
 });
 
 it('keeps a failed map preload unavailable so the client can retry instead of claiming an empty map', async () => {
@@ -114,7 +114,24 @@ it('keeps a failed map preload unavailable so the client can retry instead of cl
   } })) };
   fake.runtimeDriver.mockReturnValue(broken);
   try {
-    const loaded = await loadMemberSnapshot(workspace, 'en', true, false, false, false, false, [], undefined, true);
+    const loaded = await loadMemberSnapshot(workspace, 'en', true, false, false, false, false, [], undefined, { map: true });
     expect(loaded.agentMap).toBeNull();
   } finally { fake.runtimeDriver.mockReturnValue(db.driver); }
+});
+
+it('seeds only owned safety metadata and the exact saved result, using the existing readers', async () => {
+  const memberId = members.service_owner;
+  fake.auth.mockResolvedValue({ user: { id: 'user', name: 'Omar' }, memberships: [{ workspaceId: workspace, memberId, roles: ['service_owner'], kind: 'real', workspaceName: 'Shell' }] });
+  const other = await seed(db, 'Other safety snapshot');
+  const own = crypto.randomUUID(), foreign = crypto.randomUUID();
+  await db.owner.query("INSERT INTO nazir.safety_runs(id,workspace_id,started_by,scope,status,canary,agent_name) VALUES($1,$2,$3,'full','stopped','NZC-AABB0011','Omar agent'),($4,$5,$6,'full','stopped','NZC-AABB0022','Foreign agent')", [own, workspace, memberId, foreign, other.workspace_id, other.member_id]);
+  const { listSafety, readSafety } = await import('../../src/server/safety/read');
+  const loaded = await loadMemberSnapshot(workspace, 'en', true, false, false, false, false, [], undefined, { safetyList: true, safetyId: own });
+  expect(loaded.safetyList).toEqual(await listSafety(db.driver, memberId, 'real'));
+  expect(loaded.safetyDetail).toEqual(await readSafety(db.driver, memberId, own));
+  expect(loaded.safetyList?.runs.map((r) => r.id)).toEqual([own]);
+  const denied = await loadMemberSnapshot(workspace, 'en', true, false, false, false, false, [], undefined, { safetyList: true, safetyId: foreign });
+  expect(denied.safetyDetail).toBeNull();
+  expect(JSON.stringify(denied)).not.toContain('Foreign agent');
+  await expect(loadMemberSnapshot(other.workspace_id, 'en', true, false, false, false, false, [], undefined, { safetyList: true, safetyId: foreign })).rejects.toBeInstanceOf(Forbidden);
 });

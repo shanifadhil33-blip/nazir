@@ -1612,3 +1612,6 @@ body:has(.nz-confirm[open]) { overflow: hidden; }
   ::view-transition-old(*),
   ::view-transition-new(*) { animation: none !important; }
 }
+
+.nz-safety-pending { min-block-size: 480px; }
+.nz-safety-detail-loading { display: grid; gap: 16px; margin-block-start: 16px; }

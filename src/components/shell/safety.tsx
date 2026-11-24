@@ -3,23 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Heading } from '@/components/heading';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
-import type { SafetyDetail, SafetySummary, Weakness } from '@/server/safety/read';
+import type { SafetyDetail, SafetyList, SafetySummary, Weakness } from '@/server/safety/read';
 import { mappingMeaning } from '@/server/safety/attacks';
 import { dayLabel } from './checks-model';
 import { ShellIcon } from './icons';
 import { PillButton } from './pill-button';
 import { PhaseCard, StateCard } from './state-card';
 import { ConfirmButton } from './confirm-button';
+import { useMemberSnapshot } from './member-snapshot';
 
-type List = { runs: SafetySummary[]; confirmed: boolean; demo: boolean; agent: boolean; proof?: { url: string; token: string } | null; nextAt?: string | null };
+type List = SafetyList;
 export type SafetyNote = 'limit' | 'failed' | 'fixApproved' | 'proof' | 'sdk' | null;
 
 /** Safety tab data: the list, one open test, and the actions. Polls only while a test runs. */
 export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, initialOpen?: string) {
-  const [list, setList] = useState<List | null>(null);
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
+  const snapshot = useMemberSnapshot(workspaceId);
+  const initial = snapshot?.safetyList;
+  const candidate = snapshot?.safetyDetail;
+  const initialDetail = candidate && candidate.id === initialOpen ? candidate : null;
+  const firstRead = useRef(true);
+  const [list, setList] = useState<List | null>(initial ?? null);
+  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>(initial ? 'ready' : 'loading');
   const [openId, setOpenId] = useState<string | null>(initialOpen ?? null);
-  const [detail, setDetail] = useState<SafetyDetail | null>(null);
+  const [detail, setDetail] = useState<SafetyDetail | null>(initialDetail);
   const [detailError, setDetailError] = useState(false);
   const detailRequest = useRef(0);
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'fixing' | null>(null);
@@ -45,8 +51,19 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
     setDetail(body); setDetailError(!body);
   }, [workspaceId, headers]);
 
-  // The first read waits a tick so it never runs inside the render that turned the tab on.
-  useEffect(() => { if (!enabled) return; const t = setTimeout(() => { void load(); if (openRef.current) void loadDetail(openRef.current); }, 0); return () => clearTimeout(t); }, [enabled, load, loadDetail]);
+  // First paint is already authorized on the server. Later visits refresh in place.
+  useEffect(() => {
+    if (!enabled) return;
+    if (firstRead.current) {
+      firstRead.current = false;
+      if (initial) {
+        if (openRef.current && initialDetail?.id !== openRef.current) void loadDetail(openRef.current);
+        return;
+      }
+    }
+    const t = setTimeout(() => { void load(); if (openRef.current) void loadDetail(openRef.current); }, 0);
+    return () => clearTimeout(t);
+  }, [enabled, initial, initialDetail, load, loadDetail]);
   // One wake-up at quota expiry; no idle polling while nothing is running.
   useEffect(() => {
     if (!enabled || !list?.nextAt) return;
@@ -153,9 +170,22 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
         {list.agent && list.runs.length > 0 && !active && !needConfirm && canStart ? <PillButton className="nz-checks-start nz-safety-start" icon="play" directional label={startLabel} disabled={busy === 'starting' || limited} onClick={() => void safety.start(false)} /> : null}
       </div>
       {safety.openId ? (open ? <SafetyDetailView lang={lang} now={now} run={open} demo={list.demo} busy={busy} canStart={canStart && !active && !limited && !needConfirm} onBack={() => open_(null)} onApprove={(f) => void safety.approve(f)} onAgain={() => void safety.start(false)} reportHref={reportHref(open.id)} settingsHref={settingsHref} />
-        : <section className="nz-check-page"><button type="button" className="nz-back" onClick={() => open_(null)}><ShellIcon name="play" directional /><span>{text.back}</span></button><PhaseCard phase={safety.detailError ? 'error' : 'loading'} copy={copy} onRetry={safety.retryDetail} /></section>) : null}
+        : <SafetyDetailPending lang={lang} now={now} summary={list.runs.find((r) => r.id === safety.openId)} error={safety.detailError} onBack={() => open_(null)} onRetry={safety.retryDetail} />) : null}
     </div>
   );
+}
+
+/** Keep the known heading and first viewport in place while an exact result arrives. */
+function SafetyDetailPending({ lang, now, summary, error, onBack, onRetry }: { lang: Lang; now: Date; summary?: SafetySummary; error: boolean; onBack: () => void; onRetry: () => void }) {
+  const copy = messagesFor(lang); const text = copy.safetyScreen;
+  return <section className="nz-check-page nz-safety-pending" data-state={error ? 'error' : 'loading'} aria-busy={!error || undefined}>
+    <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
+    {error ? <PhaseCard phase="error" copy={copy} onRetry={onRetry} /> : <>
+      {summary ? <Heading as="h2" light={fill(text.rowTitle, { day: dayLabel(new Date(summary.at), now, lang, copy) })} bold={rowLine(summary, lang)} lang={lang} /> : <i className="nz-placeholder nz-placeholder-title" aria-hidden="true" />}
+      <span className="nz-visually-hidden" role="status">{copy.shell.loadingTitle}</span>
+      <div className="nz-safety-detail-loading" aria-hidden="true">{[0, 1, 2].map((i) => <section className="nz-placeholder-card" key={i}><i className="nz-placeholder nz-placeholder-title" /><i className="nz-placeholder" /><i className="nz-placeholder" /></section>)}</div>
+    </>}
+  </section>;
 }
 
 export function rowLine(run: SafetySummary, lang: Lang) {
@@ -207,7 +237,7 @@ function SafetyDetailView({ lang, now, run, demo, busy, canStart, onBack, onAppr
         {other.length ? <ul className="nz-safety-other">{other.map((w) => <li key={w.family} data-outcome={w.outcome}><strong>{w.title[lang]}</strong><span>{w.reason === 'test_people' || w.reason === 'test_people_control' ? <a href={`${settingsHref}&setup=people`}>{text.reason[w.reason]}</a> : w.reason ? text.reason[w.reason] : text.outcome[w.outcome]}</span></li>)}</ul> : null}
         {run.resisted.length ? <p className="nz-check-sub nz-safety-held">{fill(text.heldUp, { n: String(run.resisted.length) })}</p> : null}
         <div className="nz-safety-actions">
-          <PillButton icon="pencil" label={text.report} href={reportHref} />
+          <PillButton icon="pencil" label={text.report} href={reportHref} prefetch />
           {canStart ? <PillButton variant="ink" icon="play" directional className="nz-safety-again" label={busy === 'starting' ? text.starting : demo ? text.testAgain : text.changedTestAgain} disabled={busy === 'starting'} onClick={onAgain} /> : null}
         </div>
       </> : null}

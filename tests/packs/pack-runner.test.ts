@@ -38,11 +38,13 @@ async function scenarios(pack: string) {
 }
 async function run(scenarioId: string, versionId: string, model: ChatModel, recordsOnly = false) {
   const r = await enqueueRun(db.driver, { workspaceId: workspace, planId: plan, agentVersionId: versionId, scenarioIds: [scenarioId], repeats: 1, idempotencyKey: crypto.randomUUID(), recordsOnly });
-  await runNextConversation({ driver: db.driver, inspectionDriver: db.driver, workerId: 'pack_worker', runId: r.id, chatModelFactory: () => model, judgeFactory: () => async ({ input }) => { prompts.push(input); return { ...semantic('supported', input.reply), rubricVersion: (input as { rubricVersion?: string }).rubricVersion ?? rubricVersion }; } });
+  const started = { wall: Date.now(), monotonic: performance.now() };
+  const workerOutcome = await runNextConversation({ driver: db.driver, inspectionDriver: db.driver, workerId: 'pack_worker', runId: r.id, chatModelFactory: () => model, judgeFactory: () => async ({ input }) => { prompts.push(input); return { ...semantic('supported', input.reply), rubricVersion: (input as { rubricVersion?: string }).rubricVersion ?? rubricVersion }; } });
   const conversation = (await db.owner.query<Record<string, unknown>>('SELECT * FROM nazir.conversations WHERE run_id=$1', [r.id])).rows[0]!;
   const findings = (await db.owner.query<Record<string, unknown>>('SELECT * FROM nazir.findings WHERE conversation_id=$1', [conversation.id])).rows;
   const manifest = (await db.owner.query<{ frozen_manifest: Record<string, unknown> }>('SELECT frozen_manifest FROM nazir.runs WHERE id=$1', [r.id])).rows[0]!.frozen_manifest;
-  return { conversation, findings, manifest };
+  const diagnostics = { workerOutcome, wallMs: Date.now() - started.wall, monotonicMs: performance.now() - started.monotonic, dbNow: (await db.owner.query<{ now: string }>('SELECT clock_timestamp() AS now')).rows[0]!.now, attempt: conversation.attempt, leaseOwner: conversation.lease_owner, leaseExpires: conversation.lease_expires_at, heartbeat: conversation.heartbeat_at, lastError: conversation.last_error };
+  return { conversation, findings, manifest, diagnostics };
 }
 
 it('installs each pack once, with prefixed keys that never meet Government', async () => {
@@ -74,8 +76,8 @@ for (const [pack, model, baseline] of [['real_estate', estateReferenceModel, 'es
     const failed: string[] = [];
     for (const row of await scenarios(pack)) {
       const c: InlineCase = caseFromRow(row);
-      const { conversation, findings } = await run(String(row.id), installed[pack]!.versionIds[baseline]!, model(c));
-      if (conversation.status !== 'passed') failed.push(`${row.stable_key} ${conversation.status} ${conversation.inconclusive_reason ?? ''} ${JSON.stringify((conversation.result_summary as { records?: unknown })?.records)}`);
+      const { conversation, findings, diagnostics } = await run(String(row.id), installed[pack]!.versionIds[baseline]!, model(c));
+      if (conversation.status !== 'passed') failed.push(`${row.stable_key} ${conversation.status} ${conversation.inconclusive_reason ?? ''} ${JSON.stringify((conversation.result_summary as { records?: unknown })?.records)} ${JSON.stringify(diagnostics)}`);
       expect(findings).toEqual([]);
     }
     expect(failed).toEqual([]);
