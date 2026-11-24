@@ -7,6 +7,7 @@ import type { ExternalView, ConnectionFormat } from '@/server/settings/external-
 import { connectHref, connectHomeHref, saveAndTestConnection } from './connect-request';
 import { PillButton } from './pill-button';
 import { SdkSteps } from './sdk-steps';
+import { BackLink } from './back-link';
 import type { SdkStatus } from './connect-request';
 
 export function ConnectChoices({ lang, home }: { lang: Lang; home: string }) {
@@ -54,7 +55,7 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
     finally { setBusy(false); onSaved?.(); }
   }
   return <section className="nz-connect-panel" aria-label={mode === 'full' ? c.fullTitle : c.quickTitle}>
-    <Link className="nz-connect-back" href={connectHomeHref(home, lang)}>{c.back}</Link>
+    <BackLink href={connectHomeHref(home, lang)} label={copy.shell.home} />
     <h2>{mode === 'full' ? c.fullTitle : c.quickTitle}</h2>
     {demo ? <p>{c.demoNote}</p> : <>
       {mode === 'full' ? <><p>{c.fullIntro}</p><SdkSteps workspaceId={workspaceId} lang={lang} onStatus={setSdkStatus} /></> : null}

@@ -35,9 +35,9 @@ it('keeps heading copy free of dashes and extra words', () => {
   expect(source).not.toMatch(/[\u2013\u2014]/);
 });
 
-it('styles the heading pair at 300 and 700 on the v2 type ramp', () => {
+it('styles the heading pair at 400 and 600 within the readable three-weight ramp', () => {
   const css = readFileSync('src/app/globals.css', 'utf8');
-  expect(css).toMatch(/\.nz-heading-light \{ font-weight: 300; \}/);
-  expect(css).toMatch(/\.nz-heading-bold \{ font-weight: 700; \}/);
+  expect(css).toMatch(/\.nz-heading-light \{ font-weight: 400; \}/);
+  expect(css).toMatch(/\.nz-heading-bold \{ font-weight: 600; \}/);
   expect(css).toMatch(/\.nz-heading:lang\(ar\) \{ font-family: var\(--font-arabic\), "IBM Plex Sans Arabic", sans-serif; \}/);
 });
