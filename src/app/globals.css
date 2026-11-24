@@ -2,11 +2,13 @@
   --page: #F4F6F8;
   --card: #FFFFFF;
   --ink: #16181D;
-  --ink-muted: color-mix(in srgb, var(--ink) 58%, var(--page));
+  --ink-muted: color-mix(in srgb, var(--ink) 66%, var(--page));
   --accent: #16181D;
   --on-accent: #FFFFFF;
-  --right: #2E9E7A;
-  --wrong: #E0614F;
+  --right: #207457;
+  --wrong: #B83E30;
+  --hover: color-mix(in srgb, var(--ink) 5%, var(--card));
+  --pressed: color-mix(in srgb, var(--ink) 10%, var(--card));
   --mint: #DFF3EC;
   --sky: #E3EEF9;
   --peach: #FCE9DF;
@@ -814,7 +816,7 @@ button.nz-brand:hover, button.nz-brand:focus-visible { background: color-mix(in 
 .nz-state-empty .nz-state-ico { background: var(--sky); color: #3f7fb8; }
 .nz-state-limit .nz-state-ico { background: var(--mint); color: var(--right); }
 .nz-state-offline .nz-state-ico { background: #fdf1cf; color: #c98a1b; }
-.nz-shell .nz-state-act, .nz-shell-desk .nz-state .nz-state-act { flex: none; justify-content: center; min-block-size: 40px; padding: 0 18px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.nz-shell .nz-state-act, .nz-shell-desk .nz-state .nz-state-act { flex: none; justify-content: center; min-block-size: 44px; padding: 0 18px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .nz-state-spin {
   inline-size: 18px;
   block-size: 18px;
@@ -1371,7 +1373,7 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-home-main .nz-agent-name { font-weight: 600; }
 .nz-home-main .nz-agent-test, .nz-home-time { font-size: 14px; color: var(--ink-muted); }
 .nz-home-main .nz-agent-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; }
-.nz-home-main .nz-agent-actions a, .nz-home-link { display: inline-flex; align-items: center; min-block-size: 44px; color: var(--ink); text-underline-offset: 4px; }
+.nz-home-main .nz-agent-actions a, .nz-home-link { display: inline-flex; align-items: center; min-inline-size: 44px; min-block-size: 44px; color: var(--ink); text-underline-offset: 4px; }
 .nz-home-main .nz-running { padding: 16px; gap: 8px; }
 .nz-home-main .nz-hero-btn { inline-size: 100%; }
 .nz-home-secondary { margin-block-start: 24px; display: grid; gap: 8px; }
@@ -1472,7 +1474,7 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-after-row:has(> a), .nz-rep-row:has(> a) { padding: 0; }
 .nz-after-row > a, .nz-rep-row > a { display: flex; align-items: center; gap: 14px; padding: 16px; min-block-size: 56px; inline-size: 100%; color: inherit; text-decoration: none; border-radius: inherit; transition: background-color 140ms ease; }
 .nz-after-row > a:active, .nz-rep-row > a:active { background: color-mix(in srgb, var(--ink) 6%, var(--card)); }
-.nz-rep-headline a { color: inherit; text-decoration: none; }
+.nz-rep-headline a { display: inline-flex; align-items: center; min-inline-size: 44px; min-block-size: 44px; color: inherit; text-decoration: none; border-radius: 8px; }
 .nz-bell-panel { position: absolute; inset-block-start: calc(100% + 8px); inset-inline-end: 0; z-index: 40; inline-size: min(336px, calc(100vw - 32px)); max-block-size: calc(100dvh - 220px); overflow-y: auto; padding: 8px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); }
 .nz-bell-panel .nz-bell-list { position: static; inline-size: auto; padding: 0; box-shadow: none; }
 .nz-bell-panel p { margin: 12px; }
@@ -1562,6 +1564,23 @@ body:has(.nz-confirm[open]) { overflow: hidden; }
 .nz-confirm button[aria-busy="true"]::before { content: ''; inline-size: 16px; block-size: 16px; border: 2px solid rgb(255 255 255 / 35%); border-top-color: currentColor; border-radius: 50%; animation: nz-spin 1s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .nz-confirm button[aria-busy="true"]::before { animation: none; } }
 
+/* Shared control feedback stays still while a finger scrolls over a row. */
+.nz-shell :is(a, button, summary) { transition: color 140ms ease, background-color 140ms ease; }
+.nz-shell :is(a, button, summary):is(:hover, :active) { transform: none; }
+.nz-shell .nz-float-item { color: var(--ink-muted); }
+.nz-shell .nz-float-item[aria-current="page"] { color: var(--ink); }
+.nz-shell .nz-mark { font-size: 14px; font-weight: 600; }
+.nz-shell :is(.nz-set-text small, .nz-map-item small, .nz-quote-label, .nz-fix-label, .nz-after-side span, .nz-after-side small, .nz-after-lang, .nz-set-chip) { font-size: 14px; }
+.nz-avatar-initials { transition: background-color 140ms ease; }
+@media (hover: hover) and (pointer: fine) {
+  .nz-shell :is(a, button, summary):hover:not(:disabled) { background-color: var(--hover); }
+  .nz-shell :is(.nz-pill-btn-ink, .nz-float-start, .nz-side-start, .nz-tab[aria-selected="true"], .nz-tab[aria-pressed="true"]):hover:not(:disabled) { background-color: color-mix(in srgb, var(--ink) 88%, white); color: var(--on-accent); }
+  .nz-shell-who > a:hover .nz-avatar-initials { background-color: var(--hover); }
+}
+.nz-shell :is(a, button, summary):active:not(:disabled) { background-color: var(--pressed); }
+.nz-shell :is(.nz-pill-btn-ink, .nz-float-start, .nz-side-start, .nz-tab[aria-selected="true"], .nz-tab[aria-pressed="true"]):active:not(:disabled) { background-color: color-mix(in srgb, var(--ink) 78%, white); color: var(--on-accent); }
+.nz-shell-who > a:active .nz-avatar-initials { background-color: var(--pressed); }
+@media (prefers-reduced-motion: reduce) { .nz-avatar-initials { transition: none; } }
 /* Screen changes crossfade. Header, sample bar and nav keep one name so they do not flash. */
 .nz-shell-head { view-transition-name: nz-chrome-head; }
 .nz-demo-bar { view-transition-name: nz-chrome-demo; }
