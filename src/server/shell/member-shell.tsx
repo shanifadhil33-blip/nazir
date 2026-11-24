@@ -13,7 +13,7 @@ export async function MemberShell({ workspaceId, lang, pinned, screen = 'app', w
 }) {
   let value: MemberSnapshot | undefined;
   try {
-    value = await loadMemberSnapshot(workspaceId, lang, pinned, withReports, withFixes, withActive, withHistory, reportIds, reportFix);
+    value = await loadMemberSnapshot(workspaceId, lang, pinned, withReports, withFixes, withActive, withHistory, reportIds, reportFix, screen === 'map');
   } catch (error) {
     if (error instanceof Unauthorized) redirect('/signin');
     // Preserve the existing client error/retry path if first-paint reads fail.

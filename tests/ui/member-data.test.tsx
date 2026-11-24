@@ -10,6 +10,8 @@ import { FixesScreen } from '../../src/components/shell/fixes-screen';
 import { SettingsScreen } from '../../src/components/shell/settings-screen';
 import { HistoryScreen } from '../../src/components/shell/history-screen';
 import { ReportScreen } from '../../src/components/shell/report-screen';
+import { AgentMapScreen } from '../../src/components/shell/agent-map';
+import { demoInventory, mapFromInventory } from '../../src/server/safety/map';
 
 afterEach(() => vi.unstubAllGlobals());
 const snapshot: MemberSnapshot = { workspaceId: 'workspace', lang: 'en', roles: ['service_owner'], assistant: 'Assistant', person: { name: 'Omar', initials: 'OH' }, fullName: 'Omar Haddad', settings: { name: 'Assistant', language: 'en' }, reports: [], fixes: [], history: { items: [], cursor: null } };
@@ -81,4 +83,23 @@ it('withholds Start for real missing or untested connections and preserves demo 
     const html = renderToStaticMarkup(<MemberSnapshotProvider value={value}><ChecksScreen workspaceId="workspace" initialLang="en" /></MemberSnapshotProvider>);
     expect(html.includes('data-nav="start"'), `${kind} ${ready}`).toBe(start);
   }
+});
+
+it.each(['en', 'ar'] as const)('renders the map and its exact detail from authorized first-paint data in %s', (lang) => {
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  const agentMap = mapFromInventory(demoInventory, null);
+  for (const itemId of [undefined, agentMap.items[0]!.id]) {
+    const html = renderToStaticMarkup(<MemberSnapshotProvider value={{ ...snapshot, lang, agentMap }}><AgentMapScreen workspaceId="workspace" initialLang={lang} itemId={itemId} /></MemberSnapshotProvider>);
+    expect(html).not.toContain('data-state="loading"');
+    expect(html).toContain('data-state="ready"');
+    expect(html).toContain(agentMap.items[0]!.name);
+    if (itemId) expect(html).toContain('data-map-detail="' + itemId + '"');
+    expect(fetch).not.toHaveBeenCalled();
+  }
+});
+
+it('keeps the map fallback loading when first-paint data is unavailable', () => {
+  const html = renderToStaticMarkup(<MemberSnapshotProvider value={{ ...snapshot, agentMap: null }}><AgentMapScreen workspaceId="workspace" initialLang="en" /></MemberSnapshotProvider>);
+  expect(html).toContain('data-state="loading"');
+  expect(html).not.toContain('data-map-detail');
 });

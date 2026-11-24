@@ -15,6 +15,7 @@ import { historyAccess } from './history-model';
 import { homeLinks } from './home-model';
 import { useMemberData } from './member-data';
 import { StateCard } from './state-card';
+import { useMemberSnapshot } from './member-snapshot';
 
 const order: MapGroup[] = ['tools', 'mcp', 'services', 'data', 'permissions'];
 
@@ -24,15 +25,17 @@ export function AgentMapScreen({ workspaceId, initialLang, itemId }: { workspace
   const lang = data.lang;
   const copy = messagesFor(lang);
   const text = copy.mapScreen;
-  const [map, setMap] = useState<AgentMap | null | 'error'>(null);
+  const initial = useMemberSnapshot(workspaceId)?.agentMap;
+  const [map, setMap] = useState<AgentMap | null | 'error'>(initial ?? null);
   const [requestVersion, setRequestVersion] = useState(0);
   useEffect(() => {
+    if (initial && requestVersion === 0) return;
     let alive = true;
     void fetch(`/api/workspaces/${workspaceId}/agent-map`, { headers: { 'accept-language': lang } })
       .then(async (r) => { const body = r.ok ? await r.json() as AgentMap : 'error'; if (alive) setMap(body); })
       .catch(() => { if (alive) setMap('error'); });
     return () => { alive = false; };
-  }, [workspaceId, lang, requestVersion]);
+  }, [workspaceId, lang, initial, requestVersion]);
   const links = homeLinks(workspaceId, lang);
   const phase = data.phase === 'error' || map === 'error' ? 'error' : data.phase === 'ready' && map ? 'ready' : 'loading';
   const ready = map && map !== 'error' ? map : null;

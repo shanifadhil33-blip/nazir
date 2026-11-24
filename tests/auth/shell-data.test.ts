@@ -93,3 +93,28 @@ it('carries trusted kind and a safe connection projection on first paint and fai
   try { expect(await loadMemberSnapshot(workspace, 'en', true, false)).toMatchObject({ connection: null, assistant: 'No agent connected' }); }
   finally { fake.runtimeDriver.mockReturnValue(db.driver); }
 });
+
+it('loads the map only when requested using the same member-scoped reader and refuses foreign first paint', async () => {
+  const memberId = members.service_owner;
+  fake.auth.mockResolvedValue({ user: { id: 'user', name: 'Omar' }, memberships: [{ workspaceId: workspace, memberId, roles: ['service_owner'], kind: 'real', workspaceName: 'Shell' }] });
+  const { readAgentMap } = await import('../../src/server/safety/read-map');
+  const plain = await loadMemberSnapshot(workspace, 'en', true, false);
+  expect(plain).not.toHaveProperty('agentMap');
+  const loaded = await loadMemberSnapshot(workspace, 'ar', true, false, false, false, false, [], undefined, true);
+  expect(loaded.agentMap).toEqual(await readAgentMap(db.driver, memberId, 'real'));
+  expect(loaded.agentMap).toMatchObject({ scope: 'none', items: [] });
+  await expect(loadMemberSnapshot(crypto.randomUUID(), 'en', true, false, false, false, false, [], undefined, true)).rejects.toBeInstanceOf(Forbidden);
+});
+
+it('keeps a failed map preload unavailable so the client can retry instead of claiming an empty map', async () => {
+  fake.auth.mockResolvedValue({ user: { id: 'user' }, memberships: [{ workspaceId: workspace, memberId: members.service_owner, roles: ['service_owner'], kind: 'real', workspaceName: 'Shell' }] });
+  const broken: typeof db.driver = { transaction: (work) => db.driver.transaction((sql) => work({ query: (query, params) => {
+    if (query.includes('read_external_agent')) throw new Error('Unavailable');
+    return sql.query(query, params);
+  } })) };
+  fake.runtimeDriver.mockReturnValue(broken);
+  try {
+    const loaded = await loadMemberSnapshot(workspace, 'en', true, false, false, false, false, [], undefined, true);
+    expect(loaded.agentMap).toBeNull();
+  } finally { fake.runtimeDriver.mockReturnValue(db.driver); }
+});
