@@ -99,12 +99,10 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
                 <li className="nz-after-side" data-side="after"><Link href={compared.afterId ? checkHref(compared.afterId) : links.checks}><span>{text.afterAt}</span><strong>{fill(text.ofRight, { n: String(compared.after.right), total: String(compared.after.total) })}</strong><small>{compared.after.at}</small></Link></li>
               </ul>
               <ul className="nz-after-rows">
-                {rows.map((row) => (
-                  <li key={row.id} className="nz-after-row" data-row={row.id}><Link href={compared.afterId ? `${checkHref(compared.afterId)}&change=${row.id}&from=${compared.beforeId}` : links.checks}>
-                    <span className={`nz-after-ico nz-after-ico-${row.tone}`} aria-hidden="true"><ShellIcon name={row.icon === 'tick' ? 'tick' : row.icon === 'cross' ? 'cross' : 'ring'} /></span>
-                    <span>{row.label} {row.n}</span></Link>
-                  </li>
-                ))}
+                {rows.map((row) => {
+                  const content = <><span className={`nz-after-ico nz-after-ico-${row.tone}`} aria-hidden="true"><ShellIcon name={row.icon === 'tick' ? 'tick' : row.icon === 'cross' ? 'cross' : 'ring'} /></span><span>{row.label} {row.n}</span></>;
+                  return <li key={row.id} className="nz-after-row" data-row={row.id}>{row.n === 0 ? content : <Link href={compared.afterId ? `${checkHref(compared.afterId)}&change=${row.id}&from=${compared.beforeId}` : links.checks}>{content}</Link>}</li>;
+                })}
               </ul>
               {line ? <p className="nz-after-lang">{line}</p> : null}
             </> : <StateCard kind="empty" title={text.emptyTitle} action={{ label: text.goChecks, href: links.fixes }} />}

@@ -34,13 +34,9 @@ export type ReportViewProps = {
 };
 
 function Row({ icon, tone, label, value, dot, href }: { icon: ShellIconName; tone: string; label: string; value?: number; dot?: boolean; href: string }) {
+  const content = <><span className={`nz-rep-ico nz-rep-ico-${tone}`} aria-hidden="true"><ShellIcon name={icon} /></span><span className="nz-rep-label">{label}</span>{value !== undefined ? <strong className="nz-rep-value">{value}</strong> : null}{dot ? <span className="nz-rep-dot" aria-hidden="true" /> : null}</>;
   return (
-    <li className="nz-rep-row" data-tone={tone}><Link href={href}>
-      <span className={`nz-rep-ico nz-rep-ico-${tone}`} aria-hidden="true"><ShellIcon name={icon} /></span>
-      <span className="nz-rep-label">{label}</span>
-      {value !== undefined ? <strong className="nz-rep-value">{value}</strong> : null}
-      {dot ? <span className="nz-rep-dot" aria-hidden="true" /> : null}
-    </Link></li>
+    <li className="nz-rep-row" data-tone={tone}>{value === 0 ? content : <Link href={href}>{content}</Link>}</li>
   );
 }
 
