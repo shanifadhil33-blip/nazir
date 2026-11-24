@@ -8,6 +8,7 @@ import type { ExternalView } from '@/server/settings/external-agent';
 import type { DemoProgress } from '@/server/shell/demo-progress';
 import type { ActivityPage } from '@/server/shell/history';
 import type { RunProgress } from './checks-run';
+import type { AgentMap } from '@/server/safety/map';
 
 export type SavedReport = { id: string; created_at: string; body: ReportBody };
 export type LoadedSettings = { name?: string | null; language?: Lang; my_language?: Lang | null; focus_pack?: string } | null;
@@ -26,6 +27,8 @@ export type MemberSnapshot = {
   /** Null or absent means the active list is unknown, never confirmed empty. */
   activeRuns?: RunProgress[] | null;
   history?: ActivityPage | null;
+  /** Present only when the map screen requested its safe first-paint projection. */
+  agentMap?: AgentMap | null;
   demoProgress?: DemoProgress | null;
 };
 const Snapshot = createContext<MemberSnapshot | undefined>(undefined);
