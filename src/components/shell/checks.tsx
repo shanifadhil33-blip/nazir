@@ -1,5 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Heading } from '@/components/heading';
 import { BackLink } from './back-link';
 import { ConfirmButton } from './confirm-button';
@@ -9,6 +11,7 @@ import { Avatar } from './avatar';
 import { DemoBar } from './demo-bar';
 import { Bell } from './bell';
 import { Chip } from './chip';
+import { paneScroll, type CheckPane } from './checks-scroll';
 import { checkResultLabel, countsLine, dateTimeLabel, progressLine, progressPercent, type CheckFilter, type CheckRow, type ChecksAccess, type Mark } from './checks-model';
 import type { RunProgress } from './checks-run';
 import { FloatingBottomNav } from './floating-nav';
@@ -82,6 +85,7 @@ export function ChecksView(props: ChecksViewProps) {
   const showCheck = open ?? (checks[0] ?? null);
   const tab = props.tab ?? 'answers';
   const view = tab === 'safety' ? (props.safetyOpen ? 'check' : 'list') : open ? 'check' : 'list';
+  const paneRef = useCheckPaneScroll(view);
   const safetyText = copy.safetyScreen;
   const active = props.active ?? (running ? [running] : []);
   const canStart = access.start && (props.activeStatus ?? 'ready') === 'ready' && active.length === 0;
@@ -90,7 +94,7 @@ export function ChecksView(props: ChecksViewProps) {
   for (const label of times.values()) frequencies.set(label, (frequencies.get(label) ?? 0) + 1);
   const when = (item: CheckRow) => dateTimeLabel(item.at, lang, (frequencies.get(times.get(item.id)!) ?? 0) > 1);
   return (
-    <main className="nz-shell nz-checks" {...attrs} data-seat={seat} data-state={phase} data-view={view}>
+    <main ref={paneRef} className="nz-shell nz-checks" {...attrs} data-seat={seat} data-state={phase} data-view={view}>
       <div className="nz-shell-desk">
         <header className="nz-shell-head">
           <div className="nz-shell-who">
@@ -138,7 +142,7 @@ export function ChecksView(props: ChecksViewProps) {
                   const clean = !item.stopped && item.questions.length > 0 && item.questions.every((q) => q.mark === 'right');
                   const tone = clean ? 'right' : item.toFix > 0 ? 'wrong' : 'unsure';
                   return (
-                    <button key={item.id} type="button" className="nz-check-card" data-check={item.kind} data-clean={clean} aria-pressed={showCheck?.id === item.id} onClick={() => props.onOpenCheck?.(item.id)}>
+                    <button key={item.id} type="button" className="nz-check-card" data-check={item.kind} data-check-id={item.id} data-clean={clean} aria-pressed={showCheck?.id === item.id} onClick={() => props.onOpenCheck?.(item.id)}>
                       <span className={`nz-check-mark nz-check-mark-${tone}`}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
                       <span className="nz-check-text">
                         <strong>{fill(text.checkTitle, { when: when(item) })}</strong>
@@ -160,6 +164,42 @@ export function ChecksView(props: ChecksViewProps) {
       <SideNav lang={lang} seat={seat} copy={copy} canStart={canStart} current="checks" links={navLinks(links, seat)} />
     </main>
   );
+}
+
+function useCheckPaneScroll(view: CheckPane) {
+  const rootRef = useRef<HTMLElement>(null);
+  const saved = useRef(0);
+  const previous = useRef(view);
+  const opened = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    // Read the list scroll before React hides it. Hiding the list clamps the window to 0.
+    const remember = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.closest('.nz-check-card')) return;
+      if (previous.current !== 'list' || !window.matchMedia('(max-width: 1023px)').matches) return;
+      saved.current = window.scrollY;
+    };
+    root.addEventListener('click', remember, true);
+    return () => root.removeEventListener('click', remember, true);
+  }, []);
+  useLayoutEffect(() => {
+    const phone = window.matchMedia('(max-width: 1023px)').matches;
+    const before = previous.current;
+    previous.current = view;
+    const plan = paneScroll(before, view, phone, saved.current, saved.current);
+    if (!plan) return;
+    if (view === 'check') {
+      const current = document.activeElement;
+      opened.current = current instanceof HTMLElement && current.classList.contains('nz-check-card') ? current : null;
+      document.querySelector<HTMLElement>('.nz-check-page .nz-back')?.focus({ preventScroll: true });
+    } else {
+      opened.current?.focus({ preventScroll: true });
+    }
+    window.scrollTo(0, plan.top);
+  }, [view]);
+  return rootRef;
 }
 
 function navLinks(go: HomeLinks, seat: Seat) {
