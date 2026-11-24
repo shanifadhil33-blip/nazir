@@ -9,8 +9,8 @@ it('defines the v2 page, ink, accent and pastel tokens', () => {
   expect(css).toContain('--card: #FFFFFF;');
   expect(css).toContain('--ink: #16181D;');
   expect(css).toContain('--accent: #16181D;');
-  expect(css).toContain('--right: #2E9E7A;');
-  expect(css).toContain('--wrong: #E0614F;');
+  expect(css).toContain('--right: #207457;');
+  expect(css).toContain('--wrong: #B83E30;');
   expect(css).toContain('--mint: #DFF3EC;');
   expect(css).toContain('--sky: #E3EEF9;');
   expect(css).toContain('--peach: #FCE9DF;');
