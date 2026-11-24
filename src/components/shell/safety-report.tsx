@@ -13,6 +13,7 @@ import { ShellIcon } from './icons';
 import { useMemberData } from './member-data';
 import { PillButton } from './pill-button';
 import { StateCard } from './state-card';
+import { rowLine } from './safety';
 
 type Note = 'downloading' | 'copied' | 'shareFailed' | 'sharing' | null;
 
@@ -24,15 +25,16 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
   const text = copy.safetyScreen;
   const rep = copy.reportScreen;
   const [detail, setDetail] = useState<SafetyDetail | null | 'missing'>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
   const [note, setNote] = useState<Note>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     void fetch(`/api/workspaces/${workspaceId}/safety/${runId}`, { headers: { 'accept-language': lang } })
-      .then(async (r) => { if (!alive) return; setDetail(r.ok ? await r.json() as SafetyDetail : 'missing'); })
+      .then(async (r) => { const body = r.ok ? await r.json() as SafetyDetail : 'missing'; if (alive) setDetail(body); })
       .catch(() => { if (alive) setDetail('missing'); });
     return () => { alive = false; };
-  }, [workspaceId, runId, lang]);
+  }, [workspaceId, runId, lang, requestVersion]);
 
   async function share() {
     if (note === 'sharing') return;
@@ -57,13 +59,13 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
   const good = run?.verdict === 'ready_safe' || run?.verdict === 'replies_clean';
   return <>
     <DocumentLocale lang={lang} />
-    <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="report" className="nz-report nz-safety-report" assistant={data.assistant} person={data.person} links={homeLinks(workspaceId, lang)} canStart={data.canStart} history={historyAccess(data.roles)} onRetry={data.reload}>
+    <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="report" className="nz-report nz-safety-report" assistant={data.assistant} person={data.person} links={homeLinks(workspaceId, lang)} canStart={data.canStart} history={historyAccess(data.roles)} back={{ href: `/w/${workspaceId}?screen=checks&tab=safety&safety=${runId}&lang=${lang}`, label: text.safety }} onRetry={() => { setDetail(null); setRequestVersion((n) => n + 1); data.reload(); }}>
       <Heading light={rep.light} bold={rep.bold} lang={lang} />
       {run ? <>
         <section className="nz-rep-hero" data-tone={good ? 'mint' : 'peach'}>
           {run.scope === 'replies_only' ? <p>{text.repliesOnly}</p> : null}
           {run.scope === 'sample' ? <p className="nz-rep-caption">{text.sampleLine}</p> : null}
-          <p className="nz-rep-headline" data-verdict={run.verdict ?? ''}>{run.verdict ? text.verdict[run.verdict] : run.status}</p>
+          <p className="nz-rep-headline" data-verdict={run.verdict ?? ''}>{rowLine(run, lang)}</p>
           <p className="nz-rep-caption" dir="auto">{run.agent ?? ''}</p>
         </section>
         {found.length === 0 ? <StateCard kind="empty" title={text.noWeakness} /> : null}

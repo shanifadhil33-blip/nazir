@@ -11,6 +11,7 @@ import { localeAttrs } from './locale';
 import { helpLine, whoFor } from './people';
 import { SideNav } from './side-nav';
 import { PhaseCard } from './state-card';
+import { BackLink } from './back-link';
 
 export type Phase = 'loading' | 'ready' | 'error';
 
@@ -20,7 +21,7 @@ export function moreLink(links: HomeLinks, history: boolean): string {
 }
 
 /** The shared page for History, Settings and Report: header, one stack, both navs. Plain props in, markup out. */
-export function ScreenFrame({ lang, seat, phase, name, assistant, person, links, canStart, history, onRetry, className, children }: {
+export function ScreenFrame({ lang, seat, phase, name, assistant, person, links, canStart, history, onRetry, className, back, children }: {
   lang: Lang;
   seat: Seat;
   phase: Phase;
@@ -32,6 +33,7 @@ export function ScreenFrame({ lang, seat, phase, name, assistant, person, links,
   history: boolean;
   onRetry?: () => void;
   className?: string;
+  back?: { href: string; label: string } | false;
   children: ReactNode;
 }) {
   const copy = messagesFor(lang);
@@ -49,6 +51,7 @@ export function ScreenFrame({ lang, seat, phase, name, assistant, person, links,
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
+          {back !== false ? <BackLink href={back?.href ?? links.home} label={back?.label ?? copy.shell.home} /> : null}
           {phase !== 'ready' ? <>
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />
           </> : children}

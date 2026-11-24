@@ -9,6 +9,7 @@ import { dayLabel } from './checks-model';
 import { ShellIcon } from './icons';
 import { PillButton } from './pill-button';
 import { PhaseCard, StateCard } from './state-card';
+import { ConfirmButton } from './confirm-button';
 
 type List = { runs: SafetySummary[]; confirmed: boolean; demo: boolean; agent: boolean; proof?: { url: string; token: string } | null; nextAt?: string | null };
 export type SafetyNote = 'limit' | 'failed' | 'fixApproved' | 'proof' | 'sdk' | null;
@@ -19,6 +20,8 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [openId, setOpenId] = useState<string | null>(initialOpen ?? null);
   const [detail, setDetail] = useState<SafetyDetail | null>(null);
+  const [detailError, setDetailError] = useState(false);
+  const detailRequest = useRef(0);
   const [busy, setBusy] = useState<'starting' | 'stopping' | 'fixing' | null>(null);
   const [note, setNote] = useState<SafetyNote>(null);
   const langRef = useRef(lang);
@@ -35,8 +38,11 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
     return body;
   }, [workspaceId, headers]);
   const loadDetail = useCallback(async (id: string) => {
+    const request = ++detailRequest.current;
     const response = await fetch(`/api/workspaces/${workspaceId}/safety/${id}`, { headers: headers() }).catch(() => null);
-    if (response?.ok) setDetail(await response.json() as SafetyDetail);
+    const body = response?.ok ? await response.json().catch(() => null) as SafetyDetail | null : null;
+    if (request !== detailRequest.current) return;
+    setDetail(body); setDetailError(!body);
   }, [workspaceId, headers]);
 
   // The first read waits a tick so it never runs inside the render that turned the tab on.
@@ -55,7 +61,7 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
     const timer = setInterval(() => { void load().then((body) => { if (openId && body) void loadDetail(openId); }); }, 4000);
     return () => clearInterval(timer);
   }, [enabled, active, load, loadDetail, openId]);
-  const openTest = useCallback((id: string | null) => { setOpenId(id); if (id) void loadDetail(id); }, [loadDetail]);
+  const openTest = useCallback((id: string | null) => { setOpenId(id); setDetailError(false); if (id) void loadDetail(id); else detailRequest.current++; }, [loadDetail]);
 
   async function post(path: string, body: unknown) {
     const response = await fetch(`/api/workspaces/${workspaceId}${path}`, { method: 'POST', headers: headers(), body: JSON.stringify(body) }).catch(() => null);
@@ -83,6 +89,7 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
     setBusy(null);
     if (!response?.ok) setNote('failed');
     await load();
+    return Boolean(response?.ok);
   }
   async function approve(family: string) {
     if (busy) return;
@@ -92,7 +99,7 @@ export function useSafety(workspaceId: string, lang: Lang, enabled: boolean, ini
     setNote(response?.ok ? 'fixApproved' : 'failed');
     if (openId) await loadDetail(openId);
   }
-  return { list, phase, openId, setOpenId: openTest, detail, busy, note, active, start, stop, approve, reload: load };
+  return { list, phase, openId, setOpenId: openTest, detail, detailError, retryDetail: () => { if (openId) { setDetailError(false); void loadDetail(openId); } }, busy, note, active, start, stop, approve, reload: load };
 }
 
 type Props = { lang: Lang; now: Date; safety: ReturnType<typeof useSafety>; canStart: boolean; reportHref: (id: string) => string; settingsHref: string; /** Opens or closes one test, through the address. */ onOpen?: (id: string | null) => void };
@@ -116,7 +123,7 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
       <div className="nz-checks-list">
         {note ? <p className="nz-note-line" role="status" data-note={note}>{note === 'sdk' ? <a className="nz-quiet-btn nz-sdk-update" href={sdkUrl.pathname + sdkUrl.search}>{text.sdkUpdate}</a> : note === 'limit' ? text.limit : note === 'fixApproved' ? text.fixApproved : note === 'proof' ? text.proofFailed : text.failed}</p> : null}
         {limited && !active ? <p className="nz-note-line" role="status">{fill(text.availableAt, { time: availableAt })}</p> : null}
-        {active ? <SafetyRunning lang={lang} run={active} stopping={busy === 'stopping'} onStop={() => void safety.stop(active.id)} /> : null}
+        {active ? <SafetyRunning lang={lang} run={active} stopping={busy === 'stopping'} onStop={() => safety.stop(active.id)} /> : null}
         {!list.agent ? <StateCard kind="empty" title={text.needAgent} action={{ label: copy.connect.title, href: settingsHref }} /> : null}
         {list.agent && !active && needConfirm && canStart ? (
           <section className="nz-safety-confirm" aria-label={text.confirmTitle}>
@@ -146,12 +153,12 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
         {list.agent && list.runs.length > 0 && !active && !needConfirm && canStart ? <PillButton className="nz-checks-start nz-safety-start" icon="play" directional label={startLabel} disabled={busy === 'starting' || limited} onClick={() => void safety.start(false)} /> : null}
       </div>
       {safety.openId ? (open ? <SafetyDetailView lang={lang} now={now} run={open} demo={list.demo} busy={busy} canStart={canStart && !active && !limited && !needConfirm} onBack={() => open_(null)} onApprove={(f) => void safety.approve(f)} onAgain={() => void safety.start(false)} reportHref={reportHref(open.id)} settingsHref={settingsHref} />
-        : <section className="nz-check-page"><PhaseCard phase="loading" copy={copy} /></section>) : null}
+        : <section className="nz-check-page"><button type="button" className="nz-back" onClick={() => open_(null)}><ShellIcon name="play" directional /><span>{text.back}</span></button><PhaseCard phase={safety.detailError ? 'error' : 'loading'} copy={copy} onRetry={safety.retryDetail} /></section>) : null}
     </div>
   );
 }
 
-function rowLine(run: SafetySummary, lang: Lang) {
+export function rowLine(run: SafetySummary, lang: Lang) {
   const text = messagesFor(lang).safetyScreen;
   if (run.status === 'queued' || run.status === 'running') return fill(text.running, { done: String(run.done), total: String(run.total) });
   if (run.status === 'paused') return text.paused;
@@ -159,7 +166,7 @@ function rowLine(run: SafetySummary, lang: Lang) {
   return run.verdict ? text.verdict[run.verdict] : '';
 }
 
-function SafetyRunning({ lang, run, stopping, onStop }: { lang: Lang; run: SafetySummary; stopping: boolean; onStop: () => void }) {
+function SafetyRunning({ lang, run, stopping, onStop }: { lang: Lang; run: SafetySummary; stopping: boolean; onStop: () => Promise<boolean | undefined> }) {
   const text = messagesFor(lang).safetyScreen;
   const line = fill(text.running, { done: String(run.done), total: String(run.total) });
   const percent = run.total ? Math.round((run.done / run.total) * 100) : 0;
@@ -167,7 +174,7 @@ function SafetyRunning({ lang, run, stopping, onStop }: { lang: Lang; run: Safet
     <section className="nz-running" aria-label={line} data-running="true" data-safety="true">
       <div className="nz-running-top">
         <p className="nz-running-title"><span className="nz-live-dot" aria-hidden="true" /><strong>{line}</strong></p>
-        <button type="button" className="nz-quiet-btn" disabled={stopping} onClick={onStop}>{stopping ? text.stopping : text.stop}</button>
+        <ConfirmButton lang={lang} label={stopping ? text.stopping : text.stop} title={text.stopTitle} note={text.stopNote} failed={text.failed} disabled={stopping} onConfirm={onStop} />
       </div>
       <div className="nz-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={line}><span style={{ inlineSize: `${percent}%` }} /></div>
     </section>

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { useFormStatus } from 'react-dom';
 import { Heading } from '@/components/heading';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
@@ -10,6 +9,7 @@ import { StateCard } from './state-card';
 import { connectHref } from './connect-request';
 import { PillButton } from './pill-button';
 import { topicLabel, type SettingsAccess, type SettingsView } from './settings-model';
+import { SignOutControl } from './sign-out';
 
 export type ResetState = 'idle' | 'ask' | 'busy' | 'done' | 'failed';
 
@@ -97,20 +97,8 @@ export function SettingsViewScreen(props: SettingsViewProps) {
           {props.reset === 'failed' ? <p className="nz-note-line" role="alert">{text.failed}</p> : null}
         </section>
       ) : null}
-      <form action={props.signOut} className="nz-set-card nz-set-signout" data-card="signout">
-        <SignOutButton label={text.signOut} busy={text.signingOut} />
-      </form>
+      <section className="nz-set-card nz-set-signout" data-card="signout"><SignOutControl lang={lang} action={props.signOut} /></section>
       {!access.edit ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
     </ScreenFrame>
-  );
-}
-
-function SignOutButton({ label, busy }: { label: string; busy: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className="nz-set-head" disabled={pending}>
-      <span className="nz-set-ico nz-set-ico-lilac" aria-hidden="true"><ShellIcon name="people" /></span>
-      <span className="nz-set-text"><strong>{pending ? busy : label}</strong></span>
-    </button>
   );
 }

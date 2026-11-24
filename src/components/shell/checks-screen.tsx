@@ -147,6 +147,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
     setBusy(null);
     if (!ok) setNote('stopFailed');
     await refresh(true);
+    return ok;
   }
 
   async function suggest(findingId: string) {
@@ -208,7 +209,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       onFilter={(next) => { setFilter(next); setOpenQuestion(null); setComparison({ change: undefined, from: undefined }); writeUrl({ show: next === 'all' ? null : next, q: null, change: null, from: null }, false); }}
       reportHref={(id) => `/w/${workspaceId}/report/${id}?lang=${lang}`}
       onStart={() => void start()}
-      onStop={(id) => void stop(id)}
+      onStop={stop}
       onSuggest={(id) => void suggest(id)}
       fixFor={fixFor}
       onRetry={() => { if (phase === 'ready') void refresh(true); else data.reload(); }}

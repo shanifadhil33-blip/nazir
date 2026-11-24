@@ -48,7 +48,7 @@ export function inventoryElements(elements) {
       const row = el.closest('li,article,.nz-check-card,.nz-pastel,.nz-history-row');
       return { id: path(el), label: (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160),
         href: el.getAttribute('href'), actionable: action, wrapper, disabled: el.matches(':disabled,[aria-disabled=true]'),
-        current: el.matches('[aria-current=page],[aria-selected=true]'), siblingGroup: row ? path(row.parentElement) : null };
+        current: el.matches('[aria-current=page],[aria-selected=true],[aria-pressed=true]'), siblingGroup: row ? path(row.parentElement) : null };
     });
 }
 export async function inventory(page) {

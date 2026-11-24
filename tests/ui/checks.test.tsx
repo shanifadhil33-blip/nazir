@@ -128,7 +128,8 @@ it('keeps every new string free of dashes, caps, emoji and long lines in both la
 });
 
 it('keeps check labels concise while showing every verdict', () => {
-  const text = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+  // Closed native confirmations are outside the visible check labels.
+  const text = (html: string) => html.replace(/<dialog\b[^>]*>[\s\S]*?<\/dialog>/g, '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
   const column = (html: string, start: string, end: string) => text(html.slice(html.indexOf(start), html.indexOf(end)));
   const list = render('en', 'owner', { running: { runId: 'r', done: 9, total: 16 } });
   const listText = column(list, 'class="nz-checks-list"', 'class="nz-check-page"');
