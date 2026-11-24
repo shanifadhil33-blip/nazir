@@ -24,9 +24,10 @@ export async function launch() {
 }
 export async function settle(page) {
   await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(200);
   await page.waitForFunction(() => {
     const main = document.querySelector('main');
-    return main && !['loading', 'error'].includes(main.getAttribute('data-state'));
+    return main && !main.matches('[aria-busy=true],.nz-shell-loading') && !['loading', 'error'].includes(main.getAttribute('data-state'));
   }, undefined, { timeout: 20000 });
   await page.waitForTimeout(700);
 }

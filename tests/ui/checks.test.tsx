@@ -19,6 +19,14 @@ const render = (lang: Lang, seat: Seat, extra: Partial<ChecksViewProps> = {}) =>
 );
 const words = (value: string) => value.trim().split(/\s+/).filter(Boolean).length;
 
+it.each(['en', 'ar'] as const)('distinguishes two checks started within the same minute in %s', (lang) => {
+  const checks = previewChecks(lang, now).slice(0, 2).map((check, i) => ({ ...check, at: new Date(`2026-11-17T10:39:${i ? '40' : '10'}Z`) }));
+  const html = render(lang, 'owner', { checks, openId: checks[1]!.id });
+  expect(html).toContain('14:39:10');
+  expect(html).toContain('14:39:40');
+  expect(html.slice(html.indexOf('class="nz-check-page"'))).toContain('14:39:40');
+});
+
 it('follows the server role matrix for start, stop and suggest', () => {
   for (const role of ['service_owner', 'supplier_maintainer', 'quality_reviewer', 'viewer'] as Role[]) {
     const access = checksAccess([role]);

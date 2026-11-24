@@ -78,8 +78,8 @@ export function dayLabel(at: Date, now: Date, lang: Lang, copy: Messages): strin
 }
 
 /** "Sun 15 Nov, 09:04" in Dubai time. Every check is named by when it ran. */
-export function dateTimeLabel(at: Date, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(at);
+export function dateTimeLabel(at: Date, lang: Lang, precise = false): string {
+  return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-AE-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Dubai', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', ...(precise ? { second: '2-digit' as const } : {}), hourCycle: 'h23' }).format(at);
 }
 
 /** Right, wrong and could not tell, counted from the questions shown. */

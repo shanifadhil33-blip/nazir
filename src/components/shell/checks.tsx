@@ -85,6 +85,10 @@ export function ChecksView(props: ChecksViewProps) {
   const safetyText = copy.safetyScreen;
   const active = props.active ?? (running ? [running] : []);
   const canStart = access.start && (props.activeStatus ?? 'ready') === 'ready' && active.length === 0;
+  const times = new Map(checks.map((item) => [item.id, dateTimeLabel(item.at, lang)]));
+  const frequencies = new Map<string, number>();
+  for (const label of times.values()) frequencies.set(label, (frequencies.get(label) ?? 0) + 1);
+  const when = (item: CheckRow) => dateTimeLabel(item.at, lang, (frequencies.get(times.get(item.id)!) ?? 0) > 1);
   return (
     <main className="nz-shell nz-checks" {...attrs} data-seat={seat} data-state={phase} data-view={view}>
       <div className="nz-shell-desk">
@@ -137,7 +141,7 @@ export function ChecksView(props: ChecksViewProps) {
                     <button key={item.id} type="button" className="nz-check-card" data-check={item.kind} data-clean={clean} aria-pressed={showCheck?.id === item.id} onClick={() => props.onOpenCheck?.(item.id)}>
                       <span className={`nz-check-mark nz-check-mark-${tone}`}><ShellIcon name={clean ? 'check' : 'dot'} /></span>
                       <span className="nz-check-text">
-                        <strong>{fill(text.checkTitle, { when: dateTimeLabel(item.at, lang) })}</strong>
+                        <strong>{fill(text.checkTitle, { when: when(item) })}</strong>
                         {item.sample ? <small>{copy.shell.sample}</small> : null}
                         <small className={`nz-check-${tone}`}>{checkResultLabel(item, copy)}</small>
                       </span>
@@ -147,7 +151,7 @@ export function ChecksView(props: ChecksViewProps) {
                 })}
                 {canStart && checks.length > 0 ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
               </div>
-              {showCheck ? <CheckDetail lang={lang} check={showCheck} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={open ? props.onBack : undefined} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} questionIds={props.questionIds} filter={props.filter ?? 'all'} onFilter={props.onFilter} reportHref={props.reportHref?.(showCheck.id)} /> : null}
+              {showCheck ? <CheckDetail lang={lang} check={showCheck} when={when(showCheck)} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={open ? props.onBack : undefined} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} questionIds={props.questionIds} filter={props.filter ?? 'all'} onFilter={props.onFilter} reportHref={props.reportHref?.(showCheck.id)} /> : null}
             </div>}
           </>}
         </div>
@@ -183,8 +187,8 @@ const markLabel = (mark: Mark, lang: Lang) => {
   return mark === 'notChecked' ? text.notChecked : mark === 'right' ? text.right : mark === 'wrong' ? text.wrong : text.unsure;
 };
 
-function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest, fixFor, questionIds, filter, onFilter, reportHref }: {
-  lang: Lang; check: CheckRow; access: ChecksAccess; openQuestion: string | null; busy: ChecksViewProps['busy']; links: HomeLinks;
+function CheckDetail({ lang, check, when, access, openQuestion, busy, links, onBack, onOpenQuestion, onSuggest, fixFor, questionIds, filter, onFilter, reportHref }: {
+  lang: Lang; check: CheckRow; when: string; access: ChecksAccess; openQuestion: string | null; busy: ChecksViewProps['busy']; links: HomeLinks;
   onBack?: () => void; onOpenQuestion?: (id: string) => void; onSuggest?: (findingId: string) => void; fixFor: Record<string, string>;
   questionIds?: string[]; filter: CheckFilter; onFilter?: (filter: CheckFilter) => void; reportHref?: string;
 }) {
@@ -193,9 +197,9 @@ function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, o
   const shown = check.questions.filter((item) => (filter === 'all' || item.mark === filter) && (!questionIds || questionIds.includes(item.id)));
   const opened = shown.some((item) => item.id === openQuestion) ? openQuestion : null;
   return (
-    <section className="nz-check-page" aria-label={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })}>
+    <section className="nz-check-page" aria-label={fill(text.checkTitle, { when })}>
       {onBack ? <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button> : null}
-      <Heading as="h2" light={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })} bold={countsLine(check, copy)} lang={lang} flow="stack" explain={text.detailExplain} />
+      <Heading as="h2" light={fill(text.checkTitle, { when })} bold={countsLine(check, copy)} lang={lang} flow="stack" explain={text.detailExplain} />
       {check.sample ? <p className="nz-check-sub">{copy.shell.sample}</p> : null}
       <div className="nz-tabs nz-check-filter" role="group" aria-label={text.filterAll}>
         {(['all', 'wrong', 'right', ...(check.questions.some((q) => q.mark === 'unsure') ? ['unsure' as const] : [])] as const).map((id) => <button key={id} type="button" className="nz-tab" data-filter={id} aria-pressed={filter === id} onClick={() => onFilter?.(id)}>{id === 'all' ? text.filterAll : id === 'wrong' ? text.filterWrong : id === 'right' ? text.filterRight : text.unsure}</button>)}
