@@ -3,9 +3,26 @@ vi.mock('server-only', () => ({}));
 import { testDatabase, seed, type TestDatabase } from '../helpers/pglite';
 import { readHistory } from '../../src/server/shell/history';
 import { readBell, markBellSeen } from '../../src/server/shell/bell';
+import { randomUUID } from 'node:crypto';
 let db: TestDatabase;
 beforeAll(async () => { db = await testDatabase(); }, 60000);
 afterAll(async () => { await db?.close(); });
+
+it('shows paired fix-test start events once while preserving retries, legacy events and the audit log', async () => {
+  const a = await seed(db, 'activity_paired');
+  const b = await seed(db, 'activity_paired_other');
+  const fix = randomUUID(), first = randomUUID(), retry = randomUUID(), legacy = randomUUID();
+  const append = (member: string, action: string, run: string) => db.member(member, (sql) => sql.query("SELECT nazir.append_audit($1,'proposal',$2,$3::jsonb)", [action, fix, JSON.stringify({ run_id: run })]));
+  for (const run of [first, retry]) { await append(a.member_id, 'proposal.rerun', run); await append(a.member_id, 'proposal.retest', run); }
+  await append(a.member_id, 'proposal.rerun', legacy);
+  await append(b.member_id, 'proposal.retest', legacy);
+  const page = await readHistory(db.driver, a.member_id, 2);
+  const older = await readHistory(db.driver, a.member_id, 2, page.cursor);
+  expect([...page.items, ...older.items].map((item) => item.kind)).toEqual(['testStarted', 'testStarted', 'testStarted']);
+  expect(new Set([...page.items, ...older.items].map((item) => item.id)).size).toBe(3);
+  expect((await readHistory(db.driver, b.member_id)).items).toHaveLength(1);
+  expect((await db.owner.query<{ n: number }>('SELECT count(*)::int AS n FROM nazir.audit_events WHERE workspace_id=$1 AND target_id=$2', [a.workspace_id, fix])).rows[0]!.n).toBe(5);
+});
 
 it('pages the audit log, keeps private payloads out, and isolates workspaces and per person seen state', async () => {
   const a = await seed(db, 'activity_a');
