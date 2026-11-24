@@ -11,6 +11,8 @@ import { SettingsScreen } from '../../src/components/shell/settings-screen';
 import { HistoryScreen } from '../../src/components/shell/history-screen';
 import { ReportScreen } from '../../src/components/shell/report-screen';
 import { AgentMapScreen } from '../../src/components/shell/agent-map';
+import { SafetyReportScreen } from '../../src/components/shell/safety-report';
+import type { SafetyDetail } from '../../src/server/safety/read';
 import { demoInventory, mapFromInventory } from '../../src/server/safety/map';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -102,4 +104,33 @@ it('keeps the map fallback loading when first-paint data is unavailable', () => 
   const html = renderToStaticMarkup(<MemberSnapshotProvider value={{ ...snapshot, agentMap: null }}><AgentMapScreen workspaceId="workspace" initialLang="en" /></MemberSnapshotProvider>);
   expect(html).toContain('data-state="loading"');
   expect(html).not.toContain('data-map-detail');
+});
+
+const savedSafety: SafetyDetail = { id: '11111111-1111-4111-8111-111111111111', scope: 'full', status: 'done', agent: 'Omar agent', at: '2026-11-24T08:00:00Z', finishedAt: '2026-11-24T08:01:00Z', done: 40, total: 40, verdict: 'ready_safe', open: 0, weaknesses: [], resisted: ['S1'] };
+it.each(['en', 'ar'] as const)('renders the saved safety list, exact detail and report in %s without an extra browser read', (lang) => {
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  const value: MemberSnapshot = { ...snapshot, lang, activeRuns: [], safetyList: { runs: [savedSafety], confirmed: true, demo: true, agent: true, proof: null, nextAt: null }, safetyDetail: savedSafety };
+  for (const view of ['list', 'detail', 'report']) {
+    const content = view === 'report' ? <SafetyReportScreen workspaceId="workspace" runId={savedSafety.id} initialLang={lang} /> : <ChecksScreen workspaceId="workspace" initialLang={lang} initialTab="safety" initialSafety={view === 'detail' ? savedSafety.id : undefined} />;
+    const html = renderToStaticMarkup(<MemberSnapshotProvider value={value}>{content}</MemberSnapshotProvider>);
+    expect(html).not.toContain('data-state="loading"');
+    expect(html).toContain('data-state="ready"');
+    if (view === 'detail') expect(html).toContain('nz-safety-page');
+    if (view === 'report') expect(html).toContain('data-verdict="ready_safe"');
+    expect(fetch).not.toHaveBeenCalled();
+  }
+});
+
+it('never renders another saved safety result from a mismatched first-paint ID', () => {
+  const html = renderToStaticMarkup(<MemberSnapshotProvider value={{ ...snapshot, safetyDetail: savedSafety }}><SafetyReportScreen workspaceId="workspace" runId="22222222-2222-4222-8222-222222222222" initialLang="en" /></MemberSnapshotProvider>);
+  expect(html).toContain('data-state="loading"');
+  expect(html).not.toContain('data-verdict="ready_safe"');
+});
+
+it('keeps the saved safety heading with shaped placeholders while only its detail is unavailable', () => {
+  const value: MemberSnapshot = { ...snapshot, activeRuns: [], safetyList: { runs: [savedSafety], confirmed: true, demo: true, agent: true, proof: null, nextAt: null } };
+  const html = renderToStaticMarkup(<MemberSnapshotProvider value={value}><ChecksScreen workspaceId="workspace" initialLang="en" initialTab="safety" initialSafety={savedSafety.id} /></MemberSnapshotProvider>);
+  expect(html).toContain('nz-safety-pending');
+  expect(html).toContain('nz-safety-detail-loading');
+  expect(html).not.toContain('nz-state-loading');
 });

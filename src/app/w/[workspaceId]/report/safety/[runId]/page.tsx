@@ -10,5 +10,5 @@ export default async function SafetyReportPage({ params, searchParams }: { param
   const query = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(runId)) notFound();
   const lang: Lang = query.lang === 'ar' ? 'ar' : 'en';
-  return <MemberShell screen="safety" workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><SafetyReportScreen workspaceId={workspaceId} runId={runId} initialLang={lang} /></MemberShell>;
+  return <MemberShell screen="safety" safetyId={runId} workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><SafetyReportScreen key={runId} workspaceId={workspaceId} runId={runId} initialLang={lang} /></MemberShell>;
 }

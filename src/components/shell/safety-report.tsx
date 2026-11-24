@@ -14,6 +14,7 @@ import { useMemberData } from './member-data';
 import { PillButton } from './pill-button';
 import { StateCard } from './state-card';
 import { rowLine } from './safety';
+import { useMemberSnapshot } from './member-snapshot';
 
 type Note = 'downloading' | 'copied' | 'shareFailed' | 'sharing' | null;
 
@@ -24,17 +25,20 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
   const copy = messagesFor(lang);
   const text = copy.safetyScreen;
   const rep = copy.reportScreen;
-  const [detail, setDetail] = useState<SafetyDetail | null | 'missing'>(null);
+  const snapshotDetail = useMemberSnapshot(workspaceId)?.safetyDetail;
+  const initial = snapshotDetail?.id === runId ? snapshotDetail : null;
+  const [detail, setDetail] = useState<SafetyDetail | null | 'missing'>(initial);
   const [requestVersion, setRequestVersion] = useState(0);
   const [note, setNote] = useState<Note>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   useEffect(() => {
+    if (initial && requestVersion === 0) return;
     let alive = true;
     void fetch(`/api/workspaces/${workspaceId}/safety/${runId}`, { headers: { 'accept-language': lang } })
       .then(async (r) => { const body = r.ok ? await r.json() as SafetyDetail : 'missing'; if (alive) setDetail(body); })
       .catch(() => { if (alive) setDetail('missing'); });
     return () => { alive = false; };
-  }, [workspaceId, runId, lang, requestVersion]);
+  }, [workspaceId, runId, lang, initial, requestVersion]);
 
   async function share() {
     if (note === 'sharing') return;

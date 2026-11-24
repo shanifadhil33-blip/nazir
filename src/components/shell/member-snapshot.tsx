@@ -9,6 +9,7 @@ import type { DemoProgress } from '@/server/shell/demo-progress';
 import type { ActivityPage } from '@/server/shell/history';
 import type { RunProgress } from './checks-run';
 import type { AgentMap } from '@/server/safety/map';
+import type { SafetyDetail, SafetyList } from '@/server/safety/read';
 
 export type SavedReport = { id: string; created_at: string; body: ReportBody };
 export type LoadedSettings = { name?: string | null; language?: Lang; my_language?: Lang | null; focus_pack?: string } | null;
@@ -29,6 +30,8 @@ export type MemberSnapshot = {
   history?: ActivityPage | null;
   /** Present only when the map screen requested its safe first-paint projection. */
   agentMap?: AgentMap | null;
+  safetyList?: SafetyList | null;
+  safetyDetail?: SafetyDetail | null;
   demoProgress?: DemoProgress | null;
 };
 const Snapshot = createContext<MemberSnapshot | undefined>(undefined);
