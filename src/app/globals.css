@@ -1615,3 +1615,7 @@ body:has(.nz-confirm[open]) { overflow: hidden; }
 
 .nz-safety-pending { min-block-size: 480px; }
 .nz-safety-detail-loading { display: grid; gap: 16px; margin-block-start: 16px; }
+@media (max-width: 1023px) and (max-height: 600px) {
+  .nz-shell.nz-fixpage { block-size: auto; min-block-size: 100svh; display: block; }
+  .nz-fixpage .nz-fix-cards { overflow-y: visible; }
+}
