@@ -15,6 +15,7 @@ import { FloatingBottomNav } from './floating-nav';
 import { headingFor, homeLinks, lastCheckText, seatAccess, type HomeLinks, type HomeView } from './home-model';
 import { localeAttrs } from './locale';
 import { helpLine, whoFor } from './people';
+import { ShellIcon } from './icons';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
 import { StateCard, type ShellState } from './state-card';
@@ -106,7 +107,11 @@ export function ShellHome({
               <div className="nz-home-links"><Link className="nz-home-link" href={checkHref}>{copy.shell.openLastCheck}</Link><span className="nz-home-time"><bdi dir="ltr">{checkTime}</bdi></span></div>
             </section> : null}
             {kind === 'demo' && demoProgress ? <DemoGuide lang={lang} home={go.home} progress={demoProgress} /> : null}
-            <div className="nz-home-links">{access.fixes ? <Link className="nz-home-link" href={go.fixes}>{copy.shell.fixes}</Link> : null}{access.report ? <Link className="nz-home-link" href={go.report}>{copy.shell.report}</Link> : null}<Link className="nz-home-link" href={`${go.home}?screen=map&lang=${lang}`}>{copy.mapScreen.open}</Link></div>
+            <div className="nz-home-rows">
+              {access.fixes ? <Link className="nz-home-row" href={go.fixes}><span>{copy.shell.fixes}</span><ShellIcon name="chevron" directional /></Link> : null}
+              {access.report ? <Link className="nz-home-row" href={go.report}><span>{copy.shell.report}</span><ShellIcon name="chevron" directional /></Link> : null}
+              <Link className="nz-home-row" href={`${go.home}?screen=map&lang=${lang}`}><span>{copy.mapScreen.open}</span><ShellIcon name="chevron" directional /></Link>
+            </div>
             {variant === 'viewer' ? <p>{copy.shell.viewOnly}</p> : null}
           </>}
         </div> : null}

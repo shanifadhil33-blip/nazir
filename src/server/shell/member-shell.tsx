@@ -4,11 +4,12 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import type { Lang } from '@/components/ocean/copy';
 import { MemberSnapshotProvider, type MemberSnapshot } from '@/components/shell/member-snapshot';
+import { ScreenFade } from '@/components/shell/screen-fade';
 import { Unauthorized } from '@/server/http/errors';
 import { loadMemberSnapshot } from './member-data';
 
-export async function MemberShell({ workspaceId, lang, pinned, withReports = true, withFixes = false, withActive = false, withHistory = false, reportIds = [], reportFix, children }: {
-  workspaceId: string; lang: Lang; pinned: boolean; withReports?: boolean; withFixes?: boolean; withActive?: boolean; withHistory?: boolean; reportIds?: string[]; reportFix?: string; children: ReactNode;
+export async function MemberShell({ workspaceId, lang, pinned, screen = 'app', withReports = true, withFixes = false, withActive = false, withHistory = false, reportIds = [], reportFix, children }: {
+  workspaceId: string; lang: Lang; pinned: boolean; screen?: string; withReports?: boolean; withFixes?: boolean; withActive?: boolean; withHistory?: boolean; reportIds?: string[]; reportFix?: string; children: ReactNode;
 }) {
   let value: MemberSnapshot | undefined;
   try {
@@ -18,5 +19,5 @@ export async function MemberShell({ workspaceId, lang, pinned, withReports = tru
     // Preserve the existing client error/retry path if first-paint reads fail.
   }
     // Keyed on the language too: switching language in Settings remounts the screens with the new snapshot, no full reload.
-  return <MemberSnapshotProvider key={`${workspaceId}:${lang}:${reportFix ?? ''}`} value={value}>{children}</MemberSnapshotProvider>;
+  return <MemberSnapshotProvider key={`${workspaceId}:${lang}:${reportFix ?? ''}`} value={value}><ScreenFade screen={`${screen}:${lang}`}>{children}</ScreenFade></MemberSnapshotProvider>;
 }

@@ -13,5 +13,5 @@ export default async function CheckReportPage({ params, searchParams }: { params
   const lang: Lang = query.lang === 'ar' ? 'ar' : 'en';
   if (query.preview === 'ocean') return <WorkspaceApp workspaceId={workspaceId} reportId={reportId} preview initialLang={lang} initialRole="viewer" initialScreen="report" shared />;
   if (!/^[0-9a-f-]{36}$/i.test(reportId)) notFound();
-  return <MemberShell reportIds={[reportId]} workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><ReportScreen workspaceId={workspaceId} initialLang={lang} reportId={reportId} /></MemberShell>;
+  return <MemberShell screen="report" reportIds={[reportId]} workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><ReportScreen workspaceId={workspaceId} initialLang={lang} reportId={reportId} /></MemberShell>;
 }

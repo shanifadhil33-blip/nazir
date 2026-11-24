@@ -11,7 +11,7 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const query = await searchParams;
   const lang: Lang = query.lang === 'ar' ? 'ar' : 'en';
   // The preview flag keeps the older report view for the design pages that still use it.
-  if (query.preview !== 'ocean') return <MemberShell workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><ReportScreen workspaceId={workspaceId} initialLang={lang} /></MemberShell>;
+  if (query.preview !== 'ocean') return <MemberShell screen="report" workspaceId={workspaceId} lang={lang} pinned={query.lang !== undefined}><ReportScreen workspaceId={workspaceId} initialLang={lang} /></MemberShell>;
   const role: Seat = query.role === 'viewer' || query.role === 'editor' || query.role === 'supplier' || query.role === 'owner' ? query.role : 'owner';
   return <WorkspaceApp workspaceId={workspaceId} preview initialLang={lang} initialRole={role} initialScreen="report" shared />;
 }
