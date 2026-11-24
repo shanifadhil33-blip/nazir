@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { messagesFor, type Lang } from '@/components/ocean/copy';
 import { SDK_FILES } from '@/server/sdk/files';
 import { makeKey, readSdk, turnOffKey, type SdkStatus } from './connect-request';
@@ -52,26 +52,31 @@ function CopyButton({ text, lang }: { text: string; lang: Lang }) {
 
 /** Steps 1 to 3 of the full check: the key (shown once), the file with its SHA256, and the lines to add. */
 export function SdkSteps({ workspaceId, lang, onStatus }: { workspaceId: string; lang: Lang; onStatus?: (status: SdkStatus | null) => void }) {
-  const c = messagesFor(lang).connect;
+  const copy = messagesFor(lang); const c = copy.connect;
   const [status, setStatus] = useState<SdkStatus | null>(null);
   const [fresh, setFresh] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'node' | 'python'>('node');
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [ask, setAsk] = useState<'make' | 'off'>('off');
+  const [failed, setFailed] = useState(false);
   useEffect(() => { let alive = true; void readSdk(workspaceId).then((s) => { if (alive) { setStatus(s); onStatus?.(s); } }); return () => { alive = false; }; }, [workspaceId, onStatus]);
   async function make() {
-    if (busy) return; setBusy(true);
+    if (busy) return; setBusy(true); setFailed(false);
     const made = await makeKey(workspaceId, lang);
     setBusy(false);
-    if (!made) return;
+    if (!made) { setFailed(true); return; }
     setFresh(made.key);
     const next = { ...(status ?? { sdk_seen_at: null, sdk_version: null, tools: 0, mcp_servers: 0 }), key_last4: made.last4 };
     setStatus(next); onStatus?.(next);
+    dialog.current?.close();
   }
   async function off() {
-    if (busy) return; setBusy(true);
+    if (busy) return; setBusy(true); setFailed(false);
     const ok = await turnOffKey(workspaceId, lang);
     setBusy(false);
-    if (ok) { setFresh(null); const next = status ? { ...status, key_last4: null } : null; setStatus(next); onStatus?.(next); }
+    if (ok) { setFresh(null); const next = status ? { ...status, key_last4: null } : null; setStatus(next); onStatus?.(next); dialog.current?.close(); }
+    else setFailed(true);
   }
   const file = SDK_FILES.find((f) => f.lang === tab)!;
   return <ol className="nz-sdk-steps">
@@ -79,9 +84,15 @@ export function SdkSteps({ workspaceId, lang, onStatus }: { workspaceId: string;
       {fresh ? <div className="nz-sdk-key"><code dir="ltr">{fresh}</code><CopyButton text={fresh} lang={lang} /><p>{c.keyOnce}</p></div>
         : status?.key_last4 ? <p>{c.keyEnding.split('{last4}').map((part, i) => i === 0 ? part : <span key={i}><bdi dir="ltr">{status.key_last4}</bdi>{part}</span>)}</p> : null}
       <div className="nz-sdk-actions">
-        <PillButton variant={status?.key_last4 ? undefined : 'ink'} label={busy ? c.sending : status?.key_last4 ? c.makeNewKey : c.makeKey} onClick={() => void make()} disabled={busy} />
-        {status?.key_last4 ? <button type="button" className="nz-text-btn" onClick={() => void off()} disabled={busy}>{c.turnOffKey}</button> : null}
+        <PillButton variant={status?.key_last4 ? undefined : 'ink'} label={busy ? c.sending : status?.key_last4 ? c.makeNewKey : c.makeKey} onClick={() => { if (!status?.key_last4) void make(); else { setAsk('make'); setFailed(false); dialog.current?.showModal(); } }} disabled={busy} />
+        {status?.key_last4 ? <button type="button" className="nz-text-btn" onClick={() => { setAsk('off'); setFailed(false); dialog.current?.showModal(); }} disabled={busy}>{c.turnOffKey}</button> : null}
       </div>
+      {failed ? <p role="alert">{c.keyFailed}</p> : null}
+      <dialog ref={dialog} className="nz-confirm" lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'} aria-labelledby="nz-key-title" onCancel={(event) => { if (busy) event.preventDefault(); }} onClick={(event) => { if (event.target === event.currentTarget && !busy) dialog.current?.close(); }}>
+        <h2 id="nz-key-title">{ask === 'off' ? c.turnOffKeyTitle : c.replaceKeyTitle}</h2><p>{ask === 'off' ? c.turnOffKeyNote : c.replaceKeyNote}</p>
+        <div className="nz-confirm-actions"><PillButton label={copy.settingsScreen.notNow} disabled={busy} onClick={() => dialog.current?.close()} /><PillButton variant="ink" label={busy ? c.sending : ask === 'off' ? c.turnOffKey : c.makeNewKey} disabled={busy} onClick={() => void (ask === 'off' ? off() : make())} /></div>
+        {failed ? <p role="alert">{c.keyFailed}</p> : null}
+      </dialog>
     </li>
     <li><h3><bdi dir="ltr">2.</bdi> {c.stepFile}</h3>
       <div className="nz-sdk-tabs" role="tablist">{(['node', 'python'] as const).map((id) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{c[id]}</button>)}</div>

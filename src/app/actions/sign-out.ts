@@ -2,7 +2,7 @@
 
 import { signOut } from '@/auth';
 
-/** Sign out and land on the sign in page. */
+/** End the server session before the browser clears its signed in page. */
 export async function signOutAction() {
-  await signOut({ redirectTo: '/signin' });
+  await signOut({ redirect: false });
 }

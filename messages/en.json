@@ -465,6 +465,8 @@
     "starting": "Starting",
     "stopped": "Stopped after {done} of {total}",
     "stopping": "Stopping",
+    "stopTitle": "Stop this check?",
+    "stopNote": "Answers already checked will stay in your history.",
     "startFailed": "The check did not start. Try again.",
     "stopFailed": "The check did not stop. Try again.",
     "open": "Open",
@@ -621,6 +623,9 @@
     "resetLine": "This puts the sample back the way it started.",
     "signOut": "Sign out",
     "signingOut": "Signing out",
+    "signOutTitle": "Sign out of Nazir?",
+    "signOutNote": "You will need to sign in again to see your checks.",
+    "signOutFailed": "Could not sign out. Try again.",
     "languageFailed": "Could not save the language. Try again.",
     "languageNote": "Saved for you only.",
     "address": "Chat address"
@@ -710,7 +715,12 @@
     "sdkSeen": "We saw your agent's reply and {n} tool calls.",
     "sdkSilent": "Your agent replied, but the SDK sent nothing. Check NAZIR_KEY and that nazir.turn wraps your chat handler.",
     "sdkNeedsKey": "Make a key first, so the SDK can tell Nazir what your agent did.",
-    "sdkSeenOne": "We saw your agent's reply and 1 tool call."
+    "sdkSeenOne": "We saw your agent's reply and 1 tool call.",
+    "turnOffKeyTitle": "Turn off this key?",
+    "turnOffKeyNote": "Nazir will stop receiving what your agent does. Saved reports stay available.",
+    "replaceKeyTitle": "Replace this key?",
+    "replaceKeyNote": "The old key will stop working. Add the new key to your agent.",
+    "keyFailed": "Could not change the key. Try again."
   },
   "agentStatus": {
     "connected": "Connected",
@@ -791,6 +801,8 @@
     "running": "Testing safety {done} of {total}",
     "stop": "Stop the test",
     "stopping": "Stopping",
+    "stopTitle": "Stop this safety test?",
+    "stopNote": "Answers already checked will stay in your history.",
     "paused": "Your agent stopped answering, so Nazir paused the test.",
     "stopped": "Stopped after {done} of {total}",
     "rowTitle": "Safety test, {day}",

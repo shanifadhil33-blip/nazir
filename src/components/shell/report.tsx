@@ -51,10 +51,9 @@ export function ReportView(props: ReportViewProps) {
   const text = copy.reportScreen;
   const check = facts ? `${links.checks}&check=${facts.id}&lang=${lang}` : links.checks;
   return (
-    <ScreenFrame lang={lang} seat={seat} phase={phase} name="report" className="nz-report" assistant={props.assistant} person={props.person} links={links} canStart={props.canStart} history={props.history} onRetry={props.onRetry}>
+    <ScreenFrame lang={lang} seat={seat} phase={phase} name="report" className="nz-report" assistant={props.assistant} person={props.person} links={links} canStart={props.canStart} history={props.history} onRetry={props.onRetry} back={{ href: check, label: copy.checksScreen.back }}>
       <Heading light={text.light} bold={text.bold} lang={lang} />
       <p className="nz-check-sub">{text.line}</p>
-      <Link className="nz-text-link" href={check}>{copy.checksScreen.back}</Link>
             {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
       {!facts ? <StateCard kind="empty" title={text.emptyTitle} action={props.canStart ? { label: copy.shell.startCheck, href: links.start } : { label: text.goHome, href: links.home }} /> : <>
         <section className="nz-rep-hero" data-tone="mint">

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Heading } from '@/components/heading';
+import { BackLink } from './back-link';
+import { ConfirmButton } from './confirm-button';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
@@ -45,7 +47,7 @@ export type ChecksViewProps = {
   onBack?: () => void;
   onOpenQuestion?: (id: string) => void;
   onStart?: () => void;
-  onStop?: (runId?: string) => void;
+  onStop?: (runId?: string) => void | Promise<boolean | undefined>;
   onSuggest?: (findingId: string) => void;
   /** Wrong answers that already have a fix, by finding. One fix per wrong answer. */
   fixFor?: Record<string, string>;
@@ -95,6 +97,7 @@ export function ChecksView(props: ChecksViewProps) {
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
+          {view === 'list' ? <BackLink href={links.home} label={copy.shell.home} /> : null}
           {phase !== 'ready' ? <>
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
           </> : <>
@@ -144,7 +147,7 @@ export function ChecksView(props: ChecksViewProps) {
                 })}
                 {canStart && checks.length > 0 ? <PillButton className="nz-checks-start" icon="play" directional label={busy === 'starting' ? text.starting : copy.shell.startCheck} disabled={busy === 'starting'} onClick={props.onStart} /> : null}
               </div>
-              {showCheck ? <CheckDetail lang={lang} check={showCheck} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={props.onBack} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} questionIds={props.questionIds} filter={props.filter ?? 'all'} onFilter={props.onFilter} reportHref={props.reportHref?.(showCheck.id)} /> : null}
+              {showCheck ? <CheckDetail lang={lang} check={showCheck} access={access} openQuestion={openQuestion} busy={busy} links={links} onBack={open ? props.onBack : undefined} onOpenQuestion={props.onOpenQuestion} onSuggest={props.onSuggest} fixFor={props.fixFor ?? {}} questionIds={props.questionIds} filter={props.filter ?? 'all'} onFilter={props.onFilter} reportHref={props.reportHref?.(showCheck.id)} /> : null}
             </div>}
           </>}
         </div>
@@ -160,7 +163,7 @@ function navLinks(go: HomeLinks, seat: Seat) {
   return { settings: go.settings, home: go.home, checks: go.checks, start: go.start, fixes: go.fixes, more: seat === 'viewer' ? go.settings : go.more };
 }
 
-function RunningCard({ lang, running, canStop, stopping, onStop }: { lang: Lang; running: RunProgress; canStop: boolean; stopping: boolean; onStop?: () => void }) {
+function RunningCard({ lang, running, canStop, stopping, onStop }: { lang: Lang; running: RunProgress; canStop: boolean; stopping: boolean; onStop?: () => void | Promise<boolean | undefined> }) {
   const copy = messagesFor(lang);
   const text = copy.checksScreen;
   const percent = progressPercent(running.done, running.total);
@@ -168,7 +171,7 @@ function RunningCard({ lang, running, canStop, stopping, onStop }: { lang: Lang;
     <section className="nz-running" aria-label={text.checkingNow} data-running="true">
       <div className="nz-running-top">
         <p className="nz-running-title"><span className="nz-live-dot" aria-hidden="true" /><strong>{progressLine(running.done, running.total, copy)}</strong></p>
-        {canStop ? <button type="button" className="nz-quiet-btn" disabled={stopping} onClick={onStop}>{stopping ? text.stopping : text.stopCheck}</button> : null}
+        {canStop ? <ConfirmButton lang={lang} label={stopping ? text.stopping : text.stopCheck} title={text.stopTitle} note={text.stopNote} failed={text.stopFailed} disabled={stopping} onConfirm={onStop} /> : null}
       </div>
       <div className="nz-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={progressLine(running.done, running.total, copy)}><span style={{ inlineSize: `${percent}%` }} /></div>
     </section>
@@ -191,7 +194,7 @@ function CheckDetail({ lang, check, access, openQuestion, busy, links, onBack, o
   const opened = shown.some((item) => item.id === openQuestion) ? openQuestion : null;
   return (
     <section className="nz-check-page" aria-label={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })}>
-      <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
+      {onBack ? <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button> : null}
       <Heading as="h2" light={fill(text.checkTitle, { when: dateTimeLabel(check.at, lang) })} bold={countsLine(check, copy)} lang={lang} flow="stack" explain={text.detailExplain} />
       {check.sample ? <p className="nz-check-sub">{copy.shell.sample}</p> : null}
       <div className="nz-tabs nz-check-filter" role="group" aria-label={text.filterAll}>

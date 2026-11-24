@@ -25,13 +25,14 @@ export function AgentMapScreen({ workspaceId, initialLang, itemId }: { workspace
   const copy = messagesFor(lang);
   const text = copy.mapScreen;
   const [map, setMap] = useState<AgentMap | null | 'error'>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
   useEffect(() => {
     let alive = true;
     void fetch(`/api/workspaces/${workspaceId}/agent-map`, { headers: { 'accept-language': lang } })
-      .then(async (r) => { if (alive) setMap(r.ok ? await r.json() as AgentMap : 'error'); })
+      .then(async (r) => { const body = r.ok ? await r.json() as AgentMap : 'error'; if (alive) setMap(body); })
       .catch(() => { if (alive) setMap('error'); });
     return () => { alive = false; };
-  }, [workspaceId, lang]);
+  }, [workspaceId, lang, requestVersion]);
   const links = homeLinks(workspaceId, lang);
   const phase = data.phase === 'error' || map === 'error' ? 'error' : data.phase === 'ready' && map ? 'ready' : 'loading';
   const ready = map && map !== 'error' ? map : null;
@@ -39,8 +40,7 @@ export function AgentMapScreen({ workspaceId, initialLang, itemId }: { workspace
   const mapHref = `${links.home}?screen=map&lang=${lang}`;
   return <>
     <DocumentLocale lang={lang} />
-    <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="map" className="nz-map" assistant={data.assistant} person={data.person} links={links} canStart={data.canStart} history={historyAccess(data.roles)} onRetry={data.reload}>
-      {itemId ? <Link href={mapHref} className="nz-back"><ShellIcon name="play" directional /><span>{text.back}</span></Link> : null}
+    <ScreenFrame lang={lang} seat={seatFromRoles(data.roles)} phase={phase} name="map" className="nz-map" assistant={data.assistant} person={data.person} links={links} canStart={data.canStart} history={historyAccess(data.roles)} back={itemId ? { href: mapHref, label: text.back } : undefined} onRetry={() => { setMap(null); setRequestVersion((n) => n + 1); data.reload(); }}>
       <Heading light={item ? text.groups[item.group] : text.light} bold={item?.name ?? text.bold} lang={lang} />
       {ready && itemId ? (item ? <section className="nz-map-detail" data-map-detail={item.id}>
         <h2>{text.purpose}</h2><p dir="auto">{item.purpose ?? text.noPurpose}</p>

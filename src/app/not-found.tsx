@@ -1,5 +1,5 @@
-import Link from 'next/link';
+import { RecoveryScreen } from '@/components/recovery-screen';
 
 export default function NotFound() {
-  return <main className="nz-legal"><h1>Page not found</h1><p>This page could not be found.</p><Link href="/">Back to home</Link></main>;
+  return <RecoveryScreen missing />;
 }

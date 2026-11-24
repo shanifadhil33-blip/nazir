@@ -1516,3 +1516,21 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-test-people-form fieldset { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; }
 .nz-test-people-form legend { padding-inline: 6px; font-weight: 600; }
 .nz-test-people-body p { overflow-wrap: anywhere; }
+
+/* Parent links remain visible at every screen size, including desktop recovery flows. */
+.nz-parent-back { display: inline-flex; justify-self: start; align-items: center; gap: 8px; min-block-size: 44px; padding-inline: 4px 12px; border-radius: var(--radius-pill); color: var(--ink-muted); text-decoration: none; }
+.nz-parent-back svg { inline-size: 14px; block-size: 14px; }
+.nz-parent-back .nz-icon-dir { transform: scaleX(-1); }
+[dir="rtl"] .nz-parent-back .nz-icon-dir { transform: none; }
+.nz-parent-back:active { background: var(--page); }
+@media (hover: hover) and (pointer: fine) { .nz-parent-back:hover { background: var(--card); color: var(--ink); } }
+.nz-confirm { color: var(--ink); background: var(--card); border: 0; border-radius: 24px; padding: 24px; inline-size: min(420px, calc(100vw - 32px)); max-block-size: calc(100dvh - 48px); overflow: auto; box-sizing: border-box; box-shadow: var(--shadow); }
+.nz-confirm::backdrop { background: rgb(0 0 0 / 32%); }
+body:has(.nz-confirm[open]) { overflow: hidden; }
+.nz-confirm h2 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
+.nz-confirm p { margin: 0 0 20px; font-size: 16px; line-height: 1.6; }
+.nz-confirm-actions { display: flex; gap: 12px; }
+.nz-confirm-actions .nz-pill-btn { flex: 1; justify-content: center; min-block-size: 48px; }
+.nz-confirm [role="alert"] { margin-block: 16px 0; }
+.nz-confirm button[aria-busy="true"]::before { content: ''; inline-size: 16px; block-size: 16px; border: 2px solid rgb(255 255 255 / 35%); border-top-color: currentColor; border-radius: 50%; animation: nz-spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .nz-confirm button[aria-busy="true"]::before { animation: none; } }

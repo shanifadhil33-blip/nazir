@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Heading } from '@/components/heading';
+import { BackLink } from './back-link';
 import { fill, messagesFor, type Lang } from '@/components/ocean/copy';
 import type { Seat } from '@/components/ocean/model';
 import { Avatar } from './avatar';
@@ -82,6 +83,7 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
+          <BackLink href={links.fixes} label={copy.shell.fixes} />
           {phase !== 'ready' ? <>
             <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />
           </> : <>
