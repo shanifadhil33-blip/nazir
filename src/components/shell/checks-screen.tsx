@@ -15,6 +15,7 @@ import { useMemberSnapshot } from './member-snapshot';
 import { activeChecksEmpty, initialActiveChecks, receiveActiveChecks } from './checks-active';
 import { changedQuestions } from './fixes-model';
 import { SafetyBody, useSafety } from './safety';
+import { useListDetailScroll } from './list-detail-scroll';
 
 type Report = { id: string; created_at: string; body: ReportBody };
 
@@ -174,6 +175,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
   }
 
   const selectedId = openId ?? (initialRun ? reports.find((r) => r.body.run.id === initialRun)?.id : null) ?? null;
+  const rememberList = useListDetailScroll(tab === 'safety' ? Boolean(safety.openId) : Boolean(selectedId), tab);
   const before = reports.find((r) => r.id === comparison.from)?.body;
   const after = reports.find((r) => r.id === selectedId)?.body;
   const questionIds = before && after && comparison.change ? changedQuestions(before, after)[comparison.change] : undefined;
@@ -202,7 +204,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       note={note}
       limitReset={limitReset}
       connectionReady={data.kind === 'demo' || data.connection?.ready === true}
-      onOpenCheck={(id) => { setOpenId(id); setOpenQuestion(null); setFilter('all'); setComparison({ change: undefined, from: undefined }); setNote(null); writeUrl({ check: id, q: null, show: null, change: null, from: null }, true); }}
+      onOpenCheck={(id) => { rememberList(); setOpenId(id); setOpenQuestion(null); setFilter('all'); setComparison({ change: undefined, from: undefined }); setNote(null); writeUrl({ check: id, q: null, show: null, change: null, from: null }, true); }}
       onBack={() => { setOpenId(null); setNote(null); writeUrl({ check: null, q: null, show: null }, true); }}
       onOpenQuestion={(id) => { const next = openQuestion === id ? '' : id; setOpenQuestion(next); writeUrl({ q: next || null }, true); }}
       filter={filter}
@@ -218,7 +220,7 @@ export function ChecksScreen({ workspaceId, initialLang, initialCheck, initialTa
       choosing={choosing}
       onChoose={choose}
       safetyOpen={Boolean(safety.openId)}
-      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}?lang=${lang}`} settingsHref={homeLinks(workspaceId, lang).settings} onOpen={(id) => { safety.setOpenId(id); writeUrl({ safety: id }, true); }} />}
+      safety={<SafetyBody lang={lang} now={new Date()} safety={safety} canStart={access.start} reportHref={(id) => `/w/${workspaceId}/report/safety/${id}?lang=${lang}`} settingsHref={homeLinks(workspaceId, lang).settings} onOpen={(id) => { rememberList(); safety.setOpenId(id); writeUrl({ safety: id }, true); }} />}
     />
   </>;
 }
