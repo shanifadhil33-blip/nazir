@@ -134,3 +134,19 @@ it('keeps the saved safety heading with shaped placeholders while only its detai
   expect(html).toContain('nz-safety-detail-loading');
   expect(html).not.toContain('nz-state-loading');
 });
+
+
+it.each(['en', 'ar'] as const)('distinguishes same-minute saved Safety tests and exposes the exact saved report time in %s', (lang) => {
+  const first = { ...savedSafety, at: '2026-11-24T08:00:01Z' };
+  const second = { ...savedSafety, id: '22222222-2222-4222-8222-222222222222', at: '2026-11-24T08:00:42Z' };
+  const value: MemberSnapshot = { ...snapshot, lang, activeRuns: [], safetyList: { runs: [first, second], confirmed: true, demo: true, agent: true, proof: null, nextAt: null }, safetyDetail: second };
+  const list = renderToStaticMarkup(<MemberSnapshotProvider value={value}><ChecksScreen workspaceId="workspace" initialLang={lang} initialTab="safety" /></MemberSnapshotProvider>);
+  expect(list).toContain('12:00:01');
+  expect(list).toContain('12:00:42');
+  expect(list).toContain(`data-safety-id="${second.id}"`);
+  const detail = renderToStaticMarkup(<MemberSnapshotProvider value={value}><ChecksScreen workspaceId="workspace" initialLang={lang} initialTab="safety" initialSafety={second.id} /></MemberSnapshotProvider>);
+  expect(detail).toContain('12:00:42');
+  const report = renderToStaticMarkup(<MemberSnapshotProvider value={value}><SafetyReportScreen workspaceId="workspace" runId={second.id} initialLang={lang} /></MemberSnapshotProvider>);
+  expect(report).toContain(`dateTime="${new Date(second.at).toISOString()}"`);
+  expect(report).toContain('12:00:42');
+});

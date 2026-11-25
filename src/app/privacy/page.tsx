@@ -6,7 +6,7 @@ export default function Page() {
   return <main className="nz-legal" lang="en" dir="ltr">
     <nav aria-label="Nazir"><Link href="/?lang=en" lang="en">Home</Link><Link href="/?lang=ar" lang="ar" dir="rtl">الرئيسية</Link></nav>
     <h1>Privacy</h1>
-    <section lang="en"><h2>Privacy</h2>
+    <section lang="en">
       <p>The Nazir demo uses a fictional service and made up records. In your own account, you can connect an agent you control or have permission to test. Use a test environment and do not enter real personal data.</p>
       <p>From Google we store your name, email, picture and Google account id. We store sign in session records that expire after 30 days.</p>
       <p>We store your workspace, agent connection details, test runs, questions, replies, findings, fixes and activity. With the SDK, we also store reported tools, agent inventory and test evidence. Test people settings store the staging login details you provide. Connection secrets and test login values are stored encrypted.</p>

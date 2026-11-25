@@ -6,7 +6,7 @@ export default function Page() {
   return <main className="nz-legal" lang="en" dir="ltr">
     <nav aria-label="Nazir"><Link href="/?lang=en" lang="en">Home</Link><Link href="/?lang=ar" lang="ar" dir="rtl">الرئيسية</Link></nav>
     <h1>Terms</h1>
-    <section lang="en"><h2>Terms</h2>
+    <section lang="en">
       <p>Nazir is a prototype for testing AI agents. The demo uses a fictional service and made up data. Your own account can connect an agent you control or have written permission to test.</p>
       <p>Results apply only within the tested scope and are not a certificate. Review the evidence before using a result.</p>
       <p>Use a separate test environment with made up people and records. Safety checks may ask the agent to read or change records. Configure SDK dry runs for tools that change data. Do not connect real customer records or assume that every action will be blocked.</p>

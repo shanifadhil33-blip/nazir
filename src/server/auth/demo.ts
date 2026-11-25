@@ -3,7 +3,6 @@ import { createHmac, randomBytes } from 'node:crypto';
 import type { TransactionDriver } from '../db/driver';
 import { authCall, sessionHash } from './adapter';
 
-import { demoWorkspaceId } from '../../shared/demo';
 export { demoWorkspaceId } from '../../shared/demo';
 export const demoEmailSuffix = '@demo.nazir.test';
 export const demoRoles = ['owner', 'editor', 'viewer', 'supplier'] as const;
