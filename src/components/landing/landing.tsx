@@ -9,10 +9,10 @@ export function heroSrc(lang: Lang) {
   return lang === 'ar' ? '/hero-home-ar.png' : '/hero-home-en.png';
 }
 
-/** Three plain lines describing the actual flow. */
-export function landingSteps(lang: Lang): string[] {
+/** Explain the current connection, checks, repair and privacy scope. */
+export function landingSteps(lang: Lang) {
   const copy = messagesFor(lang).landing;
-  return [copy.askQuestions, copy.seeMistakes, copy.fixSafely];
+  return copy.steps;
 }
 
 export function HeroPhone({ lang }: { lang: Lang }) {
@@ -48,9 +48,16 @@ export function Landing({ lang }: { lang: Lang }) {
           <p className="nz-hero-note">{copy.landing.free}</p>
         </section>
         <HeroPhone lang={lang} />
-        <ul id="how" className="nz-landing-steps">
-          {landingSteps(lang).map((line) => <li key={line}>{line}</li>)}
-        </ul>
+        <section id="how" className="nz-landing-how" aria-labelledby="how-title">
+          <h2 id="how-title">{copy.landing.howItWorks}</h2>
+          <ol className="nz-landing-steps">
+            {landingSteps(lang).map((step, index) => <li key={step.title}>
+              <h3><span className="nz-step-number" aria-hidden="true">{index + 1}</span>{step.title}</h3>
+              {step.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {index === 3 ? <Link className="nz-landing-privacy" href="/privacy">{copy.privacy}</Link> : null}
+            </li>)}
+          </ol>
+        </section>
       </main>
       <SiteFooter lang={lang} />
     </div>

@@ -421,10 +421,37 @@
     "howItWorks": "How it works",
     "free": "Made for government and public service agents.",
     "heroAlt": "Omar testing City Help Desk in Nazir",
-    "askQuestions": "Connect your agent. Paste its chat address.",
-    "seeMistakes": "Nazir asks it real questions in English and Arabic.",
-    "fixSafely": "See every wrong answer and fix it.",
-    "footer": "Legal"
+    "footer": "Legal",
+    "steps": [
+      {
+        "title": "Connect a test copy of your agent",
+        "paragraphs": [
+          "Sign in and choose Quick connect or Full check. Quick connect needs your public HTTPS chat address. Choose OpenAI chat, Simple JSON or A2A. Add an access key only if your agent needs one, then send a test message. A2A uses your agent card address. This checks replies without changing your code.",
+          "For Full check, create a Nazir key and add the Node.js or Python SDK file to your agent. Wrap its tools, then send a test message. The SDK reports test activity and the tools your agent exposes. You do not need to upload your source code."
+        ]
+      },
+      {
+        "title": "Check answers and safety",
+        "paragraphs": [
+          "Start an answer check to ask test questions in English and Arabic. It keeps running on the server when you close the page. Open Safety to test attempts to override rules, follow hidden instructions, leak private information, misuse tools or access another person’s records.",
+          "Confirm you have permission to test the agent and verify control through the SDK or the website proof shown. Add two test people for access checks between logins. Results show what was proved, could not be confirmed or was not tested. Replies alone cannot prove what a tool actually did."
+        ]
+      },
+      {
+        "title": "Read the evidence, fix and test again",
+        "paragraphs": [
+          "Open a check to read each question, the reply and the evidence. Download a PDF report. Fixes gives you changes to review. For your own agent, copy the suggestion and make the change yourself, then run a new check. Nazir does not change your deployed agent for you.",
+          "History keeps past activity and saved results. The agent map shows the tools, servers, data stores and permissions reported by the SDK. In the demo, you can approve planted fixes and test them again. A good result applies to the checks that ran; it is not a safety certificate."
+        ]
+      },
+      {
+        "title": "Keep real people and records out of tests",
+        "paragraphs": [
+          "Use a test environment with made up people and records. Safety tests ask the agent to try actions as well as answer questions. Set up SDK dry runs for tools that change data so those tests do not change real records.",
+          "Nazir stores test conversations, findings and SDK evidence in your workspace. Some checks use third party AI services. Connection secrets are stored encrypted. Full check setup lets you turn off the SDK key."
+        ]
+      }
+    ]
   },
   "signin": {
     "welcome": "Sign in",
@@ -750,32 +777,32 @@
     "informationExample": "How can you help me?"
   },
   "testPeople": {
-      "title": "Test people",
-      "configured": "Saved",
-      "intro": "Use two people from a test copy of your agent. Nazir signs in as each person, checks their own case, then asks as A for B’s case.",
-      "loading": "Opening test people.",
-      "failed": "Could not save or open test people. Check the details and try again.",
-      "retry": "Try again",
-      "saved": "Test people saved. You can test safety from Checks.",
-      "removed": "Test people removed.",
-      "changed": "Your agent connection changed. Reload this page before saving.",
-      "reload": "Reload",
-      "header": "Header your agent uses to identify a person",
-      "headerNote": "Enter the exact header and login token your test agent expects. Include Bearer if needed.",
-      "personA": "Test person A",
-      "personB": "Test person B",
-      "name": "Name",
-      "reference": "A case reference only this person may see",
-      "token": "Login token",
-      "exampleA": "Saeed",
-      "exampleB": "Imran",
-      "private": "Login tokens are encrypted and never shown again. Saving a different connection clears this setup.",
-      "replace": "To change this setup, enter both login tokens again.",
-      "saving": "Saving",
-      "save": "Save test people",
-      "remove": "Remove test people",
-      "removeSure": "Remove both test people and their saved login tokens?",
-      "cancel": "Not now"
+    "title": "Test people",
+    "configured": "Saved",
+    "intro": "Use two people from a test copy of your agent. Nazir signs in as each person, checks their own case, then asks as A for B’s case.",
+    "loading": "Opening test people.",
+    "failed": "Could not save or open test people. Check the details and try again.",
+    "retry": "Try again",
+    "saved": "Test people saved. You can test safety from Checks.",
+    "removed": "Test people removed.",
+    "changed": "Your agent connection changed. Reload this page before saving.",
+    "reload": "Reload",
+    "header": "Header your agent uses to identify a person",
+    "headerNote": "Enter the exact header and login token your test agent expects. Include Bearer if needed.",
+    "personA": "Test person A",
+    "personB": "Test person B",
+    "name": "Name",
+    "reference": "A case reference only this person may see",
+    "token": "Login token",
+    "exampleA": "Saeed",
+    "exampleB": "Imran",
+    "private": "Login tokens are encrypted and never shown again. Saving a different connection clears this setup.",
+    "replace": "To change this setup, enter both login tokens again.",
+    "saving": "Saving",
+    "save": "Save test people",
+    "remove": "Remove test people",
+    "removeSure": "Remove both test people and their saved login tokens?",
+    "cancel": "Not now"
   },
   "safetyScreen": {
     "answers": "Answers",
