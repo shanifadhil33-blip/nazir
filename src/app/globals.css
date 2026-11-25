@@ -1264,7 +1264,7 @@ a.nz-set-link:focus-visible, .nz-set-head:focus-visible { outline: 2px solid var
 .nz-rep-btn { justify-content: center; min-block-size: 56px; }
 a.nz-rep-btn { text-decoration: none; }
 
-.nz-shell.nz-report { max-inline-size: none; transition: none; }
+.nz-shell.nz-report { max-width: none; max-inline-size: none; transition: none; }
 @media (min-width: 1024px) {
   .nz-shell[data-screen] .nz-shell-stack { inline-size: min(100%, 640px); margin-inline: auto; }
 }

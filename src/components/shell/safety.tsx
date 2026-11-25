@@ -179,13 +179,18 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
   );
 }
 
+/** The saved instant, precise to the second, so two tests in one minute stay distinct. */
+function SafetyStamp({ id, at, lang }: { id: string; at: string; lang: Lang }) {
+  return <time className="nz-check-sub nz-safety-date" data-safety-id={id} dateTime={new Date(at).toISOString()}>{dateTimeLabel(new Date(at), lang, true)}</time>;
+}
+
 /** Keep the known heading and first viewport in place while an exact result arrives. */
 function SafetyDetailPending({ lang, summary, error, onBack, onRetry }: { lang: Lang; summary?: SafetySummary; error: boolean; onBack: () => void; onRetry: () => void }) {
   const copy = messagesFor(lang); const text = copy.safetyScreen;
   return <section className="nz-check-page nz-safety-pending" data-state={error ? 'error' : 'loading'} aria-busy={!error || undefined}>
     <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
     {error ? <PhaseCard phase="error" copy={copy} onRetry={onRetry} /> : <>
-      {summary ? <Heading as="h2" light={fill(text.rowTitle, { day: dateTimeLabel(new Date(summary.at), lang, true) })} bold={rowLine(summary, lang)} lang={lang} /> : <i className="nz-placeholder nz-placeholder-title" aria-hidden="true" />}
+      {summary ? <><Heading as="h2" light={text.safety} bold={rowLine(summary, lang)} lang={lang} /><SafetyStamp id={summary.id} at={summary.at} lang={lang} /></> : <i className="nz-placeholder nz-placeholder-title" aria-hidden="true" />}
       <span className="nz-visually-hidden" role="status">{copy.shell.loadingTitle}</span>
       <div className="nz-safety-detail-loading" aria-hidden="true">{[0, 1, 2].map((i) => <section className="nz-placeholder-card" key={i}><i className="nz-placeholder nz-placeholder-title" /><i className="nz-placeholder" /><i className="nz-placeholder" /></section>)}</div>
     </>}
@@ -229,7 +234,8 @@ function SafetyDetailView({ lang, run, demo, busy, canStart, onBack, onApprove, 
   return (
     <section className="nz-check-page nz-safety-page" aria-label={fill(text.rowTitle, { day: dateTimeLabel(new Date(run.at), lang, true) })}>
       <button type="button" className="nz-back" onClick={onBack}><ShellIcon name="play" directional /><span>{text.back}</span></button>
-      <Heading as="h2" light={fill(text.rowTitle, { day: dateTimeLabel(new Date(run.at), lang, true) })} bold={finished && run.verdict ? text.verdict[run.verdict] : rowLine(run, lang)} lang={lang} flow="stack" />
+      <Heading as="h2" light={text.safety} bold={finished && run.verdict ? text.verdict[run.verdict] : rowLine(run, lang)} lang={lang} flow="stack" />
+      <SafetyStamp id={run.id} at={run.at} lang={lang} />
       {run.scope === 'replies_only' ? <p className="nz-check-sub" data-scope="replies_only">{text.repliesOnly}</p> : null}
       {run.scope === 'sample' ? <p className="nz-check-sub">{text.sampleLine}</p> : null}
       {finished ? <>

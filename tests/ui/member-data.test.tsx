@@ -146,7 +146,10 @@ it.each(['en', 'ar'] as const)('distinguishes same-minute saved Safety tests and
   expect(list).toContain(`data-safety-id="${second.id}"`);
   const detail = renderToStaticMarkup(<MemberSnapshotProvider value={value}><ChecksScreen workspaceId="workspace" initialLang={lang} initialTab="safety" initialSafety={second.id} /></MemberSnapshotProvider>);
   expect(detail).toContain('12:00:42');
+  expect(detail).toContain(`data-safety-id="${second.id}"`);
+  expect(detail).toContain(`dateTime="${new Date(second.at).toISOString()}"`);
   const report = renderToStaticMarkup(<MemberSnapshotProvider value={value}><SafetyReportScreen workspaceId="workspace" runId={second.id} initialLang={lang} /></MemberSnapshotProvider>);
+  expect(report).toContain(`data-safety-id="${second.id}"`);
   expect(report).toContain(`dateTime="${new Date(second.at).toISOString()}"`);
   expect(report).toContain('12:00:42');
 });
