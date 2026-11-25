@@ -1,0 +1,64 @@
+.how {
+  grid-column: 1 / -1;
+  inline-size: min(100%, 40rem);
+  margin: 0;
+  padding-block: 8px 40px;
+  text-align: start;
+  display: grid;
+  gap: 28px;
+}
+
+.how h2,
+.how h3,
+.how h4 {
+  margin: 0;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.how h2 {
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+
+.how h3 {
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.how h4 {
+  margin-block-start: 8px;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+}
+
+.how p,
+.how li {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.part {
+  display: grid;
+  gap: 12px;
+}
+
+.how ul,
+.how ol {
+  margin: 0;
+  padding-inline-start: 1.4rem;
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 1024px) {
+  .how {
+    inline-size: min(100%, 46rem);
+    gap: 32px;
+  }
+
+  .how h2 {
+    font-size: 2rem;
+  }
+}
