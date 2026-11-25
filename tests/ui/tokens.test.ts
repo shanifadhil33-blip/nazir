@@ -20,7 +20,7 @@ it('defines the v2 page, ink, accent and pastel tokens', () => {
 });
 
 it('paints the page and body with the new tokens and drops the sea palette', () => {
-  expect(css).toMatch(/html \{ color: var\(--ink\); background: var\(--page\); \}/);
+  expect(css).toMatch(/html \{ color: var\(--ink\); background: var\(--page\); scrollbar-gutter: stable; \}/);
   expect(css).toMatch(/font-size: 16px;/);
   expect(css).toContain('font-family: var(--font-sans), "Plus Jakarta Sans", sans-serif;');
   expect(css).toContain('font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif;');

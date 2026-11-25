@@ -14,6 +14,7 @@ import { useMemberData } from './member-data';
 import { PillButton } from './pill-button';
 import { StateCard } from './state-card';
 import { rowLine } from './safety';
+import { dateTimeLabel } from './checks-model';
 import { useMemberSnapshot } from './member-snapshot';
 
 type Note = 'downloading' | 'copied' | 'shareFailed' | 'sharing' | null;
@@ -71,6 +72,7 @@ export function SafetyReportScreen({ workspaceId, runId, initialLang }: { worksp
           {run.scope === 'sample' ? <p className="nz-rep-caption">{text.sampleLine}</p> : null}
           <p className="nz-rep-headline" data-verdict={run.verdict ?? ''}>{rowLine(run, lang)}</p>
           <p className="nz-rep-caption" dir="auto">{run.agent ?? ''}</p>
+          <p className="nz-check-sub nz-safety-date"><time data-safety-id={run.id} dateTime={new Date(run.at).toISOString()}>{dateTimeLabel(new Date(run.at), lang, true)}</time></p>
         </section>
         {found.length === 0 ? <StateCard kind="empty" title={text.noWeakness} /> : null}
         <ul className="nz-safety-other nz-safety-report-list">

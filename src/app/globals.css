@@ -20,7 +20,7 @@
   --shadow: 0 16px 40px rgba(22, 24, 29, .08);
 }
 
-html { color: var(--ink); background: var(--page); }
+html { color: var(--ink); background: var(--page); scrollbar-gutter: stable; }
 
 body {
   margin: 0;
@@ -1264,8 +1264,9 @@ a.nz-set-link:focus-visible, .nz-set-head:focus-visible { outline: 2px solid var
 .nz-rep-btn { justify-content: center; min-block-size: 56px; }
 a.nz-rep-btn { text-decoration: none; }
 
-@media (min-width: 900px) {
-  .nz-shell[data-screen] .nz-shell-desk { inline-size: min(100%, 640px); }
+.nz-shell.nz-report { max-width: none; max-inline-size: none; transition: none; }
+@media (min-width: 1024px) {
+  .nz-shell[data-screen] .nz-shell-stack { inline-size: min(100%, 640px); margin-inline: auto; }
 }
 .nz-shell-desk .nz-rep-btn, .nz-shell-desk .nz-hist-more, .nz-shell-desk .nz-set-actions .nz-pill-btn { min-block-size: 56px; border-radius: var(--radius-pill); }
 .nz-set-flat { display: flex; align-items: center; gap: 14px; }
