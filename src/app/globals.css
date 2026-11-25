@@ -343,6 +343,7 @@ a { color: var(--accent); }
   animation: nz-spin 700ms linear infinite;
 }
 .nz-legal {
+  font-family: var(--font-sans), "Plus Jakarta Sans", sans-serif;
   max-width: 42rem;
   margin: 24px auto;
   padding: 24px;
@@ -353,6 +354,9 @@ a { color: var(--accent); }
 }
 .nz-legal nav { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .nz-legal nav form { display: contents; }
+.nz-legal a { display: inline-flex; align-items: center; min-block-size: 44px; min-inline-size: 44px; }
+.nz-legal h1, .nz-legal h2 { font-weight: 600; }
+.nz-legal :lang(ar) { font-family: var(--font-arabic), "IBM Plex Sans Arabic", sans-serif; line-height: 1.7; }
 .nz-signin {
   display: flex; align-items: center; justify-content: center; gap: 12px;
   inline-size: 100%; min-block-size: 56px; padding: 0 22px; border: 0;

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 export const dynamic = 'force-static';
 export const metadata: Metadata = { title: 'Privacy | Nazir' };
 export default function Page() {
-  return <main className="nz-legal">
+  return <main className="nz-legal" lang="en" dir="ltr">
+    <nav aria-label="Nazir"><Link href="/?lang=en" lang="en">Home</Link><Link href="/?lang=ar" lang="ar" dir="rtl">الرئيسية</Link></nav>
     <h1>Privacy</h1>
     <section lang="en"><h2>Privacy</h2>
       <p>The Nazir demo uses a fictional service and made up records. In your own account, you can connect an agent you control or have permission to test. Use a test environment and do not enter real personal data.</p>
