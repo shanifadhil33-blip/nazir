@@ -11,6 +11,7 @@ import { PillButton } from './pill-button';
 import { PhaseCard, StateCard } from './state-card';
 import { ConfirmButton } from './confirm-button';
 import { useMemberSnapshot } from './member-snapshot';
+import { LocalTimeNotice } from './local-time-notice';
 
 type List = SafetyList;
 export type SafetyNote = 'limit' | 'failed' | 'fixApproved' | 'proof' | 'sdk' | null;
@@ -132,14 +133,13 @@ export function SafetyBody({ lang, now, safety, canStart, reportHref, settingsHr
   const needConfirm = !list.demo && !list.confirmed;
   const open = safety.detail && safety.detail.id === safety.openId ? safety.detail : null;
   const limited = Boolean(list.nextAt && new Date(list.nextAt).getTime() > now.getTime());
-  const availableAt = list.nextAt ? new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(list.nextAt)) : '';
   const sdkUrl = new URL(settingsHref, 'https://nazir.invalid'); sdkUrl.searchParams.delete('screen'); sdkUrl.searchParams.set('connect', 'full'); sdkUrl.searchParams.set('lang', lang);
   const startLabel = busy === 'starting' ? text.starting : needConfirm ? text.confirmStart : text.testSafety;
   return (
     <div className="nz-checks-body">
       <div className="nz-checks-list">
         {note ? <p className="nz-note-line" role="status" data-note={note}>{note === 'sdk' ? <a className="nz-quiet-btn nz-sdk-update" href={sdkUrl.pathname + sdkUrl.search}>{text.sdkUpdate}</a> : note === 'limit' ? text.limit : note === 'fixApproved' ? text.fixApproved : note === 'proof' ? text.proofFailed : text.failed}</p> : null}
-        {limited && !active ? <p className="nz-note-line" role="status">{fill(text.availableAt, { time: availableAt })}</p> : null}
+        {limited && !active && list.nextAt ? <LocalTimeNotice at={list.nextAt} lang={lang} template={text.availableAt} /> : null}
         {active ? <SafetyRunning lang={lang} run={active} stopping={busy === 'stopping'} onStop={() => safety.stop(active.id)} /> : null}
         {!list.agent ? <StateCard kind="empty" title={text.needAgent} action={{ label: copy.connect.title, href: settingsHref }} /> : null}
         {list.agent && !active && needConfirm && canStart ? (

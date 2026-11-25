@@ -1619,3 +1619,7 @@ body:has(.nz-confirm[open]) { overflow: hidden; }
   .nz-shell.nz-fixpage { block-size: auto; min-block-size: 100svh; display: block; }
   .nz-fixpage .nz-fix-cards { overflow-y: visible; }
 }
+
+.nz-local-time { position: relative; font-variant-numeric: tabular-nums; }
+.nz-local-time[data-ready="false"] > span { visibility: hidden; }
+.nz-local-time[data-ready="false"]::after { content: ''; position: absolute; inset-inline: 16px; inset-block-start: calc(50% - 7px); block-size: 14px; border-radius: 7px; background: var(--line); }
