@@ -28,14 +28,8 @@ describe.each([['en', en], ['ar', ar]] as const)('%s message copy', (lang, messa
       // Public entry points name the demo explicitly. Other product jargon stays banned.
       expect(value, key).not.toMatch(lang === 'en' ? bannedEn : bannedAr);
       expect(value, key).not.toMatch(lang === 'en' ? femaleEn : femaleAr);
-      if (key.startsWith('landing.steps.') && key.includes('.paragraphs.')) {
-        // The requested complete landing explanation has short sentences, rather than a 25 word paragraph cap.
-        for (const sentence of value.split(/\.(?:\s+|$)|[!?؟]/)) expect(words(sentence), key).toBeLessThan(25);
-      } else if (key === 'demo.intro' || key === 'demo.barOpen') { for (const sentence of value.split(/[.!?]/)) expect(words(sentence), key).toBeLessThan(21); } else expect(words(value), key).toBeLessThan(25);
-      if (lang === 'en') {
-        const allowed = key.startsWith('landing.steps.') ? /\b(PDF|SDK|HTTPS|JSON)\b/g : /\bPDF\b/g;
-        expect(value.replace(allowed, ''), key).not.toMatch(/\b[A-Z]{3,}\b/);
-      }
+      if (key === 'demo.intro' || key === 'demo.barOpen') { for (const sentence of value.split(/[.!?]/)) expect(words(sentence), key).toBeLessThan(21); } else expect(words(value), key).toBeLessThan(25);
+      if (lang === 'en') expect(value.replace(/\bPDF\b/g, '').replace(/\bSDK\b/g, ''), key).not.toMatch(/\b[A-Z]{3,}\b/);
     });
   }
   it('each small state reads under 25 words together', () => {

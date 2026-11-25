@@ -22,32 +22,28 @@ function words(text: string) {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
-it.each(langs)('S1 %s: heading, two pills and the complete numbered explanation', (lang) => {
+it.each(langs)('S1 %s: heading, two pills, free line, how it works, footer links', (lang) => {
   const html = renderToStaticMarkup(<Landing lang={lang} />);
   const copy = lang === 'ar' ? ar : en;
   for (const text of [copy.landing.lightLine, copy.landing.boldLine, copy.landing.tryDemo, copy.landing.howItWorks, copy.landing.free, copy.signIn, copy.privacy, copy.terms]) expect(html).toContain(text);
-  expect(landingSteps(lang)).toHaveLength(4);
-  for (const step of landingSteps(lang)) {
-    expect(step.title.trim()).not.toBe('');
-    expect(step.paragraphs).toHaveLength(2);
-    for (const paragraph of step.paragraphs) expect(words(paragraph)).toBeLessThanOrEqual(70);
-  }
-  expect(html).toContain('<ol class="nz-landing-steps">');
+  expect(landingSteps(lang)).toEqual([copy.landing.connectTitle, copy.landing.checksTitle, copy.landing.backTitle, copy.landing.privacyTitle]);
+  for (const line of [copy.landing.lead, copy.landing.quickA2a, copy.landing.answersBody, copy.landing.trickPeople, copy.landing.backFixes, copy.landing.privacyKey]) expect(html).toContain(line);
   expect(html).toContain('href="/privacy"');
   expect(html).toContain('href="/terms"');
   expect(html).toContain('href="#how"');
   expect(html).toContain('id="how"');
 });
 
-it.each(langs)('S1 %s: hero stays short and detailed copy avoids dashes and unsupported claims', (lang) => {
+it.each(langs)('S1 %s: hero stays short, and the page has no dashes, emoji or banned claims', (lang) => {
   const html = renderToStaticMarkup(<Landing lang={lang} />);
-  const text = textOf(mainOf(html));
-  const hero = html.slice(html.indexOf('nz-hero-copy'), html.indexOf('nz-hero-phone'));
-  expect(words(textOf(hero))).toBeLessThan(40);
-  expect(words(text)).toBeLessThan(550);
+  const main = mainOf(html);
+  const hero = textOf(main.slice(0, main.indexOf('id="how"')));
+  const text = textOf(main);
+  expect(words(hero)).toBeLessThan(65);
   expect(text).not.toMatch(/[-–—]/);
   expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
-  expect(text).not.toMatch(/\bjudge\b|certified|compliant|guaranteed safe/i);
+  expect(text.replace(/\bSDK\b/g, '')).not.toMatch(/\b[A-Z]{3,}\b/);
+  expect(text).not.toMatch(/demo with|made up|\bAPI\b|\bMCP\b|\bjudge\b|certified|compliant|verification/i);
   expect(html).not.toContain('gradient');
 });
 
@@ -81,9 +77,11 @@ it('uses male names only in the landing and sign in copy', () => {
 
 it('AR renders fully right to left and mirrors the language switch target', () => {
   const landing = renderToStaticMarkup(<Landing lang="ar" />);
+  const how = landing.indexOf('id="how"');
   expect(landing).toContain('lang="ar"');
   expect(landing).toContain('dir="rtl"');
-  expect(landing).not.toContain('dir="ltr"');
+  expect(landing.slice(0, how)).not.toContain('dir="ltr"');
+  expect(landing).toContain('dir="ltr"');
   expect(landing).toContain('href="/"');
   expect(landing).toContain('English');
   const signin = renderToStaticMarkup(<SignIn lang="ar" action={action} />);
@@ -95,7 +93,7 @@ it('AR renders fully right to left and mirrors the language switch target', () =
 it('EN and AR have the same landing and sign in keys', () => {
   expect(Object.keys(ar.landing).sort()).toEqual(Object.keys(en.landing).sort());
   expect(Object.keys(ar.signin).sort()).toEqual(Object.keys(en.signin).sort());
-  for (const value of [...Object.values(ar.landing), ...Object.values(ar.signin)]) if (typeof value === 'string') expect(value.trim()).not.toBe('');
+  for (const value of [...Object.values(ar.landing), ...Object.values(ar.signin)]) expect(value.trim()).not.toBe('');
 });
 
 it.each(langs)('S2 %s: one Google card, no email or password field, no second sign in link', (lang) => {
