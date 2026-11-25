@@ -10,7 +10,7 @@ import { retestLine, type FixCard, type FixesAccess, type Tab } from './fixes-mo
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
-import { localeAttrs } from './locale';
+import { localeAttrs, localeHref } from './locale';
 import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
@@ -66,9 +66,9 @@ export function FixesView(props: FixesViewProps) {
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
-          <BackLink href={links.home} label={copy.shell.home} />
+          <BackLink lang={lang} href={links.home} label={copy.shell.home} />
           {phase !== 'ready' ? <>
-            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={localeHref(links.home, lang)} />
           </> : <>
             <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
             <p className="nz-check-sub">{text.intro}</p>

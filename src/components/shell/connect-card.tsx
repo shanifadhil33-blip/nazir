@@ -55,7 +55,7 @@ export function ConnectCard({ workspaceId, lang, mode, connection, home, demo, o
     finally { setBusy(false); onSaved?.(); }
   }
   return <section className="nz-connect-panel" aria-label={mode === 'full' ? c.fullTitle : c.quickTitle}>
-    <BackLink href={connectHomeHref(home, lang)} label={copy.shell.home} />
+    <BackLink lang={lang} href={connectHomeHref(home, lang)} label={copy.shell.home} />
     <h2>{mode === 'full' ? c.fullTitle : c.quickTitle}</h2>
     {demo ? <p>{c.demoNote}</p> : <>
       {mode === 'full' ? <><p>{c.fullIntro}</p><SdkSteps workspaceId={workspaceId} lang={lang} onStatus={setSdkStatus} /></> : null}

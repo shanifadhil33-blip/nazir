@@ -1,1 +1,1 @@
-export { ShellLoading as default } from '@/components/shell/loading';
+export { default } from '../loading';

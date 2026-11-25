@@ -3,8 +3,8 @@ import { createHmac, randomBytes } from 'node:crypto';
 import type { TransactionDriver } from '../db/driver';
 import { authCall, sessionHash } from './adapter';
 
-/** Fixed ids from db/migrations/0031_demo_login.sql. */
-export const demoWorkspaceId = 'd0000000-0000-4000-8000-000000000100';
+import { demoWorkspaceId } from '../../shared/demo';
+export { demoWorkspaceId } from '../../shared/demo';
 export const demoEmailSuffix = '@demo.nazir.test';
 export const demoRoles = ['owner', 'editor', 'viewer', 'supplier'] as const;
 export type DemoRole = (typeof demoRoles)[number];

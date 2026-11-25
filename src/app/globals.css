@@ -1528,8 +1528,26 @@ a.nz-pastel, a.nz-running { text-decoration: none; color: var(--ink); }
 .nz-placeholder-title { inline-size: 70%; block-size: 30px; }
 .nz-placeholder-card { display: grid; gap: 20px; padding: 24px; border-radius: var(--radius-card); background: var(--card); }
 .nz-placeholder-button { block-size: 52px; border-radius: var(--radius-pill); }
-.nz-loading-nav { position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translateX(-50%); display: flex; gap: 12px; padding: 12px; border-radius: var(--radius-pill); background: var(--card); }
-@media (min-width: 900px) { .nz-loading-nav { inset-inline-start: 28px; inset-block: 170px auto; transform: none; flex-direction: column; } .nz-shell-loading .nz-shell-stack { max-inline-size: 640px; margin-inline: auto; } }
+.nz-loading-demo { display: flex; align-items: center; block-size: 44px; padding-inline: 12px; border-radius: 12px; background: var(--card); }
+.nz-loading-demo > i { inline-size: 55%; }
+.nz-loading-back { display: flex; align-items: center; block-size: 44px; padding-inline: 4px; }
+.nz-loading-back > i { inline-size: 72px; }
+.nz-loading-title { block-size: 32px; inline-size: 70%; }
+.nz-loading-title-stack { block-size: 64px; }
+.nz-loading-icon { inline-size: 20px; block-size: 20px; flex: none; }
+.nz-loading-label { inline-size: 40px; block-size: 12px; }
+.nz-loading-start { background: var(--line); box-shadow: none; }
+.nz-loading-start > i { background: var(--page); }
+.nz-loading-tabs { display: flex; gap: 8px; block-size: 44px; }
+.nz-loading-tabs > i { inline-size: 90px; block-size: 44px; border-radius: var(--radius-pill); }
+.nz-loading-report-hero { gap: 8px; font-size: 14px; }
+.nz-loading-headline { inline-size: 75%; block-size: 44px; }
+.nz-loading-caption { block-size: 1lh; }
+.nz-loading-report-icon { flex: none; inline-size: 36px; block-size: 36px; border-radius: 50%; }
+.nz-loading-report-label { inline-size: 60%; }
+.nz-loading-row { display: flex; align-items: center; gap: 12px; min-block-size: 80px; padding: 16px; }
+@media (max-width: 1023px) { .nz-loading-detail { display: none; } }
+@media (min-width: 1024px) { .nz-loading-title { block-size: 42px; margin-block-end: 12px; } .nz-loading-title-stack { block-size: 83px; } }
 .nz-check-mark-unsure { color: var(--ink-muted); background: var(--sky); }
 .nz-check-unsure { color: var(--ink-muted); }
 
