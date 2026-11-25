@@ -17,7 +17,7 @@ import type { RunProgress } from './checks-run';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
-import { localeAttrs } from './locale';
+import { localeAttrs, localeHref } from './locale';
 import { helpLine, whoFor } from './people';
 import { PillButton } from './pill-button';
 import { SideNav } from './side-nav';
@@ -105,9 +105,9 @@ export function ChecksView(props: ChecksViewProps) {
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
-          {view === 'list' ? <BackLink href={links.home} label={copy.shell.home} /> : null}
+          {view === 'list' ? <BackLink lang={lang} href={links.home} label={copy.shell.home} /> : null}
           {phase !== 'ready' ? <>
-            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={links.home} />
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={props.onRetry} fallback={localeHref(links.home, lang)} />
           </> : <>
             <div className="nz-checks-head">
               <div><Heading light={text.light} bold={text.bold} lang={lang} flow="inline" explain={text.explain} /></div>
@@ -136,7 +136,7 @@ export function ChecksView(props: ChecksViewProps) {
             {tab === 'safety' ? props.safety : <div className="nz-checks-body">
               <div className="nz-checks-list">
                 {active.map((run) => <RunningCard key={run.runId} lang={lang} running={run} canStop={access.stop} stopping={busy === 'stopping'} onStop={() => props.onStop?.(run.runId)} />)}
-                {props.activeStatus && props.activeStatus !== 'ready' ? <PhaseCard phase={props.activeStatus} copy={copy} onRetry={props.onRetry} fallback={links.home} /> : null}
+                {props.activeStatus && props.activeStatus !== 'ready' ? <PhaseCard phase={props.activeStatus} copy={copy} onRetry={props.onRetry} fallback={localeHref(links.home, lang)} /> : null}
                 {checks.length === 0 && active.length === 0 && (props.activeStatus ?? 'ready') === 'ready' ? <StateCard kind="empty" title={props.connectionReady === false ? text.emptyConnect : text.empty} action={props.connectionReady === false ? { label: copy.connect.title, href: `${links.home}?connect=quick&lang=${lang}` } : canStart ? { label: busy === 'starting' ? text.starting : copy.shell.startCheck, onClick: busy === 'starting' ? undefined : props.onStart } : null} /> : null}
                 {checks.map((item) => {
                   const clean = !item.stopped && item.questions.length > 0 && item.questions.every((q) => q.mark === 'right');

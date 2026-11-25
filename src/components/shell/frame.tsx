@@ -7,7 +7,7 @@ import { DemoBar } from './demo-bar';
 import { Bell } from './bell';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
-import { localeAttrs } from './locale';
+import { localeAttrs, localeHref } from './locale';
 import { helpLine, whoFor } from './people';
 import { SideNav } from './side-nav';
 import { PhaseCard } from './state-card';
@@ -51,9 +51,9 @@ export function ScreenFrame({ lang, seat, phase, name, assistant, person, links,
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
-          {back !== false ? <BackLink href={back?.href ?? links.home} label={back?.label ?? copy.shell.home} /> : null}
+          {back !== false ? <BackLink lang={lang} href={back?.href ?? links.home} label={back?.label ?? copy.shell.home} /> : null}
           {phase !== 'ready' ? <>
-            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={localeHref(links.home, lang)} />
           </> : children}
         </div>
       </div>

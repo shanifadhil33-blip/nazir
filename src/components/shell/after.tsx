@@ -12,7 +12,7 @@ import { navLinks } from './fixes';
 import { FloatingBottomNav } from './floating-nav';
 import type { HomeLinks } from './home-model';
 import { ShellIcon } from './icons';
-import { localeAttrs } from './locale';
+import { localeAttrs, localeHref } from './locale';
 import { helpLine, whoFor } from './people';
 import { SideNav } from './side-nav';
 import { PhaseCard, StateCard } from './state-card';
@@ -83,9 +83,9 @@ export function AfterView({ lang, seat, phase, fixId, fixes, reports, canStart, 
         </header>
         <DemoBar lang={lang} />
         <div className="nz-shell-stack">
-          <BackLink href={links.fixes} label={copy.shell.fixes} />
+          <BackLink lang={lang} href={links.fixes} label={copy.shell.fixes} />
           {phase !== 'ready' ? <>
-            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={links.home} />
+            <PhaseCard phase={phase === 'error' ? 'error' : 'loading'} copy={copy} onRetry={onRetry} fallback={localeHref(links.home, lang)} />
           </> : <>
             <Heading light={text.light} bold={text.bold} lang={lang} flow="inline" />
             {seat === 'viewer' ? <StateCard kind="view" title={copy.shell.viewOnly} /> : null}
